@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,6 +44,11 @@ function SignupPage() {
             <div><Label>Senha (mín. 6)</Label><Input required type="password" minLength={6} value={f.password} onChange={e=>setF({...f,password:e.target.value})} /></div>
             <Button className="w-full" disabled={loading}>{loading?"Criando...":"Criar conta"}</Button>
           </form>
+          <div className="my-4 flex items-center gap-2 text-xs text-muted-foreground"><div className="h-px flex-1 bg-border"/>ou<div className="h-px flex-1 bg-border"/></div>
+          <Button type="button" variant="outline" className="w-full" onClick={async()=>{
+            const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/minha-conta` });
+            if (r.error) toast.error(r.error.message ?? "Falha no login Google");
+          }}>Continuar com Google</Button>
           <p className="mt-4 text-center text-sm text-muted-foreground">Já tem conta? <Link to="/login" className="font-medium hover:text-accent">Entrar</Link></p>
         </Card>
       </div>
