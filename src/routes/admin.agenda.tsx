@@ -33,7 +33,7 @@ function Agenda() {
       .order("scheduled_start")).data ?? [],
   });
 
-  async function setStatus(id: string, status: string) {
+  async function setStatus(id: string, status: "scheduled"|"in_progress"|"completed"|"cancelled"|"no_show") {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Status atualizado");
