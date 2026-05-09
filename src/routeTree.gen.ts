@@ -19,10 +19,13 @@ import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AvaliarAppointmentIdRouteImport } from './routes/avaliar.$appointmentId'
 import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
+import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
 import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
+import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
 
 const ServicosRoute = ServicosRouteImport.update({
@@ -75,6 +78,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AvaliarAppointmentIdRoute = AvaliarAppointmentIdRouteImport.update({
+  id: '/avaliar/$appointmentId',
+  path: '/avaliar/$appointmentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminServicosRoute = AdminServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -90,9 +98,19 @@ const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
   path: '/configuracoes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminComissoesRoute = AdminComissoesRouteImport.update({
+  id: '/comissoes',
+  path: '/comissoes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminClientesRoute = AdminClientesRouteImport.update({
   id: '/clientes',
   path: '/clientes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCaixaRoute = AdminCaixaRouteImport.update({
+  id: '/caixa',
+  path: '/caixa',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAgendaRoute = AdminAgendaRouteImport.update({
@@ -112,10 +130,13 @@ export interface FileRoutesByFullPath {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
+  '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -128,10 +149,13 @@ export interface FileRoutesByTo {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
+  '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -146,10 +170,13 @@ export interface FileRoutesById {
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
+  '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
+  '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -165,10 +192,13 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/caixa'
     | '/admin/clientes'
+    | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/profissionais'
     | '/admin/servicos'
+    | '/avaliar/$appointmentId'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -181,10 +211,13 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/caixa'
     | '/admin/clientes'
+    | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/profissionais'
     | '/admin/servicos'
+    | '/avaliar/$appointmentId'
     | '/admin'
   id:
     | '__root__'
@@ -198,10 +231,13 @@ export interface FileRouteTypes {
     | '/recuperar-senha'
     | '/servicos'
     | '/admin/agenda'
+    | '/admin/caixa'
     | '/admin/clientes'
+    | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/profissionais'
     | '/admin/servicos'
+    | '/avaliar/$appointmentId'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -215,6 +251,7 @@ export interface RootRouteChildren {
   ProfissionaisRoute: typeof ProfissionaisRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
+  AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -289,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/avaliar/$appointmentId': {
+      id: '/avaliar/$appointmentId'
+      path: '/avaliar/$appointmentId'
+      fullPath: '/avaliar/$appointmentId'
+      preLoaderRoute: typeof AvaliarAppointmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/servicos': {
       id: '/admin/servicos'
       path: '/servicos'
@@ -310,11 +354,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfiguracoesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/comissoes': {
+      id: '/admin/comissoes'
+      path: '/comissoes'
+      fullPath: '/admin/comissoes'
+      preLoaderRoute: typeof AdminComissoesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/clientes': {
       id: '/admin/clientes'
       path: '/clientes'
       fullPath: '/admin/clientes'
       preLoaderRoute: typeof AdminClientesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/caixa': {
+      id: '/admin/caixa'
+      path: '/caixa'
+      fullPath: '/admin/caixa'
+      preLoaderRoute: typeof AdminCaixaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/agenda': {
@@ -329,7 +387,9 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
+  AdminCaixaRoute: typeof AdminCaixaRoute
   AdminClientesRoute: typeof AdminClientesRoute
+  AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
   AdminServicosRoute: typeof AdminServicosRoute
@@ -338,7 +398,9 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
+  AdminCaixaRoute: AdminCaixaRoute,
   AdminClientesRoute: AdminClientesRoute,
+  AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
   AdminServicosRoute: AdminServicosRoute,
@@ -357,7 +419,18 @@ const rootRouteChildren: RootRouteChildren = {
   ProfissionaisRoute: ProfissionaisRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
+  AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
