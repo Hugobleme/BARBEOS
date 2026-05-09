@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DollarSign, Plus, Lock, Unlock } from "lucide-react";
@@ -32,7 +32,7 @@ function Caixa() {
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ["cash-session"],
     queryFn: async () => (await supabase.from("cash_sessions")
-      .select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("status", "open")
+      .select("*").eq("barbershop_id").eq("status", "open")
       .order("opened_at", { ascending: false }).limit(1).maybeSingle()).data,
   });
 
@@ -40,7 +40,7 @@ function Caixa() {
     queryKey: ["cash-tx", today.toDateString()],
     queryFn: async () => (await supabase.from("cash_transactions")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
-      .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+      .eq("barbershop_id")
       .gte("created_at", startOfDay(today).toISOString())
       .lte("created_at", endOfDay(today).toISOString())
       .order("created_at", { ascending: false })).data ?? [],
@@ -138,7 +138,7 @@ function OpenSessionDialog({ open, onOpenChange, userId, onDone }: any) {
   const [amount, setAmount] = useState("0");
   async function submit() {
     const { error } = await supabase.from("cash_sessions").insert({
-      barbershop_id: DEMO_BARBERSHOP_ID, opened_by: userId, opening_amount: Number(amount) || 0,
+      barbershop_id: opened_by: userId, opening_amount: Number(amount) || 0,
     });
     if (error) return toast.error(error.message);
     toast.success("Caixa aberto"); onOpenChange(false); onDone();
@@ -192,7 +192,7 @@ function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
   async function submit() {
     if (!sessionId) return toast.error("Abra o caixa antes");
     const { error } = await supabase.from("cash_transactions").insert({
-      barbershop_id: DEMO_BARBERSHOP_ID, session_id: sessionId, kind, method,
+      barbershop_id: session_id: sessionId, kind, method,
       amount: Number(amount), description: desc || null, created_by: userId,
     });
     if (error) return toast.error(error.message);

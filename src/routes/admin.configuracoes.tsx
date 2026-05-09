@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/configuracoes")({ component: Page });
@@ -15,7 +14,7 @@ export const Route = createFileRoute("/admin/configuracoes")({ component: Page }
 function Page() {
   const { data } = useQuery({
     queryKey: ["shop-cfg"],
-    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id", DEMO_BARBERSHOP_ID).single()).data,
+    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id").single()).data,
   });
   const [f, setF] = useState({ name:"", description:"", phone:"", whatsapp:"", street:"", city:"", state:"" });
   useEffect(() => {
@@ -33,7 +32,7 @@ function Page() {
       name: f.name, description: f.description,
       contacts: { phone: f.phone, whatsapp: f.whatsapp },
       address: { street: f.street, city: f.city, state: f.state },
-    }).eq("id", DEMO_BARBERSHOP_ID);
+    }).eq("id");
     if (error) return toast.error(error.message);
     toast.success("Configurações salvas");
   }

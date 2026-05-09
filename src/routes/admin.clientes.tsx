@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { Search, Users } from "lucide-react";
 
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
@@ -13,7 +12,7 @@ function Page() {
   const [q, setQ] = useState("");
   const { data } = useQuery({
     queryKey: ["customers"],
-    queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).order("created_at",{ascending:false})).data ?? [],
+    queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id").order("created_at",{ascending:false})).data ?? [],
   });
   const filtered = (data ?? []).filter(c => !q || c.full_name.toLowerCase().includes(q.toLowerCase()) || c.phone?.includes(q));
   return (

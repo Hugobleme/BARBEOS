@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -16,8 +16,8 @@ function Dashboard() {
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
       const end = endOfDay(today).toISOString();
-      const { data: appts } = await supabase.from("appointments").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).gte("scheduled_start", start).lte("scheduled_start", end);
-      const { count: customers } = await supabase.from("customers").select("*", { count: "exact", head: true }).eq("barbershop_id", DEMO_BARBERSHOP_ID);
+      const { data: appts } = await supabase.from("appointments").select("*").eq("barbershop_id").gte("scheduled_start", start).lte("scheduled_start", end);
+      const { count: customers } = await supabase.from("customers").select("*", { count: "exact", head: true }).eq("barbershop_id");
       const revenue = (appts ?? []).filter(a=>a.status==="completed").reduce((a,b)=>a+Number(b.total_amount),0);
       return { count: appts?.length ?? 0, completed: (appts ?? []).filter(a=>a.status==="completed").length, revenue, customers: customers ?? 0 };
     },
@@ -26,7 +26,7 @@ function Dashboard() {
     queryKey: ["admin-next"],
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
-      .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+      .eq("barbershop_id")
       .gte("scheduled_start", new Date().toISOString())
       .order("scheduled_start").limit(8)).data ?? [],
   });

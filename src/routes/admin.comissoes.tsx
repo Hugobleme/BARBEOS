@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { Coins } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ function Comissoes() {
 
   const { data: pros } = useQuery({
     queryKey: ["pros-list"],
-    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true)).data ?? [],
+    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id").eq("active", true)).data ?? [],
   });
 
   const { data: rows, refetch } = useQuery({
@@ -27,7 +27,7 @@ function Comissoes() {
     queryFn: async () => {
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")
-        .eq("barbershop_id", DEMO_BARBERSHOP_ID).order("created_at", { ascending: false });
+        .eq("barbershop_id").order("created_at", { ascending: false });
       if (status !== "all") q = q.eq("status", status);
       if (pro !== "all") q = q.eq("professional_id", pro);
       return (await q).data ?? [];
