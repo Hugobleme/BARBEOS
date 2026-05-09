@@ -6,7 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { Calendar, LayoutDashboard, LogOut, Menu, Scissors, Settings, Users, UserCog, X } from "lucide-react";
+import { Calendar, Coins, DollarSign, LayoutDashboard, LogOut, Menu, Scissors, Settings, Users, UserCog, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -17,6 +17,8 @@ export const Route = createFileRoute("/admin")({
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/agenda", label: "Agenda", icon: Calendar },
+  { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
+  { to: "/admin/comissoes", label: "Comissões", icon: Coins },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/profissionais", label: "Profissionais", icon: UserCog },
   { to: "/admin/servicos", label: "Serviços", icon: Scissors },

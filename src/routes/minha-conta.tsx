@@ -91,13 +91,20 @@ function Page() {
         <div className="grid gap-2">
           {past.length === 0 && <p className="text-sm text-muted-foreground">Nada por aqui ainda.</p>}
           {past.map((a: any) => (
-            <Card key={a.id} className="flex items-center justify-between p-4 text-sm">
+            <Card key={a.id} className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-muted-foreground"/>
                 <span>{format(new Date(a.scheduled_start), "d 'de' MMM yyyy • HH:mm", { locale: ptBR })}</span>
                 <span className="text-muted-foreground">· {a.services?.map((s:any)=>s.service.name).join(", ")}</span>
               </div>
-              <Badge variant={a.status === "cancelled" ? "destructive" : "secondary"}>{a.status === "cancelled" ? "Cancelado" : a.status === "completed" ? "Concluído" : a.status}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant={a.status === "cancelled" ? "destructive" : "secondary"}>{a.status === "cancelled" ? "Cancelado" : a.status === "completed" ? "Concluído" : a.status}</Badge>
+                {a.status === "completed" && (
+                  <Button asChild size="sm" variant="outline">
+                    <Link to="/avaliar/$appointmentId" params={{ appointmentId: a.id }}>Avaliar</Link>
+                  </Button>
+                )}
+              </div>
             </Card>
           ))}
         </div>
