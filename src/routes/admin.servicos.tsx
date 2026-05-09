@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +17,10 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/servicos")({ component: Page });
 
 function Page() {
+  const shopId = useCurrentShopId();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["admin-services"],
+    queryKey: ["admin-services", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id").order("sort")).data ?? [],
   });
 
@@ -36,7 +38,7 @@ function Page() {
     if (error) return toast.error(error.message);
     toast.success(edit ? "Serviço atualizado" : "Serviço criado");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-services"] });
+    qc.invalidateQueries({ queryKey: ["admin-services", shopId], enabled: !!shopId, });
   }
 
   return (

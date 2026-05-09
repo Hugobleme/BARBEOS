@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,9 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/configuracoes")({ component: Page });
 
 function Page() {
+  const shopId = useCurrentShopId();
   const { data } = useQuery({
-    queryKey: ["shop-cfg"],
+    queryKey: ["shop-cfg", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("barbershops").select("*").eq("id").single()).data,
   });
   const [f, setF] = useState({ name:"", description:"", phone:"", whatsapp:"", street:"", city:"", state:"" });

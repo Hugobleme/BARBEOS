@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +18,10 @@ export const Route = createFileRoute("/admin/profissionais")({ component: Page }
 function slugify(s: string) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
 
 function Page() {
+  const shopId = useCurrentShopId();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["admin-pros"],
+    queryKey: ["admin-pros", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id").order("display_name")).data ?? [],
   });
   const [open, setOpen] = useState(false);
@@ -40,7 +42,7 @@ function Page() {
     if (error) return toast.error(error.message);
     toast.success(edit?"Atualizado":"Criado");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-pros"] });
+    qc.invalidateQueries({ queryKey: ["admin-pros", shopId], enabled: !!shopId, });
   }
 
   return (

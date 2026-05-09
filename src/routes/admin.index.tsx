@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { brl } from "@/lib/format";
 import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
@@ -10,9 +11,10 @@ import { ptBR } from "date-fns/locale";
 export const Route = createFileRoute("/admin/")({ component: Dashboard });
 
 function Dashboard() {
+  const shopId = useCurrentShopId();
   const today = new Date();
   const { data: stats } = useQuery({
-    queryKey: ["admin-stats"],
+    queryKey: ["admin-stats", shopId], enabled: !!shopId,,
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
       const end = endOfDay(today).toISOString();
@@ -23,7 +25,7 @@ function Dashboard() {
     },
   });
   const { data: next } = useQuery({
-    queryKey: ["admin-next"],
+    queryKey: ["admin-next", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
       .eq("barbershop_id")

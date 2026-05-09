@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,16 +15,17 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/comissoes")({ component: Comissoes });
 
 function Comissoes() {
+  const shopId = useCurrentShopId();
   const [status, setStatus] = useState<"all"|"pending"|"paid"|"cancelled">("pending");
   const [pro, setPro] = useState<string>("all");
 
   const { data: pros } = useQuery({
-    queryKey: ["pros-list"],
+    queryKey: ["pros-list", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id").eq("active", true)).data ?? [],
   });
 
   const { data: rows, refetch } = useQuery({
-    queryKey: ["commissions", status, pro],
+    queryKey: ["commissions", status, pro, shopId], enabled: !!shopId,,
     queryFn: async () => {
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -9,9 +10,10 @@ import { Search, Users } from "lucide-react";
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
 
 function Page() {
+  const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
   const { data } = useQuery({
-    queryKey: ["customers"],
+    queryKey: ["customers", shopId], enabled: !!shopId,,
     queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id").order("created_at",{ascending:false})).data ?? [],
   });
   const filtered = (data ?? []).filter(c => !q || c.full_name.toLowerCase().includes(q.toLowerCase()) || c.phone?.includes(q));
