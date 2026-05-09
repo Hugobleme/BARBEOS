@@ -10,7 +10,11 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServicosRouteImport } from './routes/servicos'
+import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
+import { Route as MinhaContaRouteImport } from './routes/minha-conta'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -19,9 +23,29 @@ const ServicosRoute = ServicosRouteImport.update({
   path: '/servicos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
+  id: '/recuperar-senha',
+  path: '/recuperar-senha',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
   id: '/profissionais',
   path: '/profissionais',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MinhaContaRoute = MinhaContaRouteImport.update({
+  id: '/minha-conta',
+  path: '/minha-conta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CadastroRoute = CadastroRouteImport.update({
+  id: '/cadastro',
+  path: '/cadastro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendarRoute = AgendarRouteImport.update({
@@ -38,34 +62,75 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
+  '/cadastro': typeof CadastroRoute
+  '/login': typeof LoginRoute
+  '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
+  '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agendar' | '/profissionais' | '/servicos'
+  fullPaths:
+    | '/'
+    | '/agendar'
+    | '/cadastro'
+    | '/login'
+    | '/minha-conta'
+    | '/profissionais'
+    | '/recuperar-senha'
+    | '/servicos'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agendar' | '/profissionais' | '/servicos'
-  id: '__root__' | '/' | '/agendar' | '/profissionais' | '/servicos'
+  to:
+    | '/'
+    | '/agendar'
+    | '/cadastro'
+    | '/login'
+    | '/minha-conta'
+    | '/profissionais'
+    | '/recuperar-senha'
+    | '/servicos'
+  id:
+    | '__root__'
+    | '/'
+    | '/agendar'
+    | '/cadastro'
+    | '/login'
+    | '/minha-conta'
+    | '/profissionais'
+    | '/recuperar-senha'
+    | '/servicos'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendarRoute: typeof AgendarRoute
+  CadastroRoute: typeof CadastroRoute
+  LoginRoute: typeof LoginRoute
+  MinhaContaRoute: typeof MinhaContaRoute
   ProfissionaisRoute: typeof ProfissionaisRoute
+  RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
 }
 
@@ -78,11 +143,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recuperar-senha': {
+      id: '/recuperar-senha'
+      path: '/recuperar-senha'
+      fullPath: '/recuperar-senha'
+      preLoaderRoute: typeof RecuperarSenhaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profissionais': {
       id: '/profissionais'
       path: '/profissionais'
       fullPath: '/profissionais'
       preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/minha-conta': {
+      id: '/minha-conta'
+      path: '/minha-conta'
+      fullPath: '/minha-conta'
+      preLoaderRoute: typeof MinhaContaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cadastro': {
+      id: '/cadastro'
+      path: '/cadastro'
+      fullPath: '/cadastro'
+      preLoaderRoute: typeof CadastroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agendar': {
@@ -105,7 +198,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendarRoute: AgendarRoute,
+  CadastroRoute: CadastroRoute,
+  LoginRoute: LoginRoute,
+  MinhaContaRoute: MinhaContaRoute,
   ProfissionaisRoute: ProfissionaisRoute,
+  RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
 }
 export const routeTree = rootRouteImport
