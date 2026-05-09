@@ -188,6 +188,7 @@ function CloseSessionButton({ session, onDone }: any) {
 }
 
 function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
+  const shopId = useCurrentShopId();
   const [kind, setKind] = useState<"sale"|"expense"|"adjustment">("sale");
   const [method, setMethod] = useState<Method>("cash");
   const [amount, setAmount] = useState("");
