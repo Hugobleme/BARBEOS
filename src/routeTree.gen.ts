@@ -19,9 +19,11 @@ import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as AvaliarAppointmentIdRouteImport } from './routes/avaliar.$appointmentId'
 import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
+import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
 import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
@@ -78,6 +80,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const ConviteTokenRoute = ConviteTokenRouteImport.update({
+  id: '/convite/$token',
+  path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AvaliarAppointmentIdRoute = AvaliarAppointmentIdRouteImport.update({
   id: '/avaliar/$appointmentId',
   path: '/avaliar/$appointmentId',
@@ -91,6 +98,11 @@ const AdminServicosRoute = AdminServicosRouteImport.update({
 const AdminProfissionaisRoute = AdminProfissionaisRouteImport.update({
   id: '/profissionais',
   path: '/profissionais',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEquipeRoute = AdminEquipeRouteImport.update({
+  id: '/equipe',
+  path: '/equipe',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
@@ -134,9 +146,11 @@ export interface FileRoutesByFullPath {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -153,9 +167,11 @@ export interface FileRoutesByTo {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
@@ -174,9 +190,11 @@ export interface FileRoutesById {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -196,9 +214,11 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/equipe'
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/convite/$token'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -215,9 +235,11 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/equipe'
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/convite/$token'
     | '/admin'
   id:
     | '__root__'
@@ -235,9 +257,11 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/equipe'
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/convite/$token'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -252,6 +276,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
   AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
+  ConviteTokenRoute: typeof ConviteTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -326,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/convite/$token': {
+      id: '/convite/$token'
+      path: '/convite/$token'
+      fullPath: '/convite/$token'
+      preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/avaliar/$appointmentId': {
       id: '/avaliar/$appointmentId'
       path: '/avaliar/$appointmentId'
@@ -345,6 +377,13 @@ declare module '@tanstack/react-router' {
       path: '/profissionais'
       fullPath: '/admin/profissionais'
       preLoaderRoute: typeof AdminProfissionaisRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/equipe': {
+      id: '/admin/equipe'
+      path: '/equipe'
+      fullPath: '/admin/equipe'
+      preLoaderRoute: typeof AdminEquipeRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/configuracoes': {
@@ -391,6 +430,7 @@ interface AdminRouteChildren {
   AdminClientesRoute: typeof AdminClientesRoute
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
+  AdminEquipeRoute: typeof AdminEquipeRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
   AdminServicosRoute: typeof AdminServicosRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -402,6 +442,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminClientesRoute: AdminClientesRoute,
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
+  AdminEquipeRoute: AdminEquipeRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
   AdminServicosRoute: AdminServicosRoute,
   AdminIndexRoute: AdminIndexRoute,
@@ -420,6 +461,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
   AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
+  ConviteTokenRoute: ConviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

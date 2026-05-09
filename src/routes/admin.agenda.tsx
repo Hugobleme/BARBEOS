@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { addDays, format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, Calendar as Cal } from "lucide-react";
@@ -32,15 +33,16 @@ const METHOD_LABEL: Record<Method, string> = {
 };
 
 function Agenda() {
+  const shopId = useCurrentShopId();
   const { user } = useAuth();
   const [date, setDate] = useState(new Date());
   const [payAppt, setPayAppt] = useState<any>(null);
 
   const { data, refetch } = useQuery({
-    queryKey: ["agenda", date.toISOString().slice(0,10)],
+    queryKey: ["agenda", date.toISOString().slice(0,10), shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
-      .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+      .eq("barbershop_id", shopId)
       .gte("scheduled_start", startOfDay(date).toISOString())
       .lte("scheduled_start", endOfDay(date).toISOString())
       .order("scheduled_start")).data ?? [],

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,17 +10,18 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl, minutes } from "@/lib/format";
 import { Plus, Pencil, Scissors } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/servicos")({ component: Page });
 
 function Page() {
+  const shopId = useCurrentShopId();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["admin-services"],
-    queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).order("sort")).data ?? [],
+    queryKey: ["admin-services", shopId], enabled: !!shopId,
+    queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id", shopId).order("sort")).data ?? [],
   });
 
   const [open, setOpen] = useState(false);
@@ -30,13 +32,13 @@ function Page() {
   function openEdit(s:any) { setEdit(s); setF({ name:s.name, description:s.description ?? "", duration_min:s.duration_min, price:Number(s.price), active:s.active }); setOpen(true); }
 
   async function save() {
-    const payload = { ...f, barbershop_id: DEMO_BARBERSHOP_ID };
+    const payload = { ...f, barbershop_id: shopId };
     const op = edit ? supabase.from("services").update(payload).eq("id", edit.id) : supabase.from("services").insert(payload);
     const { error } = await op;
     if (error) return toast.error(error.message);
     toast.success(edit ? "Serviço atualizado" : "Serviço criado");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-services"] });
+    qc.invalidateQueries({ queryKey: ["admin-services", shopId] });
   }
 
   return (

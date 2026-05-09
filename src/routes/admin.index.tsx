@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,23 +11,24 @@ import { ptBR } from "date-fns/locale";
 export const Route = createFileRoute("/admin/")({ component: Dashboard });
 
 function Dashboard() {
+  const shopId = useCurrentShopId();
   const today = new Date();
   const { data: stats } = useQuery({
-    queryKey: ["admin-stats"],
+    queryKey: ["admin-stats", shopId], enabled: !!shopId,
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
       const end = endOfDay(today).toISOString();
-      const { data: appts } = await supabase.from("appointments").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).gte("scheduled_start", start).lte("scheduled_start", end);
-      const { count: customers } = await supabase.from("customers").select("*", { count: "exact", head: true }).eq("barbershop_id", DEMO_BARBERSHOP_ID);
+      const { data: appts } = await supabase.from("appointments").select("*").eq("barbershop_id", shopId).gte("scheduled_start", start).lte("scheduled_start", end);
+      const { count: customers } = await supabase.from("customers").select("*", { count: "exact", head: true }).eq("barbershop_id", shopId);
       const revenue = (appts ?? []).filter(a=>a.status==="completed").reduce((a,b)=>a+Number(b.total_amount),0);
       return { count: appts?.length ?? 0, completed: (appts ?? []).filter(a=>a.status==="completed").length, revenue, customers: customers ?? 0 };
     },
   });
   const { data: next } = useQuery({
-    queryKey: ["admin-next"],
+    queryKey: ["admin-next", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
-      .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+      .eq("barbershop_id", shopId)
       .gte("scheduled_start", new Date().toISOString())
       .order("scheduled_start").limit(8)).data ?? [],
   });

@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { Coins } from "lucide-react";
 import { toast } from "sonner";
@@ -14,20 +15,21 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/admin/comissoes")({ component: Comissoes });
 
 function Comissoes() {
+  const shopId = useCurrentShopId();
   const [status, setStatus] = useState<"all"|"pending"|"paid"|"cancelled">("pending");
   const [pro, setPro] = useState<string>("all");
 
   const { data: pros } = useQuery({
-    queryKey: ["pros-list"],
-    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true)).data ?? [],
+    queryKey: ["pros-list", shopId], enabled: !!shopId,
+    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id", shopId).eq("active", true)).data ?? [],
   });
 
   const { data: rows, refetch } = useQuery({
-    queryKey: ["commissions", status, pro],
+    queryKey: ["commissions", status, pro, shopId], enabled: !!shopId,
     queryFn: async () => {
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")
-        .eq("barbershop_id", DEMO_BARBERSHOP_ID).order("created_at", { ascending: false });
+        .eq("barbershop_id", shopId).order("created_at", { ascending: false });
       if (status !== "all") q = q.eq("status", status);
       if (pro !== "all") q = q.eq("professional_id", pro);
       return (await q).data ?? [];

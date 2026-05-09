@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DollarSign, Plus, Lock, Unlock } from "lucide-react";
@@ -24,23 +25,24 @@ const METHOD_LABEL: Record<Method, string> = {
 };
 
 function Caixa() {
+  const shopId = useCurrentShopId();
   const { user } = useAuth();
   const today = new Date();
   const [openDlg, setOpenDlg] = useState(false);
   const [txDlg, setTxDlg] = useState(false);
 
   const { data: session, refetch: refetchSession } = useQuery({
-    queryKey: ["cash-session"],
+    queryKey: ["cash-session", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("cash_sessions")
-      .select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("status", "open")
+      .select("*").eq("barbershop_id", shopId).eq("status", "open")
       .order("opened_at", { ascending: false }).limit(1).maybeSingle()).data,
   });
 
   const { data: txs, refetch: refetchTxs } = useQuery({
-    queryKey: ["cash-tx", today.toDateString()],
+    queryKey: ["cash-tx", today.toDateString(), shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("cash_transactions")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
-      .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+      .eq("barbershop_id", shopId)
       .gte("created_at", startOfDay(today).toISOString())
       .lte("created_at", endOfDay(today).toISOString())
       .order("created_at", { ascending: false })).data ?? [],
@@ -135,10 +137,11 @@ function KPI({ label, value, accent }: { label: string; value: string; accent?: 
 }
 
 function OpenSessionDialog({ open, onOpenChange, userId, onDone }: any) {
+  const shopId = useCurrentShopId();
   const [amount, setAmount] = useState("0");
   async function submit() {
     const { error } = await supabase.from("cash_sessions").insert({
-      barbershop_id: DEMO_BARBERSHOP_ID, opened_by: userId, opening_amount: Number(amount) || 0,
+      barbershop_id: shopId, opened_by: userId, opening_amount: Number(amount) || 0,
     });
     if (error) return toast.error(error.message);
     toast.success("Caixa aberto"); onOpenChange(false); onDone();
@@ -185,6 +188,7 @@ function CloseSessionButton({ session, onDone }: any) {
 }
 
 function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
+  const shopId = useCurrentShopId();
   const [kind, setKind] = useState<"sale"|"expense"|"adjustment">("sale");
   const [method, setMethod] = useState<Method>("cash");
   const [amount, setAmount] = useState("");
@@ -192,7 +196,7 @@ function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
   async function submit() {
     if (!sessionId) return toast.error("Abra o caixa antes");
     const { error } = await supabase.from("cash_transactions").insert({
-      barbershop_id: DEMO_BARBERSHOP_ID, session_id: sessionId, kind, method,
+      barbershop_id: shopId, session_id: sessionId, kind, method,
       amount: Number(amount), description: desc || null, created_by: userId,
     });
     if (error) return toast.error(error.message);

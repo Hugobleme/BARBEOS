@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
 
@@ -18,10 +18,11 @@ export const Route = createFileRoute("/admin/profissionais")({ component: Page }
 function slugify(s: string) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,""); }
 
 function Page() {
+  const shopId = useCurrentShopId();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["admin-pros"],
-    queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).order("display_name")).data ?? [],
+    queryKey: ["admin-pros", shopId], enabled: !!shopId,
+    queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", shopId).order("display_name")).data ?? [],
   });
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<any>(null);
@@ -34,14 +35,14 @@ function Page() {
     const payload: any = {
       display_name: f.display_name, bio: f.bio, active: f.active,
       specialties: f.specialties.split(",").map(s=>s.trim()).filter(Boolean),
-      barbershop_id: DEMO_BARBERSHOP_ID, slug: slugify(f.display_name) || crypto.randomUUID().slice(0,8),
+      barbershop_id: shopId, slug: slugify(f.display_name) || crypto.randomUUID().slice(0,8),
     };
     const op = edit ? supabase.from("professionals").update(payload).eq("id", edit.id) : supabase.from("professionals").insert(payload);
     const { error } = await op;
     if (error) return toast.error(error.message);
     toast.success(edit?"Atualizado":"Criado");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-pros"] });
+    qc.invalidateQueries({ queryKey: ["admin-pros", shopId] });
   }
 
   return (

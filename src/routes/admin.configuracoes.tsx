@@ -2,20 +2,21 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/configuracoes")({ component: Page });
 
 function Page() {
+  const shopId = useCurrentShopId();
   const { data } = useQuery({
-    queryKey: ["shop-cfg"],
-    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id", DEMO_BARBERSHOP_ID).single()).data,
+    queryKey: ["shop-cfg", shopId], enabled: !!shopId,
+    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id", shopId).single()).data,
   });
   const [f, setF] = useState({ name:"", description:"", phone:"", whatsapp:"", street:"", city:"", state:"" });
   useEffect(() => {
@@ -33,7 +34,7 @@ function Page() {
       name: f.name, description: f.description,
       contacts: { phone: f.phone, whatsapp: f.whatsapp },
       address: { street: f.street, city: f.city, state: f.state },
-    }).eq("id", DEMO_BARBERSHOP_ID);
+    }).eq("id", shopId);
     if (error) return toast.error(error.message);
     toast.success("Configurações salvas");
   }
