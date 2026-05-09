@@ -213,6 +213,186 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_sessions: {
+        Row: {
+          barbershop_id: string
+          closed_at: string | null
+          closed_by: string | null
+          closing_amount: number | null
+          created_at: string
+          id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_amount: number
+          status: Database["public"]["Enums"]["cash_status"]
+        }
+        Insert: {
+          barbershop_id: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_amount?: number
+          status?: Database["public"]["Enums"]["cash_status"]
+        }
+        Update: {
+          barbershop_id?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_amount?: number | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_amount?: number
+          status?: Database["public"]["Enums"]["cash_status"]
+        }
+        Relationships: []
+      }
+      cash_transactions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          barbershop_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string | null
+          description: string | null
+          id: string
+          kind: string
+          method: Database["public"]["Enums"]["payment_method"]
+          professional_id: string | null
+          session_id: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          kind: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          professional_id?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          method?: Database["public"]["Enums"]["payment_method"]
+          professional_id?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_transactions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transactions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transactions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "cash_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commissions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          barbershop_id: string
+          base_amount: number
+          created_at: string
+          id: string
+          paid_at: string | null
+          professional_id: string
+          rate: number
+          status: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          barbershop_id: string
+          base_amount: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          professional_id: string
+          rate: number
+          status?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          barbershop_id?: string
+          base_amount?: number
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          professional_id?: string
+          rate?: number
+          status?: string
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commissions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commissions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "cash_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           barbershop_id: string
@@ -367,6 +547,60 @@ export type Database = {
             columns: ["default_barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      satisfaction_surveys: {
+        Row: {
+          answered_at: string
+          appointment_id: string
+          barbershop_id: string
+          comment: string | null
+          id: string
+          is_public: boolean
+          nps: number | null
+          professional_id: string | null
+          professional_rating: number | null
+          shop_rating: number | null
+        }
+        Insert: {
+          answered_at?: string
+          appointment_id: string
+          barbershop_id: string
+          comment?: string | null
+          id?: string
+          is_public?: boolean
+          nps?: number | null
+          professional_id?: string | null
+          professional_rating?: number | null
+          shop_rating?: number | null
+        }
+        Update: {
+          answered_at?: string
+          appointment_id?: string
+          barbershop_id?: string
+          comment?: string | null
+          id?: string
+          is_public?: boolean
+          nps?: number | null
+          professional_id?: string | null
+          professional_rating?: number | null
+          shop_rating?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "satisfaction_surveys_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: true
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "satisfaction_surveys_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
@@ -548,6 +782,8 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "no_show"
+      cash_status: "open" | "closed"
+      payment_method: "cash" | "debit" | "credit" | "pix" | "transfer" | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -683,6 +919,8 @@ export const Constants = {
         "cancelled",
         "no_show",
       ],
+      cash_status: ["open", "closed"],
+      payment_method: ["cash", "debit", "credit", "pix", "transfer", "other"],
     },
   },
 } as const
