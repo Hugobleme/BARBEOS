@@ -15,7 +15,7 @@ export const Route = createFileRoute("/admin/configuracoes")({ component: Page }
 function Page() {
   const shopId = useCurrentShopId();
   const { data } = useQuery({
-    queryKey: ["shop-cfg", shopId], enabled: !!shopId,,
+    queryKey: ["shop-cfg", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("barbershops").select("*").eq("id").single()).data,
   });
   const [f, setF] = useState({ name:"", description:"", phone:"", whatsapp:"", street:"", city:"", state:"" });

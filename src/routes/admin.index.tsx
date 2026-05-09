@@ -14,7 +14,7 @@ function Dashboard() {
   const shopId = useCurrentShopId();
   const today = new Date();
   const { data: stats } = useQuery({
-    queryKey: ["admin-stats", shopId], enabled: !!shopId,,
+    queryKey: ["admin-stats", shopId], enabled: !!shopId,
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
       const end = endOfDay(today).toISOString();
@@ -25,7 +25,7 @@ function Dashboard() {
     },
   });
   const { data: next } = useQuery({
-    queryKey: ["admin-next", shopId], enabled: !!shopId,,
+    queryKey: ["admin-next", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
       .eq("barbershop_id")

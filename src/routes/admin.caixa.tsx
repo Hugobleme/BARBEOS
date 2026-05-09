@@ -32,14 +32,14 @@ function Caixa() {
   const [txDlg, setTxDlg] = useState(false);
 
   const { data: session, refetch: refetchSession } = useQuery({
-    queryKey: ["cash-session", shopId], enabled: !!shopId,,
+    queryKey: ["cash-session", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("cash_sessions")
       .select("*").eq("barbershop_id").eq("status", "open")
       .order("opened_at", { ascending: false }).limit(1).maybeSingle()).data,
   });
 
   const { data: txs, refetch: refetchTxs } = useQuery({
-    queryKey: ["cash-tx", today.toDateString(), shopId], enabled: !!shopId,,
+    queryKey: ["cash-tx", today.toDateString(), shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("cash_transactions")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
       .eq("barbershop_id")

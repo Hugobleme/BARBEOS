@@ -21,7 +21,7 @@ function Page() {
   const shopId = useCurrentShopId();
   const qc = useQueryClient();
   const { data } = useQuery({
-    queryKey: ["admin-pros", shopId], enabled: !!shopId,,
+    queryKey: ["admin-pros", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id").order("display_name")).data ?? [],
   });
   const [open, setOpen] = useState(false);
@@ -42,7 +42,7 @@ function Page() {
     if (error) return toast.error(error.message);
     toast.success(edit?"Atualizado":"Criado");
     setOpen(false);
-    qc.invalidateQueries({ queryKey: ["admin-pros", shopId], enabled: !!shopId, });
+    qc.invalidateQueries({ queryKey: ["admin-pros", shopId] });
   }
 
   return (

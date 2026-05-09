@@ -20,12 +20,12 @@ function Comissoes() {
   const [pro, setPro] = useState<string>("all");
 
   const { data: pros } = useQuery({
-    queryKey: ["pros-list", shopId], enabled: !!shopId,,
+    queryKey: ["pros-list", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id").eq("active", true)).data ?? [],
   });
 
   const { data: rows, refetch } = useQuery({
-    queryKey: ["commissions", status, pro, shopId], enabled: !!shopId,,
+    queryKey: ["commissions", status, pro, shopId], enabled: !!shopId,
     queryFn: async () => {
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")

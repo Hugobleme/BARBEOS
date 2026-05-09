@@ -39,7 +39,7 @@ function Agenda() {
   const [payAppt, setPayAppt] = useState<any>(null);
 
   const { data, refetch } = useQuery({
-    queryKey: ["agenda", date.toISOString().slice(0,10), shopId], enabled: !!shopId,,
+    queryKey: ["agenda", date.toISOString().slice(0,10), shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
       .eq("barbershop_id")

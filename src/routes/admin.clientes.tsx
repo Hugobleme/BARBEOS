@@ -13,7 +13,7 @@ function Page() {
   const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
   const { data } = useQuery({
-    queryKey: ["customers", shopId], enabled: !!shopId,,
+    queryKey: ["customers", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id").order("created_at",{ascending:false})).data ?? [],
   });
   const filtered = (data ?? []).filter(c => !q || c.full_name.toLowerCase().includes(q.toLowerCase()) || c.phone?.includes(q));
