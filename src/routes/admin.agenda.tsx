@@ -42,7 +42,7 @@ function Agenda() {
     queryKey: ["agenda", date.toISOString().slice(0,10), shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
-      .eq("barbershop_id")
+      .eq("barbershop_id", shopId)
       .gte("scheduled_start", startOfDay(date).toISOString())
       .lte("scheduled_start", endOfDay(date).toISOString())
       .order("scheduled_start")).data ?? [],

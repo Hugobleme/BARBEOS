@@ -21,7 +21,7 @@ function Page() {
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["admin-services", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id").order("sort")).data ?? [],
+    queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id", shopId).order("sort")).data ?? [],
   });
 
   const [open, setOpen] = useState(false);

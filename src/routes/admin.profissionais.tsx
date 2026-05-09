@@ -22,7 +22,7 @@ function Page() {
   const qc = useQueryClient();
   const { data } = useQuery({
     queryKey: ["admin-pros", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id").order("display_name")).data ?? [],
+    queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", shopId).order("display_name")).data ?? [],
   });
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<any>(null);
@@ -35,7 +35,7 @@ function Page() {
     const payload: any = {
       display_name: f.display_name, bio: f.bio, active: f.active,
       specialties: f.specialties.split(",").map(s=>s.trim()).filter(Boolean),
-      barbershop_id: slug: slugify(f.display_name) || crypto.randomUUID().slice(0,8),
+      barbershop_id: shopId, slug: slugify(f.display_name) || crypto.randomUUID().slice(0,8),
     };
     const op = edit ? supabase.from("professionals").update(payload).eq("id", edit.id) : supabase.from("professionals").insert(payload);
     const { error } = await op;

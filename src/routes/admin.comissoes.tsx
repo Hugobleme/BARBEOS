@@ -21,7 +21,7 @@ function Comissoes() {
 
   const { data: pros } = useQuery({
     queryKey: ["pros-list", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id").eq("active", true)).data ?? [],
+    queryFn: async () => (await supabase.from("professionals").select("id,display_name").eq("barbershop_id", shopId).eq("active", true)).data ?? [],
   });
 
   const { data: rows, refetch } = useQuery({
@@ -29,7 +29,7 @@ function Comissoes() {
     queryFn: async () => {
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")
-        .eq("barbershop_id").order("created_at", { ascending: false });
+        .eq("barbershop_id", shopId).order("created_at", { ascending: false });
       if (status !== "all") q = q.eq("status", status);
       if (pro !== "all") q = q.eq("professional_id", pro);
       return (await q).data ?? [];

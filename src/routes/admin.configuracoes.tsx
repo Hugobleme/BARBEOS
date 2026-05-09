@@ -16,7 +16,7 @@ function Page() {
   const shopId = useCurrentShopId();
   const { data } = useQuery({
     queryKey: ["shop-cfg", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id").single()).data,
+    queryFn: async () => (await supabase.from("barbershops").select("*").eq("id", shopId).single()).data,
   });
   const [f, setF] = useState({ name:"", description:"", phone:"", whatsapp:"", street:"", city:"", state:"" });
   useEffect(() => {
@@ -34,7 +34,7 @@ function Page() {
       name: f.name, description: f.description,
       contacts: { phone: f.phone, whatsapp: f.whatsapp },
       address: { street: f.street, city: f.city, state: f.state },
-    }).eq("id");
+    }).eq("id", shopId);
     if (error) return toast.error(error.message);
     toast.success("Configurações salvas");
   }
