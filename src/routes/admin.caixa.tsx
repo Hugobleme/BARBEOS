@@ -137,6 +137,7 @@ function KPI({ label, value, accent }: { label: string; value: string; accent?: 
 }
 
 function OpenSessionDialog({ open, onOpenChange, userId, onDone }: any) {
+  const shopId = useCurrentShopId();
   const [amount, setAmount] = useState("0");
   async function submit() {
     const { error } = await supabase.from("cash_sessions").insert({
