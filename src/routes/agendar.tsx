@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/agendar")({
   head: () => ({ meta: [{ title: "Agendar — BarberOS" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ shop: typeof s.shop === "string" ? s.shop : undefined }),
   component: Booking,
 });
 
@@ -47,6 +48,7 @@ function Stepper({ step }: { step: number }) {
 function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { shop: shopSlug } = Route.useSearch();
   const [step, setStep] = useState(0);
   const [pickedServices, setPicked] = useState<Service[]>([]);
   const [proId, setProId] = useState<string | "any">("any");
@@ -55,6 +57,15 @@ function Booking() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", createAccount: false, password: "" });
   const [submitting, setSubmitting] = useState(false);
   const [doneId, setDoneId] = useState<string | null>(null);
+
+  const { data: shopId = DEMO_BARBERSHOP_ID } = useQuery({
+    queryKey: ["resolve-shop", shopSlug],
+    queryFn: async () => {
+      if (!shopSlug) return DEMO_BARBERSHOP_ID;
+      const { data } = await supabase.from("barbershops").select("id").eq("slug", shopSlug).eq("active", true).maybeSingle();
+      return data?.id ?? DEMO_BARBERSHOP_ID;
+    },
+  });
 
   useEffect(() => {
     if (user) {
@@ -65,12 +76,12 @@ function Booking() {
   }, [user]);
 
   const { data: services = [] } = useQuery({
-    queryKey: ["svc"],
-    queryFn: async () => ((await supabase.from("services").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true).order("sort")).data ?? []) as Service[],
+    queryKey: ["svc", shopId],
+    queryFn: async () => ((await supabase.from("services").select("*").eq("barbershop_id", shopId).eq("active", true).order("sort")).data ?? []) as Service[],
   });
   const { data: pros = [] } = useQuery({
-    queryKey: ["pros-all"],
-    queryFn: async () => ((await supabase.from("professionals").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true)).data ?? []) as Pro[],
+    queryKey: ["pros-all", shopId],
+    queryFn: async () => ((await supabase.from("professionals").select("*").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
   });
   const { data: workingHours = [] } = useQuery({
     queryKey: ["wh"],
@@ -169,11 +180,11 @@ function Booking() {
       let customerId: string | null = null;
       if (userId) {
         const { data: existing } = await supabase.from("customers")
-          .select("id").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("profile_id", userId).maybeSingle();
+          .select("id").eq("barbershop_id", shopId).eq("profile_id", userId).maybeSingle();
         if (existing) customerId = existing.id;
         else {
           const { data: c, error } = await supabase.from("customers").insert({
-            barbershop_id: DEMO_BARBERSHOP_ID, profile_id: userId,
+            barbershop_id: shopId, profile_id: userId,
             full_name: form.name, phone: form.phone, email: form.email || null,
           }).select("id").single();
           if (error) throw error;
@@ -181,7 +192,7 @@ function Booking() {
         }
       } else {
         const { data: c, error } = await supabase.from("customers").insert({
-          barbershop_id: DEMO_BARBERSHOP_ID,
+          barbershop_id: shopId,
           full_name: form.name, phone: form.phone, email: form.email || null,
         }).select("id").single();
         if (error) throw error;
@@ -189,7 +200,7 @@ function Booking() {
       }
 
       const { data: appt, error: aerr } = await supabase.from("appointments").insert({
-        barbershop_id: DEMO_BARBERSHOP_ID,
+        barbershop_id: shopId,
         customer_id: customerId!,
         professional_id: slot.proId,
         scheduled_start: start.toISOString(),
