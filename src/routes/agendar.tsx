@@ -48,6 +48,7 @@ function Stepper({ step }: { step: number }) {
 function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { shop: shopSlug } = Route.useSearch();
   const [step, setStep] = useState(0);
   const [pickedServices, setPicked] = useState<Service[]>([]);
   const [proId, setProId] = useState<string | "any">("any");
@@ -56,6 +57,15 @@ function Booking() {
   const [form, setForm] = useState({ name: "", phone: "", email: "", createAccount: false, password: "" });
   const [submitting, setSubmitting] = useState(false);
   const [doneId, setDoneId] = useState<string | null>(null);
+
+  const { data: shopId = DEMO_BARBERSHOP_ID } = useQuery({
+    queryKey: ["resolve-shop", shopSlug],
+    queryFn: async () => {
+      if (!shopSlug) return DEMO_BARBERSHOP_ID;
+      const { data } = await supabase.from("barbershops").select("id").eq("slug", shopSlug).eq("active", true).maybeSingle();
+      return data?.id ?? DEMO_BARBERSHOP_ID;
+    },
+  });
 
   useEffect(() => {
     if (user) {
