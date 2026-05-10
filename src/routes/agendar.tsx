@@ -76,12 +76,12 @@ function Booking() {
   }, [user]);
 
   const { data: services = [] } = useQuery({
-    queryKey: ["svc"],
-    queryFn: async () => ((await supabase.from("services").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true).order("sort")).data ?? []) as Service[],
+    queryKey: ["svc", shopId],
+    queryFn: async () => ((await supabase.from("services").select("*").eq("barbershop_id", shopId).eq("active", true).order("sort")).data ?? []) as Service[],
   });
   const { data: pros = [] } = useQuery({
-    queryKey: ["pros-all"],
-    queryFn: async () => ((await supabase.from("professionals").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true)).data ?? []) as Pro[],
+    queryKey: ["pros-all", shopId],
+    queryFn: async () => ((await supabase.from("professionals").select("*").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
   });
   const { data: workingHours = [] } = useQuery({
     queryKey: ["wh"],
