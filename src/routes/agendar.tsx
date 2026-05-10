@@ -180,11 +180,11 @@ function Booking() {
       let customerId: string | null = null;
       if (userId) {
         const { data: existing } = await supabase.from("customers")
-          .select("id").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("profile_id", userId).maybeSingle();
+          .select("id").eq("barbershop_id", shopId).eq("profile_id", userId).maybeSingle();
         if (existing) customerId = existing.id;
         else {
           const { data: c, error } = await supabase.from("customers").insert({
-            barbershop_id: DEMO_BARBERSHOP_ID, profile_id: userId,
+            barbershop_id: shopId, profile_id: userId,
             full_name: form.name, phone: form.phone, email: form.email || null,
           }).select("id").single();
           if (error) throw error;
@@ -192,7 +192,7 @@ function Booking() {
         }
       } else {
         const { data: c, error } = await supabase.from("customers").insert({
-          barbershop_id: DEMO_BARBERSHOP_ID,
+          barbershop_id: shopId,
           full_name: form.name, phone: form.phone, email: form.email || null,
         }).select("id").single();
         if (error) throw error;
@@ -200,7 +200,7 @@ function Booking() {
       }
 
       const { data: appt, error: aerr } = await supabase.from("appointments").insert({
-        barbershop_id: DEMO_BARBERSHOP_ID,
+        barbershop_id: shopId,
         customer_id: customerId!,
         professional_id: slot.proId,
         scheduled_start: start.toISOString(),
