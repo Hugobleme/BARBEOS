@@ -141,7 +141,20 @@ function AdminShell() {
           </div>
           <div className="hidden text-sm text-muted-foreground md:block">{user?.email}</div>
         </header>
-        <main className="p-4 md:p-8"><Outlet /></main>
+        <main className="p-4 pb-24 md:p-8 md:pb-8"><Outlet /></main>
+
+        {/* Mobile bottom navigation */}
+        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
+          {NAV.slice(0, 5).map((n) => {
+            const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
+            return (
+              <Link key={n.to} to={n.to} className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] ${active ? "text-accent" : "text-muted-foreground"}`}>
+                <n.icon className="h-5 w-5" />
+                <span className="truncate">{n.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );
