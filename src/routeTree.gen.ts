@@ -20,6 +20,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
+import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AvaliarAppointmentIdRouteImport } from './routes/avaliar.$appointmentId'
 import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
@@ -83,6 +84,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const ConviteTokenRoute = ConviteTokenRouteImport.update({
   id: '/convite/$token',
   path: '/convite/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BSlugRoute = BSlugRouteImport.update({
+  id: '/b/$slug',
+  path: '/b/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AvaliarAppointmentIdRoute = AvaliarAppointmentIdRouteImport.update({
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/b/$slug': typeof BSlugRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -171,6 +178,7 @@ export interface FileRoutesByTo {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/b/$slug': typeof BSlugRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -194,6 +202,7 @@ export interface FileRoutesById {
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
+  '/b/$slug': typeof BSlugRoute
   '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -218,6 +227,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/b/$slug'
     | '/convite/$token'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/b/$slug'
     | '/convite/$token'
     | '/admin'
   id:
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/admin/profissionais'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
+    | '/b/$slug'
     | '/convite/$token'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -276,6 +288,7 @@ export interface RootRouteChildren {
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
   AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
+  BSlugRoute: typeof BSlugRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
 }
 
@@ -356,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/convite/$token'
       fullPath: '/convite/$token'
       preLoaderRoute: typeof ConviteTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/b/$slug': {
+      id: '/b/$slug'
+      path: '/b/$slug'
+      fullPath: '/b/$slug'
+      preLoaderRoute: typeof BSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/avaliar/$appointmentId': {
@@ -461,6 +481,7 @@ const rootRouteChildren: RootRouteChildren = {
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
   AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
+  BSlugRoute: BSlugRoute,
   ConviteTokenRoute: ConviteTokenRoute,
 }
 export const routeTree = rootRouteImport
