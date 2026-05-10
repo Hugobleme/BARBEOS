@@ -21,6 +21,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/agendar")({
   head: () => ({ meta: [{ title: "Agendar — BarberOS" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ shop: typeof s.shop === "string" ? s.shop : undefined }),
   component: Booking,
 });
 
