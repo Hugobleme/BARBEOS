@@ -15,6 +15,7 @@ export function PublicHeader() {
           BarberOS
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
+          <Link to="/barbearias" className="hover:text-foreground">Barbearias</Link>
           <Link to="/servicos" className="hover:text-foreground">Serviços</Link>
           <Link to="/profissionais" className="hover:text-foreground">Equipe</Link>
           <Link to="/minha-conta" className="hover:text-foreground">Minha conta</Link>

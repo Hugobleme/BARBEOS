@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { Building2, Calendar, Coins, DollarSign, LayoutDashboard, LogOut, Menu, Plus, Scissors, Settings, Users, UserCog, UsersRound, X } from "lucide-react";
+import { BarChart3, Building2, Calendar, Coins, DollarSign, LayoutDashboard, LogOut, Menu, Plus, Scissors, Settings, Users, UserCog, UsersRound, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
@@ -24,6 +24,7 @@ const NAV = [
   { to: "/admin/agenda", label: "Agenda", icon: Calendar },
   { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
+  { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/profissionais", label: "Profissionais", icon: UserCog },
   { to: "/admin/servicos", label: "Serviços", icon: Scissors },
