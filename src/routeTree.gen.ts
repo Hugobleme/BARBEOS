@@ -15,6 +15,7 @@ import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as BarbeariasRouteImport } from './routes/barbearias'
 import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -23,6 +24,7 @@ import { Route as ConviteTokenRouteImport } from './routes/convite.$token'
 import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AvaliarAppointmentIdRouteImport } from './routes/avaliar.$appointmentId'
 import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
+import { Route as AdminRelatoriosRouteImport } from './routes/admin.relatorios'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
@@ -59,6 +61,11 @@ const LoginRoute = LoginRouteImport.update({
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BarbeariasRoute = BarbeariasRouteImport.update({
+  id: '/barbearias',
+  path: '/barbearias',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendarRoute = AgendarRouteImport.update({
@@ -101,6 +108,11 @@ const AdminServicosRoute = AdminServicosRouteImport.update({
   path: '/servicos',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRelatoriosRoute = AdminRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProfissionaisRoute = AdminProfissionaisRouteImport.update({
   id: '/profissionais',
   path: '/profissionais',
@@ -141,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
+  '/barbearias': typeof BarbeariasRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
@@ -154,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
+  '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/b/$slug': typeof BSlugRoute
@@ -163,6 +177,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
+  '/barbearias': typeof BarbeariasRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
@@ -176,6 +191,7 @@ export interface FileRoutesByTo {
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
+  '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/b/$slug': typeof BSlugRoute
@@ -187,6 +203,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
+  '/barbearias': typeof BarbeariasRoute
   '/cadastro': typeof CadastroRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
@@ -200,6 +217,7 @@ export interface FileRoutesById {
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
+  '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
   '/b/$slug': typeof BSlugRoute
@@ -212,6 +230,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agendar'
+    | '/barbearias'
     | '/cadastro'
     | '/login'
     | '/minha-conta'
@@ -225,6 +244,7 @@ export interface FileRouteTypes {
     | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/profissionais'
+    | '/admin/relatorios'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
     | '/b/$slug'
@@ -234,6 +254,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agendar'
+    | '/barbearias'
     | '/cadastro'
     | '/login'
     | '/minha-conta'
@@ -247,6 +268,7 @@ export interface FileRouteTypes {
     | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/profissionais'
+    | '/admin/relatorios'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
     | '/b/$slug'
@@ -257,6 +279,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agendar'
+    | '/barbearias'
     | '/cadastro'
     | '/login'
     | '/minha-conta'
@@ -270,6 +293,7 @@ export interface FileRouteTypes {
     | '/admin/configuracoes'
     | '/admin/equipe'
     | '/admin/profissionais'
+    | '/admin/relatorios'
     | '/admin/servicos'
     | '/avaliar/$appointmentId'
     | '/b/$slug'
@@ -281,6 +305,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AgendarRoute: typeof AgendarRoute
+  BarbeariasRoute: typeof BarbeariasRoute
   CadastroRoute: typeof CadastroRoute
   LoginRoute: typeof LoginRoute
   MinhaContaRoute: typeof MinhaContaRoute
@@ -334,6 +359,13 @@ declare module '@tanstack/react-router' {
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/barbearias': {
+      id: '/barbearias'
+      path: '/barbearias'
+      fullPath: '/barbearias'
+      preLoaderRoute: typeof BarbeariasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agendar': {
@@ -390,6 +422,13 @@ declare module '@tanstack/react-router' {
       path: '/servicos'
       fullPath: '/admin/servicos'
       preLoaderRoute: typeof AdminServicosRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/relatorios': {
+      id: '/admin/relatorios'
+      path: '/relatorios'
+      fullPath: '/admin/relatorios'
+      preLoaderRoute: typeof AdminRelatoriosRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/profissionais': {
@@ -452,6 +491,7 @@ interface AdminRouteChildren {
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
+  AdminRelatoriosRoute: typeof AdminRelatoriosRoute
   AdminServicosRoute: typeof AdminServicosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -464,6 +504,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEquipeRoute: AdminEquipeRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
+  AdminRelatoriosRoute: AdminRelatoriosRoute,
   AdminServicosRoute: AdminServicosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
@@ -474,6 +515,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AgendarRoute: AgendarRoute,
+  BarbeariasRoute: BarbeariasRoute,
   CadastroRoute: CadastroRoute,
   LoginRoute: LoginRoute,
   MinhaContaRoute: MinhaContaRoute,
@@ -487,13 +529,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
