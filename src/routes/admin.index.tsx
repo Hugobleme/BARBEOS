@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { brl } from "@/lib/format";
+import { KPISkeleton } from "@/components/site/LoadingState";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
