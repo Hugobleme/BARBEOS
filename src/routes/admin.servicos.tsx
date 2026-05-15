@@ -67,25 +67,36 @@ function Page() {
         </Dialog>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data?.map(s => (
-          <Card key={s.id} className="flex flex-col gap-3 p-5">
-            <div className="flex items-start justify-between">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5"/></div>
-              {!s.active && <Badge variant="secondary">Inativo</Badge>}
-            </div>
-            <div>
-              <div className="font-display text-lg font-semibold">{s.name}</div>
-              <p className="text-sm text-muted-foreground line-clamp-2">{s.description}</p>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">{minutes(s.duration_min)}</span>
-              <span className="text-lg font-semibold">{brl(Number(s.price))}</span>
-            </div>
-            <Button size="sm" variant="outline" onClick={()=>openEdit(s)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
-          </Card>
-        ))}
-      </div>
+      {isLoading ? (
+        <CardGridSkeleton count={6} />
+      ) : !data || data.length === 0 ? (
+        <EmptyState
+          icon={Scissors}
+          title="Nenhum serviço cadastrado"
+          description="Crie seu primeiro serviço para começar a receber agendamentos."
+          action={<Button onClick={openNew}><Plus className="mr-1 h-4 w-4"/>Novo serviço</Button>}
+        />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {data.map(s => (
+            <Card key={s.id} className="flex flex-col gap-3 p-5">
+              <div className="flex items-start justify-between">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5"/></div>
+                {!s.active && <Badge variant="secondary">Inativo</Badge>}
+              </div>
+              <div>
+                <div className="font-display text-lg font-semibold">{s.name}</div>
+                <p className="text-sm text-muted-foreground line-clamp-2">{s.description}</p>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">{minutes(s.duration_min)}</span>
+                <span className="text-lg font-semibold">{brl(Number(s.price))}</span>
+              </div>
+              <Button size="sm" variant="outline" onClick={()=>openEdit(s)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
