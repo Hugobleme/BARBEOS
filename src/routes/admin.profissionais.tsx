@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { CardGridSkeleton, EmptyState } from "@/components/site/LoadingState";
+import { Plus, Pencil, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/profissionais")({ component: Page });
@@ -20,7 +21,7 @@ function slugify(s: string) { return s.toLowerCase().normalize("NFD").replace(/[
 function Page() {
   const shopId = useCurrentShopId();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-pros", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", shopId).order("display_name")).data ?? [],
   });
