@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { CardGridSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { brl, minutes } from "@/lib/format";
 import { Plus, Pencil, Scissors } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +20,7 @@ export const Route = createFileRoute("/admin/servicos")({ component: Page });
 function Page() {
   const shopId = useCurrentShopId();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-services", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("services").select("*").eq("barbershop_id", shopId).order("sort")).data ?? [],
   });
