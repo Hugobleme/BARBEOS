@@ -15,7 +15,7 @@ export const Route = createFileRoute("/admin/")({ component: Dashboard });
 function Dashboard() {
   const shopId = useCurrentShopId();
   const today = new Date();
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-stats", shopId], enabled: !!shopId,
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
@@ -26,7 +26,7 @@ function Dashboard() {
       return { count: appts?.length ?? 0, completed: (appts ?? []).filter(a=>a.status==="completed").length, revenue, customers: customers ?? 0 };
     },
   });
-  const { data: next } = useQuery({
+  const { data: next, isLoading: nextLoading } = useQuery({
     queryKey: ["admin-next", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
