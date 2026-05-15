@@ -26,6 +26,7 @@ import { Route as AvaliarAppointmentIdRouteImport } from './routes/avaliar.$appo
 import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminRelatoriosRouteImport } from './routes/admin.relatorios'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
+import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
@@ -118,6 +119,11 @@ const AdminProfissionaisRoute = AdminProfissionaisRouteImport.update({
   path: '/profissionais',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
+  id: '/franquia',
+  path: '/franquia',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEquipeRoute = AdminEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
     | '/admin/servicos'
@@ -267,6 +277,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
     | '/admin/servicos'
@@ -292,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
     | '/admin/servicos'
@@ -438,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProfissionaisRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/franquia': {
+      id: '/admin/franquia'
+      path: '/franquia'
+      fullPath: '/admin/franquia'
+      preLoaderRoute: typeof AdminFranquiaRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/equipe': {
       id: '/admin/equipe'
       path: '/equipe'
@@ -490,6 +509,7 @@ interface AdminRouteChildren {
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
+  AdminFranquiaRoute: typeof AdminFranquiaRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
   AdminRelatoriosRoute: typeof AdminRelatoriosRoute
   AdminServicosRoute: typeof AdminServicosRoute
@@ -503,6 +523,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEquipeRoute: AdminEquipeRoute,
+  AdminFranquiaRoute: AdminFranquiaRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
   AdminRelatoriosRoute: AdminRelatoriosRoute,
   AdminServicosRoute: AdminServicosRoute,
