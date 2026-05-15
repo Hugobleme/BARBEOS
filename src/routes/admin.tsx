@@ -25,6 +25,7 @@ const NAV = [
   { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+  { to: "/admin/franquia", label: "Franquia", icon: Building2 },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
   { to: "/admin/profissionais", label: "Profissionais", icon: UserCog },
   { to: "/admin/servicos", label: "Serviços", icon: Scissors },
