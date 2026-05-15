@@ -42,16 +42,22 @@ function Dashboard() {
         <p className="text-muted-foreground">{format(today, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI icon={Calendar} label="Agendamentos hoje" value={stats?.count ?? 0} />
-        <KPI icon={TrendingUp} label="Atendimentos concluídos" value={stats?.completed ?? 0} />
-        <KPI icon={DollarSign} label="Faturamento do dia" value={brl(stats?.revenue ?? 0)} />
-        <KPI icon={Users} label="Total de clientes" value={stats?.customers ?? 0} />
-      </div>
+      {statsLoading ? <KPISkeleton /> : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPI icon={Calendar} label="Agendamentos hoje" value={stats?.count ?? 0} />
+          <KPI icon={TrendingUp} label="Atendimentos concluídos" value={stats?.completed ?? 0} />
+          <KPI icon={DollarSign} label="Faturamento do dia" value={brl(stats?.revenue ?? 0)} />
+          <KPI icon={Users} label="Total de clientes" value={stats?.customers ?? 0} />
+        </div>
+      )}
 
       <Card className="p-5">
         <h2 className="mb-4 font-display text-lg font-semibold">Próximos agendamentos</h2>
-        {(!next || next.length === 0) ? (
+        {nextLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : (!next || next.length === 0) ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Nenhum agendamento futuro.</p>
         ) : (
           <ul className="divide-y divide-border">
