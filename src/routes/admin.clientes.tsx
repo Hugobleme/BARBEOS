@@ -28,13 +28,16 @@ function Page() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
         <Input className="pl-9" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
       </div>
-      <Card className="overflow-hidden p-0">
-        {filtered.length === 0 ? (
-          <div className="grid place-items-center gap-2 p-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground"/>
-            <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado ainda.</p>
-          </div>
-        ) : (
+      {isLoading ? (
+        <TableSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title={q ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+          description={q ? "Tente outro termo de busca." : "Os clientes aparecem aqui automaticamente após o primeiro agendamento."}
+        />
+      ) : (
+        <Card className="overflow-hidden p-0">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">E-mail</th><th className="px-4 py-3">Cliente desde</th></tr>
@@ -50,8 +53,8 @@ function Page() {
               ))}
             </tbody>
           </table>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
