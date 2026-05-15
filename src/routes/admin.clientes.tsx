@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { useState } from "react";
 import { Search, Users } from "lucide-react";
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/admin/clientes")({ component: Page });
 function Page() {
   const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["customers", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id", shopId).order("created_at",{ascending:false})).data ?? [],
   });
