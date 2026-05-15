@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { brl } from "@/lib/format";
+import { KPISkeleton } from "@/components/site/LoadingState";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, DollarSign, TrendingUp, Users } from "lucide-react";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -13,7 +15,7 @@ export const Route = createFileRoute("/admin/")({ component: Dashboard });
 function Dashboard() {
   const shopId = useCurrentShopId();
   const today = new Date();
-  const { data: stats } = useQuery({
+  const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["admin-stats", shopId], enabled: !!shopId,
     queryFn: async () => {
       const start = startOfDay(today).toISOString();
@@ -24,7 +26,7 @@ function Dashboard() {
       return { count: appts?.length ?? 0, completed: (appts ?? []).filter(a=>a.status==="completed").length, revenue, customers: customers ?? 0 };
     },
   });
-  const { data: next } = useQuery({
+  const { data: next, isLoading: nextLoading } = useQuery({
     queryKey: ["admin-next", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("appointments")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
@@ -40,16 +42,22 @@ function Dashboard() {
         <p className="text-muted-foreground">{format(today, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI icon={Calendar} label="Agendamentos hoje" value={stats?.count ?? 0} />
-        <KPI icon={TrendingUp} label="Atendimentos concluídos" value={stats?.completed ?? 0} />
-        <KPI icon={DollarSign} label="Faturamento do dia" value={brl(stats?.revenue ?? 0)} />
-        <KPI icon={Users} label="Total de clientes" value={stats?.customers ?? 0} />
-      </div>
+      {statsLoading ? <KPISkeleton /> : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KPI icon={Calendar} label="Agendamentos hoje" value={stats?.count ?? 0} />
+          <KPI icon={TrendingUp} label="Atendimentos concluídos" value={stats?.completed ?? 0} />
+          <KPI icon={DollarSign} label="Faturamento do dia" value={brl(stats?.revenue ?? 0)} />
+          <KPI icon={Users} label="Total de clientes" value={stats?.customers ?? 0} />
+        </div>
+      )}
 
       <Card className="p-5">
         <h2 className="mb-4 font-display text-lg font-semibold">Próximos agendamentos</h2>
-        {(!next || next.length === 0) ? (
+        {nextLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        ) : (!next || next.length === 0) ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Nenhum agendamento futuro.</p>
         ) : (
           <ul className="divide-y divide-border">

@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { CardGridSkeleton, EmptyState } from "@/components/site/LoadingState";
+import { Plus, Pencil, UserCog } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/profissionais")({ component: Page });
@@ -20,7 +21,7 @@ function slugify(s: string) { return s.toLowerCase().normalize("NFD").replace(/[
 function Page() {
   const shopId = useCurrentShopId();
   const qc = useQueryClient();
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["admin-pros", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", shopId).order("display_name")).data ?? [],
   });
@@ -66,24 +67,35 @@ function Page() {
         </Dialog>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {data?.map(p => (
-          <Card key={p.id} className="flex flex-col gap-3 p-5">
-            <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
-              <div>
-                <div className="font-display font-semibold">{p.display_name}</div>
-                {!p.active && <Badge variant="secondary">Inativo</Badge>}
+      {isLoading ? (
+        <CardGridSkeleton count={3} />
+      ) : !data || data.length === 0 ? (
+        <EmptyState
+          icon={UserCog}
+          title="Nenhum profissional cadastrado"
+          description="Adicione barbeiros para que eles apareçam no agendamento online."
+          action={<Button onClick={openNew}><Plus className="mr-1 h-4 w-4"/>Novo profissional</Button>}
+        />
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {data.map(p => (
+            <Card key={p.id} className="flex flex-col gap-3 p-5">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
+                <div>
+                  <div className="font-display font-semibold">{p.display_name}</div>
+                  {!p.active && <Badge variant="secondary">Inativo</Badge>}
+                </div>
               </div>
-            </div>
-            <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
-            <div className="flex flex-wrap gap-1.5">
-              {p.specialties?.map(s => <Badge key={s} variant="outline" className="font-normal">{s}</Badge>)}
-            </div>
-            <Button size="sm" variant="outline" onClick={()=>openEdit(p)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
-          </Card>
-        ))}
-      </div>
+              <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {p.specialties?.map(s => <Badge key={s} variant="outline" className="font-normal">{s}</Badge>)}
+              </div>
+              <Button size="sm" variant="outline" onClick={()=>openEdit(p)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

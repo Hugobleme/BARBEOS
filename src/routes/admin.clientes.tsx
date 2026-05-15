@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { useState } from "react";
 import { Search, Users } from "lucide-react";
 
@@ -12,7 +13,7 @@ export const Route = createFileRoute("/admin/clientes")({ component: Page });
 function Page() {
   const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["customers", shopId], enabled: !!shopId,
     queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id", shopId).order("created_at",{ascending:false})).data ?? [],
   });
@@ -27,13 +28,16 @@ function Page() {
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
         <Input className="pl-9" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
       </div>
-      <Card className="overflow-hidden p-0">
-        {filtered.length === 0 ? (
-          <div className="grid place-items-center gap-2 p-12 text-center">
-            <Users className="h-10 w-10 text-muted-foreground"/>
-            <p className="text-sm text-muted-foreground">Nenhum cliente cadastrado ainda.</p>
-          </div>
-        ) : (
+      {isLoading ? (
+        <TableSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title={q ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+          description={q ? "Tente outro termo de busca." : "Os clientes aparecem aqui automaticamente após o primeiro agendamento."}
+        />
+      ) : (
+        <Card className="overflow-hidden p-0">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
               <tr><th className="px-4 py-3">Nome</th><th className="px-4 py-3">Telefone</th><th className="px-4 py-3">E-mail</th><th className="px-4 py-3">Cliente desde</th></tr>
@@ -49,8 +53,8 @@ function Page() {
               ))}
             </tbody>
           </table>
-        )}
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
