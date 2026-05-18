@@ -37,6 +37,6 @@ function Page() {
           <p className="mt-4 text-center text-sm"><Link to="/login" className="text-muted-foreground hover:text-foreground">Voltar ao login</Link></p>
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }
