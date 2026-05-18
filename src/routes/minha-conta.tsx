@@ -1,8 +1,8 @@
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicHeader } from "@/components/site/PublicHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +52,7 @@ function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
         <div className="flex items-center justify-between">
           <div>

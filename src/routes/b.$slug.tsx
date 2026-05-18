@@ -1,8 +1,7 @@
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicHeader } from "@/components/site/PublicHeader";
-import { PublicFooter } from "@/components/site/PublicFooter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,25 +43,21 @@ export const Route = createFileRoute("/b/$slug")({
     };
   },
   notFoundComponent: () => (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <div className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="font-display text-3xl font-bold">Barbearia não encontrada</h1>
         <p className="mt-2 text-muted-foreground">O endereço pode estar incorreto ou a unidade está inativa.</p>
         <Button asChild className="mt-6"><Link to="/">Voltar à home</Link></Button>
       </div>
-      <PublicFooter />
-    </div>
+      </PublicLayout>
   ),
   errorComponent: ({ error }) => (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <div className="mx-auto max-w-2xl px-4 py-24 text-center">
         <h1 className="font-display text-2xl font-bold">Algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
       </div>
-      <PublicFooter />
-    </div>
+      </PublicLayout>
   ),
   component: ShopPage,
 });
@@ -104,8 +99,7 @@ function ShopPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
 
       {/* Hero */}
@@ -227,7 +221,6 @@ function ShopPage() {
         </Card>
       </section>
 
-      <PublicFooter />
-    </div>
+      </PublicLayout>
   );
 }

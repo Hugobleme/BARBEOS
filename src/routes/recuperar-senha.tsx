@@ -1,7 +1,7 @@
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicHeader } from "@/components/site/PublicHeader";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,7 @@ function Page() {
     setSent(true);
   }
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <div className="mx-auto max-w-md px-4 py-12">
         <Card className="p-6">
           <h1 className="font-display text-2xl font-bold">Recuperar senha</h1>

@@ -2,8 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicHeader } from "@/components/site/PublicHeader";
-import { PublicFooter } from "@/components/site/PublicFooter";
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -226,35 +225,33 @@ function Booking() {
 
   if (doneId) {
     return (
-      <div className="min-h-screen bg-background">
-        <PublicHeader />
+      <PublicLayout>
         <div className="mx-auto max-w-2xl px-4 py-16 md:px-6">
-          <Card className="p-8 text-center">
+          <Card className="rounded-none border-border bg-card p-10 text-center">
             <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-success/15 text-success"><Check className="h-8 w-8" /></div>
-            <h1 className="mt-4 font-display text-3xl font-bold">Agendamento confirmado!</h1>
-            <p className="mt-2 text-muted-foreground">Protocolo: <span className="font-mono">{doneId.slice(0,8).toUpperCase()}</span></p>
-            <div className="mt-6 rounded-xl bg-muted p-4 text-left text-sm">
+            <h1 className="mt-5 font-serif text-3xl font-bold md:text-4xl">Agendamento confirmado</h1>
+            <p className="mt-2 text-xs uppercase tracking-[0.25em] text-muted-foreground">Protocolo · <span className="font-mono normal-case tracking-normal text-accent">{doneId.slice(0,8).toUpperCase()}</span></p>
+            <div className="mt-7 border border-border/60 bg-background/40 p-5 text-left text-sm">
               <div className="flex items-center gap-2"><Cal className="h-4 w-4 text-accent" />{date && format(date, "EEEE, d 'de' MMMM", { locale: ptBR })} • {time}</div>
               <div className="mt-2 flex items-center gap-2"><Scissors className="h-4 w-4 text-accent"/>{pickedServices.map(s=>s.name).join(" + ")}</div>
-              <div className="mt-2 font-semibold">{brl(totalPrice)}</div>
+              <div className="mt-3 font-serif text-lg">{brl(totalPrice)}</div>
             </div>
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              <Button asChild><Link to="/minha-conta">Ver meus agendamentos</Link></Button>
-              <Button asChild variant="outline"><Link to="/">Voltar à home</Link></Button>
+            <div className="mt-7 flex flex-wrap justify-center gap-2">
+              <Button asChild className="rounded-none bg-accent text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"><Link to="/minha-conta">Meus agendamentos</Link></Button>
+              <Button asChild variant="outline" className="rounded-none border-border bg-transparent text-[11px] font-bold uppercase tracking-[0.2em] hover:border-accent hover:bg-transparent hover:text-accent"><Link to="/">Voltar à home</Link></Button>
             </div>
           </Card>
         </div>
-        <PublicFooter />
-      </div>
+      </PublicLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
-      <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-        <h1 className="font-display text-3xl font-bold md:text-4xl">Agendar horário</h1>
-        <p className="mt-1 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
+    <PublicLayout>
+      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Reserva</div>
+        <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Agendar <span className="italic font-normal">horário</span></h1>
+        <p className="mt-2 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
 
         <div className="mt-8">
           <Stepper step={step} />
@@ -385,8 +382,7 @@ function Booking() {
           </div>
         </div>
       </div>
-      <PublicFooter />
-    </div>
+    </PublicLayout>
   );
 }
 
