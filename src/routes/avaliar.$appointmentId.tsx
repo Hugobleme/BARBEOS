@@ -1,9 +1,9 @@
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { PublicHeader } from "@/components/site/PublicHeader";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -74,8 +74,7 @@ function Page() {
   if (loading || !user) return null;
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
+    <PublicLayout>
       <div className="mx-auto max-w-xl px-4 py-10 md:px-6">
         <Card className="p-6 md:p-8">
           {done ? (
