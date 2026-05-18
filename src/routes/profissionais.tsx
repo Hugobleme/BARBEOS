@@ -1,13 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { PublicHeader } from "@/components/site/PublicHeader";
-import { PublicFooter } from "@/components/site/PublicFooter";
-import { Card } from "@/components/ui/card";
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/profissionais")({
   head: () => ({ meta: [{ title: "Equipe — BarberOS" }] }),
@@ -17,33 +16,79 @@ export const Route = createFileRoute("/profissionais")({
 function Page() {
   const { data } = useQuery({
     queryKey: ["pros"],
-    queryFn: async () => (await supabase.from("professionals").select("*").eq("barbershop_id", DEMO_BARBERSHOP_ID).eq("active", true)).data ?? [],
+    queryFn: async () =>
+      (
+        await supabase
+          .from("professionals")
+          .select("*")
+          .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+          .eq("active", true)
+      ).data ?? [],
   });
+
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
-      <div className="mx-auto max-w-6xl px-4 py-12 md:px-6">
-        <h1 className="font-display text-4xl font-bold">Equipe</h1>
-        <p className="mt-2 text-muted-foreground">Conheça nossos barbeiros.</p>
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <PublicLayout>
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+        <div className="max-w-2xl space-y-4">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
+            — Os artesãos
+          </div>
+          <h1 className="font-serif text-5xl font-bold tracking-tight md:text-6xl">
+            Nossa <span className="italic font-normal">equipe</span>
+          </h1>
+          <p className="text-muted-foreground">Conheça os barbeiros que assinam cada corte.</p>
+        </div>
+
+        <div className="mt-14 grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-2 lg:grid-cols-3">
           {data?.map((p) => (
-            <Card key={p.id} className="flex flex-col gap-4 p-6">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-16 w-16"><AvatarFallback className="bg-primary text-lg text-primary-foreground">{p.display_name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
-                <div>
-                  <div className="font-display text-lg font-semibold">{p.display_name}</div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
+            <article
+              key={p.id}
+              className="flex flex-col gap-6 bg-background p-8 transition-colors hover:bg-card md:p-10"
+            >
+              <div className="flex items-center gap-5">
+                <Avatar className="h-16 w-16 rounded-none">
+                  <AvatarFallback className="rounded-none bg-accent/15 font-serif text-xl text-accent">
+                    {p.display_name
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .slice(0, 2)
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <div className="font-serif text-xl font-bold">{p.display_name}</div>
+                  <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                    {p.bio}
+                  </p>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {p.specialties?.map((s) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
-              </div>
-              <Button asChild className="mt-2"><Link to="/agendar">Agendar com {p.display_name.split(" ")[0]}</Link></Button>
-            </Card>
+              {p.specialties && p.specialties.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {p.specialties.map((s: string) => (
+                    <Badge
+                      key={s}
+                      variant="outline"
+                      className="rounded-none border-border bg-transparent text-[10px] font-normal uppercase tracking-[0.18em] text-muted-foreground"
+                    >
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <Button
+                asChild
+                variant="outline"
+                className="mt-auto h-auto rounded-none border-border bg-transparent py-4 text-[11px] font-bold uppercase tracking-[0.2em] hover:border-accent hover:bg-transparent hover:text-accent"
+              >
+                <Link to="/agendar">
+                  Agendar com {p.display_name.split(" ")[0]}
+                  <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                </Link>
+              </Button>
+            </article>
           ))}
         </div>
-      </div>
-      <PublicFooter />
-    </div>
+      </section>
+    </PublicLayout>
   );
 }
