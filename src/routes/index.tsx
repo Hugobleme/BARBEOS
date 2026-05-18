@@ -12,10 +12,24 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "BarberOS — Barbearia premium em São Paulo" },
+      { name: "description", content: "Atendimento exclusivo. Reserve sua experiência em 30 segundos, disponível 24/7." },
+      { property: "og:title", content: "BarberOS — Barbearia premium em São Paulo" },
+      { property: "og:description", content: "Reserve sua experiência em 30 segundos, 24/7." },
+      { property: "og:url", content: "/" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+    links: [{ rel: "canonical", href: "/" }],
+    scripts: [
       {
-        name: "description",
-        content:
-          "Atendimento exclusivo. Reserve sua experiência em 30 segundos, disponível 24/7.",
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "HealthAndBeautyBusiness",
+          name: "BarberOS",
+          description: "Barbearia premium com agendamento online 24/7.",
+          areaServed: "São Paulo",
+        }),
       },
     ],
   }),

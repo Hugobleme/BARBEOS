@@ -10,8 +10,12 @@ export const Route = createFileRoute("/servicos")({
   head: () => ({
     meta: [
       { title: "Serviços — BarberOS" },
-      { name: "description", content: "Catálogo completo de serviços da BarberOS." },
+      { name: "description", content: "Cortes, barba e cuidados. Catálogo completo da BarberOS com preços e duração." },
+      { property: "og:title", content: "Serviços — BarberOS" },
+      { property: "og:description", content: "Cortes, barba e cuidados premium." },
+      { property: "og:url", content: "/servicos" },
     ],
+    links: [{ rel: "canonical", href: "/servicos" }],
   }),
   component: Page,
 });
