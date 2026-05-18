@@ -247,11 +247,11 @@ function Booking() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <PublicHeader />
-      <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-        <h1 className="font-display text-3xl font-bold md:text-4xl">Agendar horário</h1>
-        <p className="mt-1 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
+    <PublicLayout>
+      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+        <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Reserva</div>
+        <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Agendar <span className="italic font-normal">horário</span></h1>
+        <p className="mt-2 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
 
         <div className="mt-8">
           <Stepper step={step} />
