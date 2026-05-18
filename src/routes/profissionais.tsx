@@ -9,7 +9,16 @@ import { DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/profissionais")({
-  head: () => ({ meta: [{ title: "Equipe — BarberOS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Equipe — BarberOS" },
+      { name: "description", content: "Conheça os artesãos por trás de cada corte na BarberOS." },
+      { property: "og:title", content: "Equipe — BarberOS" },
+      { property: "og:description", content: "Os artesãos da BarberOS." },
+      { property: "og:url", content: "/profissionais" },
+    ],
+    links: [{ rel: "canonical", href: "/profissionais" }],
+  }),
   component: Page,
 });
 

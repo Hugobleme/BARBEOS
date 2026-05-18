@@ -3,18 +3,24 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
-import { brl, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, LogOut, Scissors } from "lucide-react";
+import { Calendar, Clock, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minha-conta")({
-  head: () => ({ meta: [{ title: "Minha conta — BarberOS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Minha conta — BarberOS" },
+      { name: "description", content: "Gerencie seus agendamentos, histórico e avaliações." },
+      { name: "robots", content: "noindex,follow" },
+    ],
+    links: [{ rel: "canonical", href: "/minha-conta" }],
+  }),
   component: Page,
 });
 
@@ -31,18 +37,20 @@ function Page() {
     queryKey: ["my-appts", user?.id],
     queryFn: async () => {
       const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
-      const ids = (customers ?? []).map(c => c.id);
+      const ids = (customers ?? []).map((c) => c.id);
       if (ids.length === 0) return [];
-      const { data } = await supabase.from("appointments")
+      const { data } = await supabase
+        .from("appointments")
         .select("*, professional:professionals(display_name), services:appointment_services(service:services(name))")
-        .in("customer_id", ids).order("scheduled_start", { ascending: false });
+        .in("customer_id", ids)
+        .order("scheduled_start", { ascending: false });
       return data ?? [];
     },
   });
 
   if (loading || !user) return null;
-  const upcoming = (appts ?? []).filter(a => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
-  const past = (appts ?? []).filter(a => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
+  const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
+  const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
 
   async function cancel(id: string) {
     const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
@@ -53,61 +61,114 @@ function Page() {
 
   return (
     <PublicLayout>
-      <div className="mx-auto max-w-4xl px-4 py-10 md:px-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold">Olá!</h1>
-            <p className="text-muted-foreground">{user.email}</p>
+      <section className="relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] bg-[radial-gradient(60%_60%_at_50%_0%,color-mix(in_oklab,var(--accent)_14%,transparent),transparent_70%)]"
+        />
+        <div className="mx-auto max-w-5xl px-6 py-16 md:py-20">
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/60 pb-8">
+            <div>
+              <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Minha conta</p>
+              <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Olá</h1>
+              <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="uppercase tracking-[0.2em]"
+              onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}
+            >
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" onClick={()=>supabase.auth.signOut().then(()=>nav({to:"/"}))}><LogOut className="mr-1 h-4 w-4"/>Sair</Button>
-        </div>
 
-        <h2 className="mt-10 mb-3 font-display text-xl font-semibold">Próximos agendamentos</h2>
-        <div className="grid gap-3">
-          {upcoming.length === 0 && (
-            <Card className="p-6 text-center text-sm text-muted-foreground">
-              Você não tem agendamentos. <Link to="/agendar" className="font-medium text-accent hover:underline">Agendar agora →</Link>
-            </Card>
-          )}
-          {upcoming.map((a: any) => (
-            <Card key={a.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-4">
-                <div className="grid h-12 w-12 place-items-center rounded-xl bg-accent/15 text-accent"><Calendar className="h-5 w-5"/></div>
-                <div>
-                  <div className="font-semibold">{format(new Date(a.scheduled_start), "EEEE, d 'de' MMM • HH:mm", { locale: ptBR })}</div>
-                  <div className="text-sm text-muted-foreground">{a.services?.map((s:any)=>s.service.name).join(" + ")} · com {a.professional?.display_name}</div>
+          <SectionTitle eyebrow="01" title="Próximos atendimentos" />
+          <div className="grid gap-3">
+            {upcoming.length === 0 && (
+              <div className="border border-border/60 p-8 text-center text-sm text-muted-foreground">
+                Nada agendado.{" "}
+                <Link to="/agendar" className="font-medium text-accent hover:underline">
+                  Reservar agora →
+                </Link>
+              </div>
+            )}
+            {upcoming.map((a: any) => (
+              <article
+                key={a.id}
+                className="flex flex-col gap-4 border border-border/60 bg-card/40 p-5 transition hover:border-accent/40 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="grid h-12 w-12 place-items-center border border-accent/40 text-accent">
+                    <Calendar className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="font-serif text-lg">
+                      {format(new Date(a.scheduled_start), "EEEE, d 'de' MMM • HH:mm", { locale: ptBR })}
+                    </div>
+                    <div className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+                      {a.services?.map((s: any) => s.service.name).join(" + ")} · com {a.professional?.display_name}
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary">{brl(Number(a.total_amount))}</Badge>
-                <Button size="sm" variant="outline" onClick={()=>cancel(a.id)}>Cancelar</Button>
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        <h2 className="mt-10 mb-3 font-display text-xl font-semibold">Histórico</h2>
-        <div className="grid gap-2">
-          {past.length === 0 && <p className="text-sm text-muted-foreground">Nada por aqui ainda.</p>}
-          {past.map((a: any) => (
-            <Card key={a.id} className="flex flex-col gap-2 p-4 text-sm sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="h-4 w-4 text-muted-foreground"/>
-                <span>{format(new Date(a.scheduled_start), "d 'de' MMM yyyy • HH:mm", { locale: ptBR })}</span>
-                <span className="text-muted-foreground">· {a.services?.map((s:any)=>s.service.name).join(", ")}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={a.status === "cancelled" ? "destructive" : "secondary"}>{a.status === "cancelled" ? "Cancelado" : a.status === "completed" ? "Concluído" : a.status}</Badge>
-                {a.status === "completed" && (
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/avaliar/$appointmentId" params={{ appointmentId: a.id }}>Avaliar</Link>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="rounded-none border-accent/50 text-accent">
+                    {brl(Number(a.total_amount))}
+                  </Badge>
+                  <Button size="sm" variant="outline" className="rounded-none uppercase tracking-[0.18em]" onClick={() => cancel(a.id)}>
+                    Cancelar
                   </Button>
-                )}
-              </div>
-            </Card>
-          ))}
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <SectionTitle eyebrow="02" title="Histórico" />
+          <div className="grid gap-2">
+            {past.length === 0 && <p className="text-sm text-muted-foreground">Nada por aqui ainda.</p>}
+            {past.map((a: any) => (
+              <article
+                key={a.id}
+                className="flex flex-col gap-2 border border-border/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex items-center gap-3">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-serif">{format(new Date(a.scheduled_start), "d 'de' MMM yyyy • HH:mm", { locale: ptBR })}</span>
+                  <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
+                    · {a.services?.map((s: any) => s.service.name).join(", ")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={a.status === "cancelled" ? "destructive" : "secondary"}
+                    className="rounded-none uppercase tracking-[0.15em]"
+                  >
+                    {a.status === "cancelled" ? "Cancelado" : a.status === "completed" ? "Concluído" : a.status}
+                  </Badge>
+                  {a.status === "completed" && (
+                    <Button asChild size="sm" variant="outline" className="rounded-none uppercase tracking-[0.18em]">
+                      <Link to="/avaliar/$appointmentId" params={{ appointmentId: a.id }}>
+                        Avaliar
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
-      </div>
+      </section>
     </PublicLayout>
+  );
+}
+
+function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div className="mt-14 mb-5 flex items-baseline gap-4">
+      <span className="font-serif text-sm italic text-accent">{eyebrow}</span>
+      <div className="h-px flex-1 bg-border/70" />
+      <h2 className="font-serif text-xl font-semibold">{title}</h2>
+    </div>
   );
 }

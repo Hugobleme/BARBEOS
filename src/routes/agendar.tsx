@@ -19,7 +19,16 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/agendar")({
-  head: () => ({ meta: [{ title: "Agendar — BarberOS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Agendar — BarberOS" },
+      { name: "description", content: "Reserve seu horário em segundos. Disponibilidade em tempo real, 24/7." },
+      { property: "og:title", content: "Agendar — BarberOS" },
+      { property: "og:description", content: "Reserve seu horário em segundos." },
+      { property: "og:url", content: "/agendar" },
+    ],
+    links: [{ rel: "canonical", href: "/agendar" }],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({ shop: typeof s.shop === "string" ? s.shop : undefined }),
   component: Booking,
 });
