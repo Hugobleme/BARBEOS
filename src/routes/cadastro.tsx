@@ -51,6 +51,6 @@ function SignupPage() {
           <p className="mt-4 text-center text-sm text-muted-foreground">Já tem conta? <Link to="/login" className="font-medium hover:text-accent">Entrar</Link></p>
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }

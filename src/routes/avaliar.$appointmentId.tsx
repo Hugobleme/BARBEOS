@@ -109,6 +109,6 @@ function Page() {
           )}
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }
