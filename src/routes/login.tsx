@@ -52,6 +52,6 @@ function LoginPage() {
           </div>
         </Card>
       </div>
-    </div>
+    </PublicLayout>
   );
 }
