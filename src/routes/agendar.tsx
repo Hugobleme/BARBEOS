@@ -382,8 +382,7 @@ function Booking() {
           </div>
         </div>
       </div>
-      <PublicFooter />
-    </div>
+    </PublicLayout>
   );
 }
 
