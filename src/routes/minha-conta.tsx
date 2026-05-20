@@ -147,6 +147,40 @@ function Page() {
             </>
           )}
 
+          {(wallet?.balances?.some((b: any) => Number(b.balance) > 0) || (wallet?.txs?.length ?? 0) > 0) && (
+            <>
+              <SectionTitle eyebrow="$" title="Sua carteira" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(wallet?.balances ?? []).filter((b: any) => Number(b.balance) > 0 || Number(b.lifetime_credited) > 0).map((b: any, i: number) => (
+                  <article key={i} className="flex items-center justify-between border border-accent/30 bg-accent/5 p-5">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
+                        <Wallet className="h-4 w-4" /> {b.barbershop?.name}
+                      </div>
+                      <div className="mt-2 font-serif text-3xl font-bold">{brl(Number(b.balance))}</div>
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Recebeu {brl(Number(b.lifetime_credited))} de cashback</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {(wallet?.txs?.length ?? 0) > 0 && (
+                <details className="mt-3 border border-border/50 p-4 text-sm">
+                  <summary className="cursor-pointer text-xs uppercase tracking-[0.2em] text-muted-foreground">Ver extrato (últimos 20)</summary>
+                  <ul className="mt-3 divide-y divide-border/40">
+                    {wallet!.txs.map((t: any) => (
+                      <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-xs">
+                        <span className="text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy", { locale: ptBR })} · {t.barbershop?.name}</span>
+                        <span className="flex-1 truncate px-2">{t.description ?? t.kind}</span>
+                        <span className={`font-mono ${Number(t.amount) > 0 ? "text-accent" : "text-muted-foreground"}`}>{Number(t.amount) > 0 ? "+" : ""}{brl(Number(t.amount))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
+
+
           <SectionTitle eyebrow="01" title="Próximos atendimentos" />
           <div className="grid gap-3">
             {upcoming.length === 0 && (
