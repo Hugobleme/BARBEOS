@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -47,6 +47,21 @@ function Agenda() {
       .lte("scheduled_start", endOfDay(date).toISOString())
       .order("scheduled_start")).data ?? [],
   });
+
+  // Realtime: atualiza a agenda quando appointments mudam para esta barbearia
+  useEffect(() => {
+    if (!shopId) return;
+    const channel = supabase
+      .channel(`agenda:${shopId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments", filter: `barbershop_id=eq.${shopId}` },
+        () => refetch(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [shopId, refetch]);
+
 
   async function setStatus(id: string, status: "scheduled"|"in_progress"|"cancelled"|"no_show") {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
