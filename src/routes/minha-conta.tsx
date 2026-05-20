@@ -63,6 +63,21 @@ function Page() {
     },
   });
 
+  const { data: wallet } = useQuery({
+    enabled: !!user,
+    queryKey: ["my-wallet", user?.id],
+    queryFn: async () => {
+      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
+      const ids = (customers ?? []).map((c) => c.id);
+      if (ids.length === 0) return { balances: [], txs: [] };
+      const [{ data: balances }, { data: txs }] = await Promise.all([
+        supabase.from("wallet_balances").select("balance, lifetime_credited, barbershop:barbershops(id, name)").in("customer_id", ids),
+        supabase.from("wallet_transactions").select("id, kind, amount, description, created_at, barbershop:barbershops(name)").in("customer_id", ids).order("created_at", { ascending: false }).limit(20),
+      ]);
+      return { balances: balances ?? [], txs: txs ?? [] };
+    },
+  });
+
   if (loading || !user) return null;
   const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
   const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
