@@ -124,6 +124,9 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     onFinal: (text) => {
       void sendText(text);
     },
+    onEmpty: () => {
+      setStatus("idle");
+    },
   });
 
   useEffect(() => {
