@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Plus, Lock, Unlock } from "lucide-react";
+import { DollarSign, Plus, Lock, Unlock, Receipt, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/caixa")({ component: Caixa });
@@ -30,6 +30,13 @@ function Caixa() {
   const today = new Date();
   const [openDlg, setOpenDlg] = useState(false);
   const [txDlg, setTxDlg] = useState(false);
+  const [txPreset, setTxPreset] = useState<{ kind: "sale"|"expense"|"adjustment"; description?: string } | null>(null);
+
+  function openNewTx(preset?: { kind: "sale"|"expense"|"adjustment"; description?: string }) {
+    setTxPreset(preset ?? null);
+    setTxDlg(true);
+  }
+
 
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ["cash-session", shopId], enabled: !!shopId,
@@ -56,6 +63,17 @@ function Caixa() {
   }, { sales: 0, expenses: 0, byMethod: {} as Record<string, number> });
   const net = totals.sales - totals.expenses;
 
+  // Totais por profissional (apenas vendas)
+  const byPro = new Map<string, { name: string; total: number; count: number }>();
+  for (const t of (txs ?? [])) {
+    if (t.kind !== "sale" || !t.professional_id) continue;
+    const cur = byPro.get(t.professional_id) ?? { name: t.professional?.display_name ?? "—", total: 0, count: 0 };
+    cur.total += Number(t.amount); cur.count += 1;
+    byPro.set(t.professional_id, cur);
+  }
+  const proRows = Array.from(byPro.values()).sort((a, b) => b.total - a.total);
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -68,7 +86,7 @@ function Caixa() {
             <>
               <Badge className="bg-success/15 text-success" variant="outline"><Unlock className="mr-1 h-3 w-3"/>Caixa aberto</Badge>
               <CloseSessionButton session={session} onDone={() => { refetchSession(); }} />
-              <Button onClick={() => setTxDlg(true)}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
+              <Button onClick={() => openNewTx()}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
             </>
           ) : (
             <Button onClick={() => setOpenDlg(true)}><Unlock className="mr-1 h-4 w-4"/>Abrir caixa</Button>
@@ -76,12 +94,28 @@ function Caixa() {
         </div>
       </div>
 
+      {session && (
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Receipt className="h-4 w-4"/> Atalhos de despesa
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Vale profissional" })}>Vale</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Material" })}>Material</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Limpeza" })}>Limpeza</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Contas (água/luz/internet)" })}>Contas</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Outros" })}>Outros</Button>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPI label="Vendas (dia)" value={brl(totals.sales)} accent />
         <KPI label="Despesas" value={brl(totals.expenses)} />
         <KPI label="Resultado" value={brl(net)} />
         <KPI label="Em dinheiro" value={brl(totals.byMethod.cash ?? 0)} />
       </div>
+
 
       <Card className="p-5">
         <h2 className="mb-3 font-display text-lg font-semibold">Por método de pagamento</h2>
@@ -94,6 +128,29 @@ function Caixa() {
           ))}
         </div>
       </Card>
+
+      <Card className="p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+          <Users className="h-4 w-4 text-accent"/> Por profissional (vendas do dia)
+        </h2>
+        {proRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem vendas registradas a profissionais.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {proRows.map((p, i) => (
+              <li key={i} className="flex items-center justify-between py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{p.name}</span>
+                  <Badge variant="outline" className="text-xs">{p.count} atend.</Badge>
+                </div>
+                <span className="font-mono font-medium">{brl(p.total)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+
 
       <Card className="p-5">
         <h2 className="mb-3 font-display text-lg font-semibold">Lançamentos do dia</h2>
@@ -122,7 +179,7 @@ function Caixa() {
       </Card>
 
       <OpenSessionDialog open={openDlg} onOpenChange={setOpenDlg} userId={user?.id} onDone={() => refetchSession()} />
-      <NewTxDialog open={txDlg} onOpenChange={setTxDlg} sessionId={session?.id} userId={user?.id} onDone={() => refetchTxs()} />
+      <NewTxDialog open={txDlg} onOpenChange={(o:boolean)=>{ setTxDlg(o); if(!o) setTxPreset(null); }} preset={txPreset} sessionId={session?.id} userId={user?.id} onDone={() => refetchTxs()} />
     </div>
   );
 }
@@ -187,12 +244,20 @@ function CloseSessionButton({ session, onDone }: any) {
   );
 }
 
-function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
+function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone, preset }: any) {
   const shopId = useCurrentShopId();
   const [kind, setKind] = useState<"sale"|"expense"|"adjustment">("sale");
   const [method, setMethod] = useState<Method>("cash");
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
+  useEffect(() => {
+    if (open) {
+      setKind(preset?.kind ?? "sale");
+      setDesc(preset?.description ?? "");
+      setAmount("");
+      setMethod("cash");
+    }
+  }, [open, preset]);
   async function submit() {
     if (!sessionId) return toast.error("Abra o caixa antes");
     const { error } = await supabase.from("cash_transactions").insert({
