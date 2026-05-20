@@ -34,6 +34,7 @@ import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
+import { Route as AdminCuponsRouteImport } from './routes/admin.cupons'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
 import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
@@ -167,6 +168,11 @@ const AdminEquipeRoute = AdminEquipeRouteImport.update({
   path: '/equipe',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCuponsRoute = AdminCuponsRouteImport.update({
+  id: '/cupons',
+  path: '/cupons',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminConfiguracoesRoute = AdminConfiguracoesRouteImport.update({
   id: '/configuracoes',
   path: '/configuracoes',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
+  '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
     | '/admin/folgas'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
     | '/admin/folgas'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
+    | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
     | '/admin/folgas'
@@ -603,6 +615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEquipeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/cupons': {
+      id: '/admin/cupons'
+      path: '/cupons'
+      fullPath: '/admin/cupons'
+      preLoaderRoute: typeof AdminCuponsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/configuracoes': {
       id: '/admin/configuracoes'
       path: '/configuracoes'
@@ -662,6 +681,7 @@ interface AdminRouteChildren {
   AdminClientesRoute: typeof AdminClientesRoute
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
+  AdminCuponsRoute: typeof AdminCuponsRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
   AdminEstoqueRoute: typeof AdminEstoqueRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
@@ -682,6 +702,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminClientesRoute: AdminClientesRoute,
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
+  AdminCuponsRoute: AdminCuponsRoute,
   AdminEquipeRoute: AdminEquipeRoute,
   AdminEstoqueRoute: AdminEstoqueRoute,
   AdminFolgasRoute: AdminFolgasRoute,
