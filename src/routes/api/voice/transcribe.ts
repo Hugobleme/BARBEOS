@@ -19,23 +19,14 @@ export const Route = createFileRoute("/api/voice/transcribe")({
           }
           const { text, duration_ms } = await transcribeAudio(file);
           const masked = maskPII(text);
-
-          if (sessionId && masked) {
-            await supabaseAdmin.from("voice_messages").insert({
-              session_id: sessionId,
-              role: "user",
-              content: masked,
-              duration_ms,
-            });
-            await supabaseAdmin.rpc("tg_set_updated_at"); // noop; just trigger updated_at via update below
+          // Note: we don't persist here — /chat persists the user turn so the
+          // conversation history stays in a single transactional path.
+          if (sessionId) {
+            // touch session updated_at for activity tracking
             await supabaseAdmin
               .from("voice_sessions")
-              .update({ total_turns: (undefined as never) ?? undefined })
-              .eq("id", sessionId)
-              .select()
-              .single()
-              .then(() => undefined)
-              .catch(() => undefined);
+              .update({ total_audio_seconds: Math.round(duration_ms / 1000) })
+              .eq("id", sessionId);
           }
           return Response.json({ text: masked, duration_ms });
         } catch (e) {

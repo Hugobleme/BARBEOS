@@ -114,7 +114,7 @@ export const Route = createFileRoute("/api/voice/chat")({
                   role: "tool",
                   content: null,
                   tool_name: call.function.name,
-                  tool_payload: args,
+                  tool_payload: args as never,
                   tool_result: result as never,
                 });
                 messages.push({

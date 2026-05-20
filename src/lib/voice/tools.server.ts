@@ -292,7 +292,8 @@ export async function runTool(name: string, args: Record<string, unknown>, barbe
       await db.from("appointment_services").insert({
         appointment_id: appt.id,
         service_id: serviceId,
-        price: svc.price,
+        price_snapshot: svc.price,
+        duration_snapshot: svc.duration_min,
       });
 
       return { appointment_id: appt.id, scheduled_start: start.toISOString(), scheduled_end: end.toISOString() };
