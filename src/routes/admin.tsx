@@ -11,7 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { BarChart3, Building2, Calendar, Coins, DollarSign, LayoutDashboard, LogOut, Menu, Moon, Plus, Scissors, Settings, Sun, Users, UserCog, UsersRound, X } from "lucide-react";
+import { BarChart3, Building2, Calendar, Coins, DollarSign, LayoutDashboard, LogOut, Menu, MoreHorizontal, Moon, Plus, Scissors, Settings, Sun, Users, UserCog, UsersRound, X } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/use-theme";
 
