@@ -86,7 +86,7 @@ function Caixa() {
             <>
               <Badge className="bg-success/15 text-success" variant="outline"><Unlock className="mr-1 h-3 w-3"/>Caixa aberto</Badge>
               <CloseSessionButton session={session} onDone={() => { refetchSession(); }} />
-              <Button onClick={() => setTxDlg(true)}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
+              <Button onClick={() => openNewTx()}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
             </>
           ) : (
             <Button onClick={() => setOpenDlg(true)}><Unlock className="mr-1 h-4 w-4"/>Abrir caixa</Button>
@@ -94,12 +94,28 @@ function Caixa() {
         </div>
       </div>
 
+      {session && (
+        <Card className="p-4">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Receipt className="h-4 w-4"/> Atalhos de despesa
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Vale profissional" })}>Vale</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Material" })}>Material</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Limpeza" })}>Limpeza</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Contas (água/luz/internet)" })}>Contas</Button>
+            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Outros" })}>Outros</Button>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPI label="Vendas (dia)" value={brl(totals.sales)} accent />
         <KPI label="Despesas" value={brl(totals.expenses)} />
         <KPI label="Resultado" value={brl(net)} />
         <KPI label="Em dinheiro" value={brl(totals.byMethod.cash ?? 0)} />
       </div>
+
 
       <Card className="p-5">
         <h2 className="mb-3 font-display text-lg font-semibold">Por método de pagamento</h2>
