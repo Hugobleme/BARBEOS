@@ -152,7 +152,7 @@ function ProPage() {
               <h1 className="mt-4 font-display text-4xl font-bold leading-tight md:text-5xl">{pro.display_name}</h1>
               {pro.specialties && pro.specialties.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {pro.specialties.map((s) => (
+                  {pro.specialties.map((s: string) => (
                     <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>
                   ))}
                 </div>
