@@ -1,97 +1,72 @@
 // Tool implementations called by Aurora. All scoped to a single barbershop_id.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
+// Gemini functionDeclarations format.
 export const auroraTools = [
   {
-    type: "function",
-    function: {
-      name: "listar_servicos",
-      description: "Lista os serviços ativos da barbearia (nome, duração, preço).",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
+    name: "listar_servicos",
+    description: "Lista os serviços ativos da barbearia (nome, duração, preço).",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "listar_profissionais",
+    description: "Lista os profissionais ativos. Opcionalmente filtra por serviço.",
+    parameters: {
+      type: "object",
+      properties: { service_id: { type: "string", description: "UUID do serviço (opcional)" } },
     },
   },
   {
-    type: "function",
-    function: {
-      name: "listar_profissionais",
-      description: "Lista os profissionais ativos. Opcionalmente filtra por serviço.",
-      parameters: {
-        type: "object",
-        properties: { service_id: { type: "string", description: "UUID do serviço (opcional)" } },
-        additionalProperties: false,
+    name: "buscar_horarios_disponiveis",
+    description: "Retorna horários livres num intervalo de datas para um serviço, opcionalmente filtrando por profissional.",
+    parameters: {
+      type: "object",
+      properties: {
+        service_id: { type: "string" },
+        professional_id: { type: "string", description: "Opcional" },
+        date_from: { type: "string", description: "Data ISO YYYY-MM-DD" },
+        date_to: { type: "string", description: "Data ISO YYYY-MM-DD" },
       },
+      required: ["service_id", "date_from", "date_to"],
     },
   },
   {
-    type: "function",
-    function: {
-      name: "buscar_horarios_disponiveis",
-      description: "Retorna horários livres em um intervalo de datas para um serviço, opcionalmente filtrando por profissional.",
-      parameters: {
-        type: "object",
-        properties: {
-          service_id: { type: "string" },
-          professional_id: { type: "string", description: "Opcional" },
-          date_from: { type: "string", description: "ISO date YYYY-MM-DD" },
-          date_to: { type: "string", description: "ISO date YYYY-MM-DD" },
-        },
-        required: ["service_id", "date_from", "date_to"],
-        additionalProperties: false,
+    name: "identificar_cliente",
+    description: "Identifica um cliente pelo telefone. Retorna dados básicos ou nulo.",
+    parameters: {
+      type: "object",
+      properties: { phone: { type: "string" } },
+      required: ["phone"],
+    },
+  },
+  {
+    name: "criar_agendamento",
+    description: "Cria o agendamento. Se o cliente não existir, cria pelo nome+telefone. Só chame após confirmação clara.",
+    parameters: {
+      type: "object",
+      properties: {
+        service_id: { type: "string" },
+        professional_id: { type: "string" },
+        scheduled_start: { type: "string", description: "Datetime ISO com timezone" },
+        customer_name: { type: "string" },
+        customer_phone: { type: "string" },
       },
+      required: ["service_id", "professional_id", "scheduled_start", "customer_name", "customer_phone"],
     },
   },
   {
-    type: "function",
-    function: {
-      name: "identificar_cliente",
-      description: "Identifica um cliente pelo telefone (formato livre). Retorna dados básicos ou nulo.",
-      parameters: {
-        type: "object",
-        properties: { phone: { type: "string" } },
-        required: ["phone"],
-        additionalProperties: false,
-      },
+    name: "cancelar_agendamento",
+    description: "Cancela um agendamento existente pelo id.",
+    parameters: {
+      type: "object",
+      properties: { appointment_id: { type: "string" } },
+      required: ["appointment_id"],
     },
   },
   {
-    type: "function",
-    function: {
-      name: "criar_agendamento",
-      description: "Cria um agendamento. Se o cliente não existir, cria pelo nome+telefone.",
-      parameters: {
-        type: "object",
-        properties: {
-          service_id: { type: "string" },
-          professional_id: { type: "string" },
-          scheduled_start: { type: "string", description: "ISO datetime" },
-          customer_name: { type: "string" },
-          customer_phone: { type: "string" },
-        },
-        required: ["service_id", "professional_id", "scheduled_start", "customer_name", "customer_phone"],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "cancelar_agendamento",
-      description: "Cancela um agendamento existente pelo id.",
-      parameters: {
-        type: "object",
-        properties: { appointment_id: { type: "string" } },
-        required: ["appointment_id"],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "informacoes_barbearia",
-      description: "Retorna nome, endereço, contatos e descrição da barbearia.",
-      parameters: { type: "object", properties: {}, additionalProperties: false },
-    },
+    name: "informacoes_barbearia",
+    description: "Retorna nome, endereço, contatos e descrição da barbearia.",
+    parameters: { type: "object", properties: {} },
   },
 ];
 
