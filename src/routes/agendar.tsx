@@ -274,7 +274,7 @@ function Booking() {
 
   return (
     <PublicLayout>
-      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+      <div className="mx-auto max-w-3xl px-4 py-12 pb-32 md:px-6 md:py-16 md:pb-16">
         <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Reserva</div>
         <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Agendar <span className="italic font-normal">horário</span></h1>
         <p className="mt-2 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
