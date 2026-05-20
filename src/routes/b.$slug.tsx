@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check } from "lucide-react";
+import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check, Star, Quote } from "lucide-react";
 import { brl, minutes } from "@/lib/format";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -133,6 +133,21 @@ function ShopPage() {
       .order("created_at", { ascending: false })
       .limit(12)).data ?? [],
   });
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["shop-reviews", shop.id],
+    queryFn: async () => (await supabase.from("satisfaction_surveys")
+      .select("id, shop_rating, professional_rating, comment, answered_at, professional:professionals(display_name)")
+      .eq("barbershop_id", shop.id)
+      .eq("is_public", true)
+      .not("comment", "is", null)
+      .order("answered_at", { ascending: false })
+      .limit(9)).data ?? [],
+  });
+  const ratingAvg = (() => {
+    const vals = reviews.map((r: any) => r.shop_rating).filter((v: number | null): v is number => v != null);
+    if (!vals.length) return null;
+    return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
+  })();
 
   const addr = shop.address ?? {};
   const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
