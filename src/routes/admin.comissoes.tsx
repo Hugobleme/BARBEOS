@@ -8,16 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { brl } from "@/lib/format";
-import { format } from "date-fns";
-import { Coins } from "lucide-react";
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { Coins, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/comissoes")({ component: Comissoes });
+
+type Period = "today" | "week" | "month" | "all";
+
+function periodRange(p: Period): { from?: string; to?: string } {
+  const now = new Date();
+  if (p === "today") return { from: startOfDay(now).toISOString(), to: endOfDay(now).toISOString() };
+  if (p === "week") return { from: startOfWeek(now, { weekStartsOn: 1 }).toISOString(), to: endOfWeek(now, { weekStartsOn: 1 }).toISOString() };
+  if (p === "month") return { from: startOfMonth(now).toISOString(), to: endOfMonth(now).toISOString() };
+  return {};
+}
 
 function Comissoes() {
   const shopId = useCurrentShopId();
   const [status, setStatus] = useState<"all"|"pending"|"paid"|"cancelled">("pending");
   const [pro, setPro] = useState<string>("all");
+  const [period, setPeriod] = useState<Period>("month");
 
   const { data: pros } = useQuery({
     queryKey: ["pros-list", shopId], enabled: !!shopId,
@@ -25,13 +36,16 @@ function Comissoes() {
   });
 
   const { data: rows, refetch } = useQuery({
-    queryKey: ["commissions", status, pro, shopId], enabled: !!shopId,
+    queryKey: ["commissions", status, pro, period, shopId], enabled: !!shopId,
     queryFn: async () => {
+      const { from, to } = periodRange(period);
       let q = supabase.from("commissions")
         .select("*, professional:professionals(display_name), appointment:appointments(scheduled_start, customer:customers(full_name))")
         .eq("barbershop_id", shopId).order("created_at", { ascending: false });
       if (status !== "all") q = q.eq("status", status);
       if (pro !== "all") q = q.eq("professional_id", pro);
+      if (from) q = q.gte("created_at", from);
+      if (to) q = q.lte("created_at", to);
       return (await q).data ?? [];
     },
   });
@@ -47,6 +61,15 @@ function Comissoes() {
   async function cancel(id: string) {
     const { error } = await supabase.from("commissions").update({ status: "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
+    refetch();
+  }
+  async function payAllPending() {
+    const ids = (rows ?? []).filter((r: any) => r.status === "pending").map((r: any) => r.id);
+    if (ids.length === 0) return toast.error("Nenhuma comissão pendente no filtro");
+    if (!confirm(`Marcar ${ids.length} comissões como pagas?`)) return;
+    const { error } = await supabase.from("commissions").update({ status: "paid", paid_at: new Date().toISOString() }).in("id", ids);
+    if (error) return toast.error(error.message);
+    toast.success(`${ids.length} comissões pagas`);
     refetch();
   }
 
@@ -84,6 +107,22 @@ function Comissoes() {
                 {(pros ?? []).map((p:any)=> <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
               </SelectContent>
             </Select>
+          </div>
+          <div className="min-w-40"><label className="text-xs text-muted-foreground">Período</label>
+            <Select value={period} onValueChange={(v:any)=>setPeriod(v)}>
+              <SelectTrigger><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="week">Esta semana</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ml-auto">
+            <Button onClick={payAllPending} disabled={pending === 0}>
+              <CheckCheck className="mr-1 h-4 w-4"/>Pagar todas pendentes
+            </Button>
           </div>
         </div>
       </Card>

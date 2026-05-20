@@ -218,11 +218,31 @@ function OpenSessionDialog({ open, onOpenChange, userId, onDone }: any) {
 }
 
 function CloseSessionButton({ session, onDone }: any) {
+  const shopId = useCurrentShopId();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
+  const [notes, setNotes] = useState("");
+
+  const { data: sessionTxs } = useQuery({
+    enabled: open && !!session?.id,
+    queryKey: ["session-tx", session?.id],
+    queryFn: async () => (await supabase.from("cash_transactions")
+      .select("kind, method, amount").eq("session_id", session.id)).data ?? [],
+  });
+
+  const expected = (() => {
+    const opening = Number(session?.opening_amount ?? 0);
+    const cashIn = (sessionTxs ?? []).filter((t: any) => t.kind === "sale" && t.method === "cash").reduce((s: number, t: any) => s + Number(t.amount), 0);
+    const cashOut = (sessionTxs ?? []).filter((t: any) => t.kind === "expense" && t.method === "cash").reduce((s: number, t: any) => s + Number(t.amount), 0);
+    return opening + cashIn - cashOut;
+  })();
+  const counted = Number(amount || 0);
+  const diff = counted - expected;
+
   async function submit() {
     const { error } = await supabase.from("cash_sessions").update({
-      status: "closed", closed_at: new Date().toISOString(), closing_amount: Number(amount) || 0,
+      status: "closed", closed_at: new Date().toISOString(),
+      closing_amount: counted, notes: notes || null,
     }).eq("id", session.id);
     if (error) return toast.error(error.message);
     toast.success("Caixa fechado"); setOpen(false); onDone();
@@ -233,11 +253,28 @@ function CloseSessionButton({ session, onDone }: any) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Fechar caixa</DialogTitle></DialogHeader>
-          <div className="space-y-2">
-            <Label>Valor em caixa no fechamento (R$)</Label>
-            <Input type="number" value={amount} onChange={e=>setAmount(e.target.value)} />
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+              <div className="flex justify-between"><span className="text-muted-foreground">Abertura</span><span className="font-mono">{brl(Number(session?.opening_amount ?? 0))}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">+ Vendas em dinheiro</span><span className="font-mono">{brl((sessionTxs ?? []).filter((t:any)=>t.kind==="sale"&&t.method==="cash").reduce((s:number,t:any)=>s+Number(t.amount),0))}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">− Despesas em dinheiro</span><span className="font-mono">{brl((sessionTxs ?? []).filter((t:any)=>t.kind==="expense"&&t.method==="cash").reduce((s:number,t:any)=>s+Number(t.amount),0))}</span></div>
+              <div className="mt-2 flex justify-between border-t border-border pt-2 font-medium"><span>Esperado em caixa</span><span className="font-mono">{brl(expected)}</span></div>
+            </div>
+            <div>
+              <Label>Valor contado (R$)</Label>
+              <Input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00" autoFocus />
+            </div>
+            {amount !== "" && (
+              <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium ${Math.abs(diff) < 0.01 ? "bg-success/15 text-success" : diff > 0 ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive"}`}>
+                <span>Diferença</span><span className="font-mono">{diff > 0 ? "+" : ""}{brl(diff)}</span>
+              </div>
+            )}
+            <div>
+              <Label>Observações (opcional)</Label>
+              <Input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Ex: troca de turno" />
+            </div>
           </div>
-          <DialogFooter><Button onClick={submit}>Fechar</Button></DialogFooter>
+          <DialogFooter><Button onClick={submit} disabled={amount === ""}>Fechar caixa</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </>
