@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Star } from "lucide-react";
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
+import { AuroraFab } from "@/components/aurora/AuroraFab";
 import heroImage from "@/assets/hero-barbershop.jpg";
 
 export const Route = createFileRoute("/")({
@@ -320,6 +321,7 @@ function Landing() {
           </div>
         </div>
       </section>
+      <AuroraFab barbershopId={DEMO_BARBERSHOP_ID} barbershopName="BarberOS Demo" />
     </PublicLayout>
   );
 }
