@@ -157,7 +157,7 @@ function RedeemDialog({ customerId, customerName, current, onDone }: { customerI
     if (p > current) return toast.error("Cliente não tem pontos suficientes");
     setBusy(true);
     const { error } = await supabase.rpc("redeem_loyalty_points", {
-      _barbershop_id: shopId,
+      _barbershop_id: shopId!,
       _customer_id: customerId,
       _points: p,
       _description: desc || "Resgate manual",
