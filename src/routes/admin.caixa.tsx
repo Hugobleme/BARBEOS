@@ -244,12 +244,20 @@ function CloseSessionButton({ session, onDone }: any) {
   );
 }
 
-function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone }: any) {
+function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone, preset }: any) {
   const shopId = useCurrentShopId();
   const [kind, setKind] = useState<"sale"|"expense"|"adjustment">("sale");
   const [method, setMethod] = useState<Method>("cash");
   const [amount, setAmount] = useState("");
   const [desc, setDesc] = useState("");
+  useEffect(() => {
+    if (open) {
+      setKind(preset?.kind ?? "sale");
+      setDesc(preset?.description ?? "");
+      setAmount("");
+      setMethod("cash");
+    }
+  }, [open, preset]);
   async function submit() {
     if (!sessionId) return toast.error("Abra o caixa antes");
     const { error } = await supabase.from("cash_transactions").insert({
