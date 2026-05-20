@@ -218,6 +218,28 @@ function Relatorios() {
   );
 }
 
+function exportCSV(daily: any[], ranking: any[], topServices: any[]) {
+  const lines: string[] = [];
+  lines.push("Faturamento por dia");
+  lines.push("Dia;Faturamento;Atendimentos");
+  daily.forEach((d) => lines.push(`${d.day};${d.revenue.toFixed(2)};${d.count}`));
+  lines.push("");
+  lines.push("Ranking de profissionais");
+  lines.push("Profissional;Atendimentos;Faturamento");
+  ranking.forEach((r) => lines.push(`${r.name};${r.count};${r.revenue.toFixed(2)}`));
+  lines.push("");
+  lines.push("Top servicos");
+  lines.push("Servico;Quantidade;Faturamento");
+  topServices.forEach((s) => lines.push(`${s.name};${s.count};${s.revenue.toFixed(2)}`));
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `relatorio-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function KPI({ icon: Icon, label, value, hint }: any) {
   return (
     <Card className="p-5">
