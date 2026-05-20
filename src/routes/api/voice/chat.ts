@@ -111,7 +111,13 @@ export const Route = createFileRoute("/api/voice/chat")({
             }
           }
 
-          // Current user turn — if audio, transcribe first (separate cheap call) so we have clean text in history.
+          let assistantText = "";
+          let userTranscript = body.user_text ?? "";
+          let totalIn = 0;
+          let totalOut = 0;
+          let toolUsed = false;
+
+          // Current user turn — if audio, transcribe first so we have clean text in history.
           if (body.audio_base64) {
             try {
               const stt = await geminiGenerate({
@@ -136,12 +142,6 @@ export const Route = createFileRoute("/api/voice/chat")({
             contents.push({ role: "user", parts: [{ text: body.user_text! }] });
           }
 
-          // Tool calling loop
-          let assistantText = "";
-          let userTranscript = body.user_text ?? "";
-          let totalIn = 0;
-          let totalOut = 0;
-          let toolUsed = false;
 
           for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
             const resp = await geminiGenerate({
