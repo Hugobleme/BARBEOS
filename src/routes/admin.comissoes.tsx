@@ -108,6 +108,22 @@ function Comissoes() {
               </SelectContent>
             </Select>
           </div>
+          <div className="min-w-40"><label className="text-xs text-muted-foreground">Período</label>
+            <Select value={period} onValueChange={(v:any)=>setPeriod(v)}>
+              <SelectTrigger><SelectValue/></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="week">Esta semana</SelectItem>
+                <SelectItem value="month">Este mês</SelectItem>
+                <SelectItem value="all">Todo o período</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="ml-auto">
+            <Button onClick={payAllPending} disabled={pending === 0}>
+              <CheckCheck className="mr-1 h-4 w-4"/>Pagar todas pendentes
+            </Button>
+          </div>
         </div>
       </Card>
 
