@@ -17,6 +17,7 @@ export const Route = createFileRoute("/cadastro")({
       { property: "og:title", content: "Criar conta — BarberOS" },
       { property: "og:description", content: "Cadastro gratuito para agendar online 24/7." },
       { property: "og:url", content: "/cadastro" },
+      { name: "robots", content: "noindex,follow" },
     ],
     links: [{ rel: "canonical", href: "/cadastro" }],
   }),

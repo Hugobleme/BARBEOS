@@ -8,7 +8,13 @@ import { Mail, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/convite/$token")({
-  head: () => ({ meta: [{ title: "Convite — BarberOS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Convite — BarberOS" },
+      { name: "description", content: "Aceite seu convite para integrar a equipe BarberOS." },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: AcceptInvite,
 });
 

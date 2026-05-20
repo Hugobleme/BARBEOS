@@ -15,7 +15,12 @@ import { BarChart3, Building2, Calendar, Coins, DollarSign, LayoutDashboard, Log
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin")({
-  head: () => ({ meta: [{ title: "Admin — BarberOS" }] }),
+  head: () => ({
+    meta: [
+      { title: "Admin — BarberOS" },
+      { name: "robots", content: "noindex,nofollow" },
+    ],
+  }),
   component: AdminLayout,
 });
 
