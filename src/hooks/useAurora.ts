@@ -20,6 +20,14 @@ function speak(text: string, onDone: () => void): void {
     onDone();
     return;
   }
+  let settled = false;
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const finish = () => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId) clearTimeout(timeoutId);
+    onDone();
+  };
   try {
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -30,11 +38,19 @@ function speak(text: string, onDone: () => void): void {
     const voices = window.speechSynthesis.getVoices();
     const pt = voices.find((v) => v.lang?.toLowerCase().startsWith("pt"));
     if (pt) u.voice = pt;
-    u.onend = () => onDone();
-    u.onerror = () => onDone();
+    u.onend = finish;
+    u.onerror = finish;
+    timeoutId = setTimeout(() => {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        /* noop */
+      }
+      finish();
+    }, Math.min(12000, Math.max(2500, text.length * 90)));
     window.speechSynthesis.speak(u);
   } catch {
-    onDone();
+    finish();
   }
 }
 
@@ -63,7 +79,10 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
   }, [sessionId, barbershopId]);
 
   const playTts = useCallback((text: string): Promise<void> => {
-    if (mutedRef.current || !text) return Promise.resolve();
+    if (!text.trim() || mutedRef.current) {
+      setStatus("idle");
+      return Promise.resolve();
+    }
     setStatus("speaking");
     return new Promise<void>((resolve) => {
       speak(text, () => {
@@ -108,8 +127,18 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
   });
 
   useEffect(() => {
-    if (speech.isRecording) setStatus("listening");
+    if (speech.isRecording) {
+      setStatus("listening");
+      return;
+    }
+    setStatus((current) => (current === "listening" ? "idle" : current));
   }, [speech.isRecording]);
+
+  useEffect(() => {
+    if (speech.error) {
+      setStatus((current) => (current === "listening" ? "idle" : current));
+    }
+  }, [speech.error]);
 
   const startListening = useCallback(() => {
     setError(null);
