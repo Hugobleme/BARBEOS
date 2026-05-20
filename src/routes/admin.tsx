@@ -30,6 +30,7 @@ const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/agenda", label: "Agenda", icon: Calendar },
   { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
+  { to: "/admin/pdv", label: "PDV", icon: ShoppingCart },
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/franquia", label: "Franquia", icon: Building2 },
