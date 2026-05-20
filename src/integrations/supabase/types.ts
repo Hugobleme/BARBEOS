@@ -609,6 +609,54 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          cost: number
+          created_at: string
+          description: string | null
+          id: string
+          min_stock: number
+          name: string
+          price: number
+          sku: string | null
+          stock_qty: number
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_stock?: number
+          name: string
+          price?: number
+          sku?: string | null
+          stock_qty?: number
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          cost?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          min_stock?: number
+          name?: string
+          price?: number
+          sku?: string | null
+          stock_qty?: number
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       professionals: {
         Row: {
           active: boolean
@@ -837,6 +885,53 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          notes: string | null
+          product_id: string
+          quantity: number
+          transaction_id: string | null
+          unit_cost: number | null
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          notes?: string | null
+          product_id: string
+          quantity: number
+          transaction_id?: string | null
+          unit_cost?: number | null
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          transaction_id?: string | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
