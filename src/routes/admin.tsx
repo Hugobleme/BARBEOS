@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { BarChart3, Boxes, Building2, Calendar, CalendarOff, Coins, DollarSign, Gift, Image as ImageIcon, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Moon, Package, Plus, Scissors, Settings, ShoppingCart, Sun, TicketPercent, Users, UserCog, UsersRound, X } from "lucide-react";
+import { BarChart3, Boxes, Building2, Calendar, CalendarOff, Coins, DollarSign, Gift, Image as ImageIcon, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Moon, Package, Plus, Scissors, Settings, ShoppingCart, Sun, TicketPercent, Users, UserCog, UsersRound, Wallet, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/use-theme";
@@ -35,6 +35,7 @@ const NAV = [
   { to: "/admin/pacotes", label: "Pacotes", icon: Package },
   { to: "/admin/cupons", label: "Cupons", icon: TicketPercent },
   { to: "/admin/fidelidade", label: "Fidelidade", icon: Gift },
+  { to: "/admin/carteira", label: "Carteira", icon: Wallet },
   { to: "/admin/estoque", label: "Estoque", icon: Boxes },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/franquia", label: "Franquia", icon: Building2 },
