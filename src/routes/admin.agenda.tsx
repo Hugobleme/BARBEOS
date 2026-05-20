@@ -48,6 +48,21 @@ function Agenda() {
       .order("scheduled_start")).data ?? [],
   });
 
+  // Realtime: atualiza a agenda quando appointments mudam para esta barbearia
+  useEffect(() => {
+    if (!shopId) return;
+    const channel = supabase
+      .channel(`agenda:${shopId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "appointments", filter: `barbershop_id=eq.${shopId}` },
+        () => refetch(),
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [shopId, refetch]);
+
+
   async function setStatus(id: string, status: "scheduled"|"in_progress"|"cancelled"|"no_show") {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
