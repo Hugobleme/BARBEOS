@@ -43,13 +43,23 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
       setError("Reconhecimento de voz não suportado neste navegador.");
       return;
     }
+    // If already running, ignore.
+    if (recRef.current) {
+      try {
+        recRef.current.abort();
+      } catch {
+        /* noop */
+      }
+      recRef.current = null;
+    }
     setError(null);
     setInterim("");
     finalRef.current = "";
     try {
       const rec = new SR();
       rec.lang = lang;
-      rec.continuous = true;
+      // Single-utterance mode is dramatically more reliable across Chrome versions.
+      rec.continuous = false;
       rec.interimResults = true;
       rec.maxAlternatives = 1;
       rec.onstart = () => setIsRecording(true);
@@ -64,15 +74,29 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
         setInterim(interimText);
       };
       rec.onerror = (e) => {
-        if (e.error === "no-speech" || e.error === "aborted") return;
-        if (e.error === "not-allowed") setError("Permissão de microfone negada.");
-        else if (e.error === "network")
+        if (e.error === "aborted") return;
+        if (e.error === "no-speech") {
+          setError("Não ouvi nada. Toque no microfone e fale novamente.");
+          return;
+        }
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+          setError("Permissão de microfone negada. Habilite nas configurações do navegador.");
+          return;
+        }
+        if (e.error === "audio-capture") {
+          setError("Microfone não encontrado.");
+          return;
+        }
+        if (e.error === "network") {
           setError("O reconhecimento de voz não funciona dentro do preview. Abra o app em uma aba nova para falar.");
-        else setError(e.error);
+          return;
+        }
+        setError(e.error);
       };
       rec.onend = () => {
         setIsRecording(false);
         setInterim("");
+        recRef.current = null;
         const text = finalRef.current.trim();
         finalRef.current = "";
         if (text) onFinalRef.current(text);
