@@ -65,7 +65,10 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
       };
       rec.onerror = (e) => {
         if (e.error === "no-speech" || e.error === "aborted") return;
-        setError(e.error === "not-allowed" ? "Permissão de microfone negada." : e.error);
+        if (e.error === "not-allowed") setError("Permissão de microfone negada.");
+        else if (e.error === "network")
+          setError("O reconhecimento de voz não funciona dentro do preview. Abra o app em uma aba nova para falar.");
+        else setError(e.error);
       };
       rec.onend = () => {
         setIsRecording(false);
