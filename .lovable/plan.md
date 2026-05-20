@@ -1,55 +1,90 @@
-# Etapa 13 — Aurora, assistente de voz com IA
+# BarberOS — Roadmap de Incrementos (pós-Aurora)
 
-Vou construir o assistente de voz "Aurora" em fases pequenas e testáveis. Cada fase é entregue em uma rodada para reduzir risco e custo de retrabalho.
+Aurora pausada. Vamos entregar os incrementos em etapas pequenas e testáveis. Cada etapa = 1 rodada, com aprovação antes da próxima.
 
-## Pré-requisito
-Preciso da chave **OPENAI_API_KEY** salva nos secrets do Lovable Cloud. Sem ela nenhuma das funções de voz consegue rodar. Vou pedir via formulário seguro logo no início.
+## Ordem sugerida (do maior impacto/menor risco pro mais complexo)
 
-## Decisão de arquitetura
-- **Stack**: este projeto é TanStack Start, então em vez de Edge Functions Supabase vou usar **server functions / server routes do TanStack** (`createServerFn` / `routes/api/*`). Mesma capacidade, integra melhor com o resto do app e segue a regra da plataforma. Isso não muda nenhum critério funcional do brief.
-- Toda chamada à OpenAI fica no servidor, chave nunca vai pro cliente.
-- Modelos: Whisper (`whisper-1`), GPT-4o-mini com tools, TTS (`tts-1`, voz `nova`).
+### Etapa 1 — Fidelidade & Retenção (base de pontos + carteira)
+- Tabela `loyalty_points` (saldo por cliente/barbearia) e `loyalty_transactions` (ganho/resgate).
+- Regra configurável: X pontos por R$ gasto (em settings da barbearia).
+- Crédito automático ao concluir agendamento/venda PDV.
+- Tela admin: configurar regra + ver saldo do cliente.
+- Tela cliente (`/minha-conta`): saldo, extrato, como usar.
 
-## Fases (uma por rodada, com aprovação entre elas)
+### Etapa 2 — Cashback / Carteira de créditos
+- Tabela `wallet_balances` + `wallet_transactions`.
+- % de cashback configurável; gera crédito ao concluir serviço.
+- Uso como forma de pagamento no PDV e no agendamento.
+- Extrato no app do cliente.
 
-### Fase 1 — Fundação de dados e secret
-- Migration: tabelas `voice_sessions` e `voice_messages` com RLS (dono enxerga as da barbearia, cliente as próprias).
-- Coluna `settings.aurora` em `barbershops` (ativo, voz, mensagem de boas-vindas, limite de turnos, gravação on/off, persona extra).
-- Pedir `OPENAI_API_KEY`.
+### Etapa 3 — Aniversariantes + Cupons inteligentes
+- Job diário: gera cupom de aniversário automático.
+- Detecção de inativos (45+ dias sem agendar) → cupom "saudades".
+- Painel: ver cupons gerados, taxa de uso.
+- (Notificação fica pra Etapa 6 quando ligarmos push/email.)
 
-### Fase 2 — Backend de voz (3 endpoints)
-- `POST /api/voice/transcribe` — recebe áudio webm, chama Whisper, devolve texto.
-- `POST /api/voice/chat` — server function: monta system prompt + histórico, chama GPT-4o-mini com **tools** (`listar_servicos`, `listar_profissionais`, `buscar_horarios_disponiveis`, `identificar_cliente`, `criar_agendamento`, `cancelar_agendamento`, `informacoes_barbearia`). Reaproveita as regras já existentes em `agendar.tsx` (conflito, antecedência, no-show, bloqueio).
-- `POST /api/voice/synthesize` — recebe texto, devolve mp3 do TTS.
-- Persistência de turnos em `voice_messages`, tokens contados, máscara de PII (cartão/CPF) antes de salvar.
+### Etapa 4 — Indique e Ganhe
+- Código único por cliente (slug curto).
+- Tabela `referrals` rastreia indicação → primeiro agendamento do indicado.
+- Crédito automático na carteira de quem indicou + desconto no indicado.
+- Tela "Indicar amigos" no `/minha-conta` com link compartilhável.
 
-### Fase 3 — Frontend (FAB + Drawer)
-- Hook `useVoiceRecorder` (MediaRecorder + AnalyserNode + VAD de silêncio 1,5s).
-- Hook `useVoiceChat` orquestrando gravar → transcrever → chat → tts → play.
-- `<VoiceAssistantDrawer />` com avatar pulsante, balões estilo WhatsApp, badge de estado (Ouvindo/Pensando/Falando), botão circular grande (tap = toggle, hold = push-to-talk), mute do TTS, fallback teclado, encerrar.
-- FAB dourado fixo em todas as páginas públicas (montado no `PublicLayout`), pulse animado, respeita safe-area mobile, esconde se Aurora desativada nas settings.
-- Modal de permissão de microfone amigável + fallback se negado.
-- Onboarding: primeira fala da Aurora se apresentando.
+### Etapa 5 — Lista de Espera
+- Tabela `waitlist_entries` (cliente, serviço, profissional opcional, janela desejada).
+- Botão "Entrar na lista" quando horário tá cheio.
+- Trigger: ao cancelar/liberar slot, notificar próximo da fila.
+- Painel admin pra gerenciar fila.
 
-### Fase 4 — Painel admin
-- `/admin/aurora`: KPIs (sessões, conversão, duração média, turnos médios, custo estimado), tabela de sessões com filtro, modal de detalhe com transcrição completa, gráfico de sessões/dia.
-- Seção em `/admin/configuracoes` para configurar Aurora (ativar, voz, persona, turnos máx, gravação, boas-vindas).
+### Etapa 6 — Push Notifications (PWA)
+- Web Push (VAPID) com Service Worker já que o PWA está instalável.
+- Tabela `push_subscriptions`.
+- Disparos: confirmação de agendamento, lembrete 24h/1h, vaga liberada, cupom novo, pontos creditados.
+- Preferências de notificação no `/minha-conta`.
 
-### Fase 5 — Polimento
-- Rate limit por IP/sessão (10/h, 60s por gravação, 8min por sessão).
-- Botão "apagar minha conversa".
-- Aviso de privacidade na primeira abertura.
-- README curto sobre `OPENAI_API_KEY`.
-- Seed: ativar Aurora na demo + 5 sessões de exemplo.
+### Etapa 7 — Check-in por QR Code
+- QR code único por agendamento.
+- Cliente abre `/checkin/$token` → marca chegada → agenda mostra "Cliente chegou".
+- Badge na agenda do profissional.
 
-## Detalhes técnicos relevantes
-- Streaming: chat completion com `stream: true`, TTS disparado por frase assim que chega do LLM (latência alvo < 2,5s).
-- VAD: RMS do AnalyserNode, threshold ajustável.
-- Áudio: `webm;codecs=opus` na captura, `audio/mpeg` no retorno do TTS.
-- Tools rodam com client admin do Supabase dentro do server, sempre filtrando por `barbershop_id` da sessão.
-- Auditoria: `audit_logs` recebe entrada quando Aurora cria agendamento.
+### Etapa 8 — Reagendamento self-service
+- Link no email/push do lembrete → fluxo de remarcar em 1 clique.
+- Reaproveita as regras de antecedência/conflito já existentes.
 
-## O que vou fazer agora se você aprovar
-1. Pedir o secret `OPENAI_API_KEY`.
-2. Rodar a migration da Fase 1.
-3. Voltar para confirmar antes de seguir pra Fase 2.
+### Etapa 9 — Dashboard de Insights
+- KPIs novos: previsão de faturamento do mês, horários ociosos, melhor dia/profissional.
+- Sugestões automáticas ("terças 14h estão 80% vazias — criar promoção?").
+- Ranking expandido de profissionais (retenção, ticket médio, nota).
+
+### Etapa 10 — Metas & Gamificação
+- Tabela `goals` (mensal por profissional ou barbearia).
+- Barra de progresso na home admin.
+- Bônus de comissão automático ao bater meta.
+
+### Etapa 11 — Pagamento Online (sinal antifurão)
+- Integração Stripe (já temos conector) — sinal de X% no agendamento.
+- Política: se cliente cancela <12h ou no-show, sinal é retido.
+- Crédito do sinal abatido no PDV ao concluir o serviço.
+
+### Etapa 12 — Estoque inteligente
+- Alerta de mínimo configurável por produto.
+- Sugestão de recompra baseada no consumo médio.
+- Notificação no painel quando estoque cruza o limite.
+
+### Etapa 13 — Google Calendar Sync (profissionais)
+- OAuth Google por profissional.
+- Sincroniza agendamentos como eventos; bloqueios do Google viram folgas.
+
+### Etapa 14 — Franquia: painel consolidado
+- Comparativo entre unidades (faturamento, ticket, retenção).
+- Cálculo automático de royalties por unidade.
+- Transferência de cliente entre unidades mantendo histórico.
+
+---
+
+## Como vamos trabalhar
+- Eu entrego a etapa, você testa, aprova, seguimos pra próxima.
+- Se quiser pular alguma ou mudar a ordem, é só falar.
+- Posso também agrupar 2 etapas pequenas numa rodada se você preferir velocidade.
+
+## Próximo passo se aprovar
+Começo pela **Etapa 1 — Fidelidade & Retenção** (migration + telas admin/cliente + crédito automático ao concluir agendamento).
