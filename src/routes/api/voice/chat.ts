@@ -214,12 +214,6 @@ export const Route = createFileRoute("/api/voice/chat")({
             assistantText = "Desculpa, não entendi. Pode repetir?";
           }
 
-          // If audio input, try to extract a transcript from history we just sent.
-          // Gemini doesn't return separate transcripts, so we ask it briefly via a no-tool follow-up only if needed.
-          // For simplicity + cost, we skip a separate transcript call and use a placeholder.
-          if (body.audio_base64 && !userTranscript) {
-            userTranscript = "[áudio]";
-          }
 
           // Persist user turn
           await supabaseAdmin.from("voice_messages").insert({
