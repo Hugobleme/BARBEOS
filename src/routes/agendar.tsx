@@ -133,6 +133,22 @@ function Booking() {
     },
   });
 
+  const { data: dayTimeOff = [] } = useQuery({
+    enabled: !!date && candidatePros.length > 0,
+    queryKey: ["timeoff", date?.toISOString().slice(0,10), candidatePros.map(p=>p.id).join(",")],
+    queryFn: async () => {
+      if (!date) return [];
+      const start = startOfDay(date).toISOString();
+      const end = addDays(startOfDay(date), 1).toISOString();
+      // Overlaps the day: start_at < dayEnd AND end_at > dayStart
+      const { data } = await supabase.from("time_off")
+        .select("professional_id, start_at, end_at")
+        .in("professional_id", candidatePros.map(p=>p.id))
+        .lt("start_at", end).gt("end_at", start);
+      return data ?? [];
+    },
+  });
+
   const slots = useMemo(() => {
     if (!date || totalDuration === 0 || candidatePros.length === 0) return [] as { time: string; proId: string }[];
     const wd = date.getDay();
@@ -146,6 +162,7 @@ function Booking() {
       const breakS = wh.break_start ? parse(wh.break_start, "HH:mm:ss", date) : null;
       const breakE = wh.break_end ? parse(wh.break_end, "HH:mm:ss", date) : null;
       const proAppts = dayAppts.filter(a => a.professional_id === pro.id).map(a => ({ s: new Date(a.scheduled_start), e: new Date(a.scheduled_end) }));
+      const proOff = dayTimeOff.filter((t: any) => t.professional_id === pro.id).map((t: any) => ({ s: new Date(t.start_at), e: new Date(t.end_at) }));
 
       let cur = dayStart;
       const now = new Date();
@@ -154,8 +171,9 @@ function Booking() {
         const slotEnd = addMinutes(cur, totalDuration);
         const inBreak = breakS && breakE && (slotStart < breakE && slotEnd > breakS);
         const overlaps = proAppts.some(a => slotStart < a.e && slotEnd > a.s);
+        const blocked = proOff.some(t => slotStart < t.e && slotEnd > t.s);
         const inPast = isBefore(slotStart, addMinutes(now, 30));
-        if (!inBreak && !overlaps && !inPast) {
+        if (!inBreak && !overlaps && !blocked && !inPast) {
           const key = format(slotStart, "HH:mm");
           if (!seen.has(key)) {
             seen.add(key);
@@ -166,7 +184,7 @@ function Booking() {
       }
     }
     return out.sort((a,b)=> a.time.localeCompare(b.time));
-  }, [date, totalDuration, candidatePros, workingHours, dayAppts]);
+  }, [date, totalDuration, candidatePros, workingHours, dayAppts, dayTimeOff]);
 
   const toggleService = (s: Service) =>
     setPicked(prev => prev.find(p => p.id === s.id) ? prev.filter(p => p.id !== s.id) : [...prev, s]);
