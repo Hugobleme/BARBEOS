@@ -1096,6 +1096,145 @@ export type Database = {
           },
         ]
       }
+      voice_messages: {
+        Row: {
+          audio_url: string | null
+          content: string | null
+          created_at: string
+          duration_ms: number | null
+          id: string
+          role: string
+          session_id: string
+          tokens_in: number | null
+          tokens_out: number | null
+          tool_name: string | null
+          tool_payload: Json | null
+          tool_result: Json | null
+        }
+        Insert: {
+          audio_url?: string | null
+          content?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          role: string
+          session_id: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_name?: string | null
+          tool_payload?: Json | null
+          tool_result?: Json | null
+        }
+        Update: {
+          audio_url?: string | null
+          content?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          role?: string
+          session_id?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+          tool_name?: string | null
+          tool_payload?: Json | null
+          tool_result?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "voice_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voice_sessions: {
+        Row: {
+          appointment_id: string | null
+          barbershop_id: string
+          created_at: string
+          customer_id: string | null
+          ended_at: string | null
+          id: string
+          language: string
+          metadata: Json
+          outcome: string | null
+          profile_id: string | null
+          started_at: string
+          status: string
+          total_audio_seconds: number
+          total_turns: number
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          customer_id?: string | null
+          ended_at?: string | null
+          id?: string
+          language?: string
+          metadata?: Json
+          outcome?: string | null
+          profile_id?: string | null
+          started_at?: string
+          status?: string
+          total_audio_seconds?: number
+          total_turns?: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string | null
+          ended_at?: string | null
+          id?: string
+          language?: string
+          metadata?: Json
+          outcome?: string | null
+          profile_id?: string | null
+          started_at?: string
+          status?: string
+          total_audio_seconds?: number
+          total_turns?: number
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_sessions_barbershop_id_fkey"
+            columns: ["barbershop_id"]
+            isOneToOne: false
+            referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voice_sessions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       working_hours: {
         Row: {
           break_end: string | null
