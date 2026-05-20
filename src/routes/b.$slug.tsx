@@ -6,20 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Phone, Scissors, Sparkles, Star } from "lucide-react";
+import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check } from "lucide-react";
 import { brl, minutes } from "@/lib/format";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 type Shop = {
   id: string; name: string; slug: string; description: string | null;
   logo_url: string | null; banner_url: string | null;
-  address: any; contacts: any; social: any;
+  address: any; contacts: any; social: any; settings: any;
 };
 
 export const Route = createFileRoute("/b/$slug")({
   loader: async ({ params }) => {
     const { data, error } = await supabase
       .from("barbershops")
-      .select("id,name,slug,description,logo_url,banner_url,address,contacts,social,active")
+      .select("id,name,slug,description,logo_url,banner_url,address,contacts,social,settings,active")
       .eq("slug", params.slug)
       .eq("active", true)
       .maybeSingle();
@@ -89,8 +91,29 @@ export const Route = createFileRoute("/b/$slug")({
   component: ShopPage,
 });
 
+const DAYS: { key: string; label: string }[] = [
+  { key: "mon", label: "Segunda" },
+  { key: "tue", label: "Terça" },
+  { key: "wed", label: "Quarta" },
+  { key: "thu", label: "Quinta" },
+  { key: "fri", label: "Sexta" },
+  { key: "sat", label: "Sábado" },
+  { key: "sun", label: "Domingo" },
+];
+
+const DEFAULT_HOURS: Record<string, string> = {
+  mon: "09h – 19h", tue: "09h – 19h", wed: "09h – 19h",
+  thu: "09h – 19h", fri: "09h – 19h", sat: "09h – 17h", sun: "Fechado",
+};
+
+function todayKey() {
+  return ["sun","mon","tue","wed","thu","fri","sat"][new Date().getDay()];
+}
+
 function ShopPage() {
   const { shop } = Route.useLoaderData();
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedPro, setSelectedPro] = useState<string | null>(null);
 
   const { data: services = [] } = useQuery({
     queryKey: ["shop-services", shop.id],
@@ -105,30 +128,30 @@ function ShopPage() {
 
   const addr = shop.address ?? {};
   const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
+  const whatsapp = shop.contacts?.whatsapp;
+  const whatsappNumber = whatsapp ? String(whatsapp).replace(/\D/g, "") : null;
   const fullAddr = [addr.street, addr.number].filter(Boolean).join(", ");
   const cityLine = [addr.city, addr.state].filter(Boolean).join(" / ");
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "HairSalon",
-    name: shop.name,
-    description: shop.description ?? undefined,
-    image: shop.banner_url ?? shop.logo_url ?? undefined,
-    telephone: phone ?? undefined,
-    address: addr.street ? {
-      "@type": "PostalAddress",
-      streetAddress: fullAddr,
-      addressLocality: addr.city ?? undefined,
-      addressRegion: addr.state ?? undefined,
-      postalCode: addr.zip ?? undefined,
-      addressCountry: "BR",
-    } : undefined,
-  };
+  const hours: Record<string, string> = (shop.settings?.hours && typeof shop.settings.hours === "object")
+    ? { ...DEFAULT_HOURS, ...shop.settings.hours }
+    : DEFAULT_HOURS;
+  const today = todayKey();
+  const todayHours = hours[today] ?? "—";
+
+  // Builds the booking search params with current selection so /agendar pre-fills.
+  const bookingSearch = () => ({
+    shop: shop.slug,
+    ...(selectedService ? { service: selectedService } : {}),
+    ...(selectedPro ? { pro: selectedPro } : {}),
+  }) as any;
+
+  const waUrl = whatsappNumber
+    ? `https://wa.me/55${whatsappNumber}?text=${encodeURIComponent(`Olá! Gostaria de agendar na ${shop.name}.`)}`
+    : null;
 
   return (
     <PublicLayout>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,oklch(0.74_0.09_85/0.18),transparent_70%)]" />
@@ -139,11 +162,25 @@ function ShopPage() {
             </span>
             <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] md:text-6xl">{shop.name}</h1>
             {shop.description && <p className="mt-5 max-w-md text-base text-muted-foreground md:text-lg">{shop.description}</p>}
+
+            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs text-foreground">
+              <Clock className="h-3.5 w-3.5 text-accent" />
+              <span className="font-medium">Hoje:</span>
+              <span className="text-muted-foreground">{todayHours}</span>
+            </div>
+
             <div className="mt-7 flex flex-wrap gap-3">
               <Button asChild size="lg" className="h-12 px-6 text-base">
-                <Link to="/agendar" search={{ shop: shop.slug } as any}>Agendar agora</Link>
+                <Link to="/agendar" search={bookingSearch()}>Agendar agora</Link>
               </Button>
-              {phone && (
+              {waUrl && (
+                <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
+                  <a href={waUrl} target="_blank" rel="noopener noreferrer">
+                    <MessageCircle className="mr-2 h-4 w-4" />WhatsApp
+                  </a>
+                </Button>
+              )}
+              {phone && !waUrl && (
                 <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
                   <a href={`tel:${phone}`}><Phone className="mr-2 h-4 w-4" />{phone}</a>
                 </Button>
@@ -182,31 +219,46 @@ function ShopPage() {
         <div className="mb-6 flex items-end justify-between">
           <div>
             <h2 className="font-display text-3xl font-bold md:text-4xl">Serviços</h2>
-            <p className="mt-2 text-muted-foreground">Escolha, agende e relaxe.</p>
+            <p className="mt-2 text-muted-foreground">Toque em um serviço para destacá-lo no agendamento.</p>
           </div>
         </div>
         {services.length === 0 ? (
           <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhum serviço cadastrado ainda.</p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s: any) => (
-              <Card key={s.id} className="group flex flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5" /></div>
-                  <span className="text-xs text-muted-foreground">{minutes(s.duration_min)}</span>
-                </div>
-                <div>
-                  <div className="font-display text-lg font-semibold">{s.name}</div>
-                  {s.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{s.description}</p>}
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xl font-semibold">{brl(Number(s.price))}</span>
-                  <Button asChild size="sm" variant="secondary">
-                    <Link to="/agendar" search={{ shop: shop.slug } as any}>Agendar</Link>
-                  </Button>
-                </div>
-              </Card>
-            ))}
+            {services.map((s: any) => {
+              const active = selectedService === s.id;
+              return (
+                <Card
+                  key={s.id}
+                  onClick={() => setSelectedService(active ? null : s.id)}
+                  className={cn(
+                    "group relative flex cursor-pointer flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
+                    active && "border-accent ring-2 ring-accent/40 shadow-md",
+                  )}
+                >
+                  {active && (
+                    <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-foreground">
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                  )}
+                  <div className="flex items-start justify-between">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5" /></div>
+                    <span className="text-xs text-muted-foreground">{minutes(s.duration_min)}</span>
+                  </div>
+                  <div>
+                    <div className="font-display text-lg font-semibold">{s.name}</div>
+                    {s.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{s.description}</p>}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xl font-semibold">{brl(Number(s.price))}</span>
+                    <Button asChild size="sm" variant={active ? "default" : "secondary"} onClick={(e) => e.stopPropagation()}>
+                      <Link to="/agendar" search={{ shop: shop.slug, service: s.id, ...(selectedPro ? { pro: selectedPro } : {}) } as any}>Agendar</Link>
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
@@ -216,35 +268,88 @@ function ShopPage() {
         <section className="bg-card/40">
           <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
             <h2 className="font-display text-3xl font-bold md:text-4xl">Equipe</h2>
-            <p className="mt-2 text-muted-foreground">Profissionais com paixão pelo ofício.</p>
+            <p className="mt-2 text-muted-foreground">Escolha seu profissional preferido.</p>
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pros.map((p: any) => (
-                <Card key={p.id} className="flex items-center gap-4 p-5">
-                  <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}</AvatarFallback></Avatar>
-                  <div className="min-w-0">
-                    <div className="font-semibold">{p.display_name}</div>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {p.specialties?.slice(0, 3).map((s: string) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
+              {pros.map((p: any) => {
+                const active = selectedPro === p.id;
+                return (
+                  <Card
+                    key={p.id}
+                    onClick={() => setSelectedPro(active ? null : p.id)}
+                    className={cn(
+                      "relative flex cursor-pointer items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
+                      active && "border-accent ring-2 ring-accent/40 shadow-md",
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-foreground">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+                    )}
+                    <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}</AvatarFallback></Avatar>
+                    <div className="min-w-0">
+                      <div className="font-semibold">{p.display_name}</div>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {p.specialties?.slice(0, 3).map((s: string) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
+                      </div>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
       )}
 
+      {/* Horário de funcionamento */}
+      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <h2 className="font-display text-3xl font-bold md:text-4xl">Horários</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Atendimento mediante agendamento. Cancelamento gratuito até 2h antes.
+            </p>
+          </div>
+          <Card className="md:col-span-2 p-6">
+            <ul className="divide-y divide-border">
+              {DAYS.map((d) => {
+                const isToday = d.key === today;
+                return (
+                  <li key={d.key} className={cn("flex items-center justify-between py-2.5", isToday && "font-semibold text-accent")}>
+                    <span>{d.label}{isToday && " · hoje"}</span>
+                    <span className={cn("text-sm", !isToday && "text-muted-foreground")}>{hours[d.key]}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
+      </section>
+
       {/* CTA final */}
-      <section className="mx-auto max-w-6xl px-4 py-16 md:px-6">
+      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
         <Card className="flex flex-col items-start gap-4 bg-primary p-8 text-primary-foreground">
           <Sparkles className="h-8 w-8 text-accent" />
           <div>
             <h3 className="font-display text-2xl font-semibold">Pronto pra um novo visual?</h3>
-            <p className="mt-2 text-sm opacity-80">Reserve seu horário em poucos toques na {shop.name}.</p>
+            <p className="mt-2 text-sm opacity-80">
+              {selectedService || selectedPro
+                ? "Sua seleção será aplicada no agendamento."
+                : `Reserve seu horário em poucos toques na ${shop.name}.`}
+            </p>
           </div>
-          <Button asChild size="lg" variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <Link to="/agendar" search={{ shop: shop.slug } as any}>Agendar agora</Link>
-          </Button>
+          <div className="flex flex-wrap gap-3">
+            <Button asChild size="lg" variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <Link to="/agendar" search={bookingSearch()}>Agendar agora</Link>
+            </Button>
+            {waUrl && (
+              <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10">
+                <a href={waUrl} target="_blank" rel="noopener noreferrer">
+                  <MessageCircle className="mr-2 h-4 w-4" />Falar no WhatsApp
+                </a>
+              </Button>
+            )}
+          </div>
         </Card>
       </section>
 
