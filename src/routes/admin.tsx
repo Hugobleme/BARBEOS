@@ -34,6 +34,7 @@ const NAV = [
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
   { to: "/admin/pacotes", label: "Pacotes", icon: Package },
   { to: "/admin/cupons", label: "Cupons", icon: TicketPercent },
+  { to: "/admin/fidelidade", label: "Fidelidade", icon: Gift },
   { to: "/admin/estoque", label: "Estoque", icon: Boxes },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/franquia", label: "Franquia", icon: Building2 },
