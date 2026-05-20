@@ -46,6 +46,9 @@ function PDV() {
   const [filter, setFilter] = useState("");
   const [tab, setTab] = useState<"services" | "products">("services");
   const [busy, setBusy] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<any>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const { data: session } = useQuery({
     queryKey: ["pdv-session", shopId], enabled: !!shopId,
