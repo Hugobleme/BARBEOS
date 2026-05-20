@@ -119,23 +119,38 @@ export const Route = createFileRoute("/api/voice/chat")({
 
           // Current user turn — if audio, transcribe first so we have clean text in history.
           if (body.audio_base64) {
+            const rawMime = (body.audio_mime || "audio/webm").toLowerCase();
+            // Gemini officially supports: wav, mp3, aiff, aac, ogg, flac.
+            // MediaRecorder on Chrome produces webm/opus. Map container to audio/ogg so Gemini accepts the opus payload.
+            let sttMime = rawMime.split(";")[0].trim();
+            if (sttMime === "audio/webm") sttMime = "audio/ogg";
+            let sttErr: string | null = null;
             try {
               const stt = await geminiGenerate({
-                systemInstruction: "Transcreva fielmente o áudio em português do Brasil. Responda apenas com a transcrição, sem comentários.",
+                systemInstruction:
+                  "Transcreva fielmente o áudio em português do Brasil. Responda APENAS com a transcrição literal, sem comentários, sem aspas, sem prefixos.",
                 contents: [{
                   role: "user",
-                  parts: [{ inlineData: { mimeType: body.audio_mime || "audio/webm", data: body.audio_base64 } }],
+                  parts: [
+                    { text: "Transcreva o áudio a seguir:" },
+                    { inlineData: { mimeType: sttMime, data: body.audio_base64 } },
+                  ],
                 }],
               });
               const t = stt.candidates?.[0]?.content?.parts?.find(
                 (p): p is { text: string } => "text" in p && typeof p.text === "string",
               )?.text?.trim();
               userTranscript = t || "";
-            } catch {
+            } catch (err) {
+              sttErr = err instanceof Error ? err.message : String(err);
+              console.error("[voice/chat] STT error:", sttErr, "mime:", sttMime);
               userTranscript = "";
             }
             if (!userTranscript) {
-              return Response.json({ error: "Não entendi o áudio, pode repetir?" }, { status: 422 });
+              return Response.json(
+                { error: sttErr ? `STT: ${sttErr}` : "Não entendi o áudio, pode repetir?" },
+                { status: 422 },
+              );
             }
             contents.push({ role: "user", parts: [{ text: userTranscript }] });
           } else {
