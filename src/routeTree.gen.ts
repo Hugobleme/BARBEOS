@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
@@ -34,6 +35,11 @@ import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ServicosRoute = ServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
+    | '/sitemap.xml'
     | '/admin/agenda'
     | '/admin/caixa'
     | '/admin/clientes'
@@ -271,6 +281,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
+    | '/sitemap.xml'
     | '/admin/agenda'
     | '/admin/caixa'
     | '/admin/clientes'
@@ -297,6 +308,7 @@ export interface FileRouteTypes {
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
+    | '/sitemap.xml'
     | '/admin/agenda'
     | '/admin/caixa'
     | '/admin/clientes'
@@ -324,6 +336,7 @@ export interface RootRouteChildren {
   ProfissionaisRoute: typeof ProfissionaisRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
   BSlugRoute: typeof BSlugRoute
   ConviteTokenRoute: typeof ConviteTokenRoute
@@ -331,6 +344,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/servicos': {
       id: '/servicos'
       path: '/servicos'
@@ -543,6 +563,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfissionaisRoute: ProfissionaisRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
   BSlugRoute: BSlugRoute,
   ConviteTokenRoute: ConviteTokenRoute,
