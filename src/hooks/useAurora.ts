@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSpeechRecognition } from "./useSpeechRecognition";
+import { useVoiceRecorder } from "./useVoiceRecorder";
 
 export type AuroraStatus = "idle" | "listening" | "thinking" | "speaking" | "error";
 
@@ -15,43 +15,46 @@ interface UseAuroraOpts {
   muted?: boolean;
 }
 
-function speak(text: string, onDone: () => void): void {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-    onDone();
-    return;
-  }
-  let settled = false;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const finish = () => {
-    if (settled) return;
-    settled = true;
-    if (timeoutId) clearTimeout(timeoutId);
-    onDone();
-  };
-  try {
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "pt-BR";
-    u.rate = 1.05;
-    u.pitch = 1;
-    // Prefer a Portuguese voice if available.
-    const voices = window.speechSynthesis.getVoices();
-    const pt = voices.find((v) => v.lang?.toLowerCase().startsWith("pt"));
-    if (pt) u.voice = pt;
-    u.onend = finish;
-    u.onerror = finish;
-    timeoutId = setTimeout(() => {
-      try {
-        window.speechSynthesis.cancel();
-      } catch {
-        /* noop */
-      }
-      finish();
-    }, Math.min(12000, Math.max(2500, text.length * 90)));
-    window.speechSynthesis.speak(u);
-  } catch {
-    finish();
-  }
+// Decode PCM 16-bit LE from Gemini TTS (mime like "audio/L16;codec=pcm;rate=24000")
+function parseRate(mime: string): number {
+  const m = mime.match(/rate=(\d+)/i);
+  return m ? parseInt(m[1], 10) : 24000;
+}
+
+async function playPcmBase64(base64: string, mime: string): Promise<void> {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  const pcm = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
+  const rate = parseRate(mime);
+  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const ctx = new AC({ sampleRate: rate });
+  const buf = ctx.createBuffer(1, pcm.length, rate);
+  const ch = buf.getChannelData(0);
+  for (let i = 0; i < pcm.length; i++) ch[i] = pcm[i] / 32768;
+  return new Promise((resolve) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.onended = () => { ctx.close().catch(() => undefined); resolve(); };
+    src.start();
+  });
+}
+
+function fallbackSpeak(text: string): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return resolve();
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "pt-BR";
+      const v = window.speechSynthesis.getVoices().find((x) => x.lang?.toLowerCase().startsWith("pt"));
+      if (v) u.voice = v;
+      let done = false;
+      const finish = () => { if (!done) { done = true; resolve(); } };
+      u.onend = finish; u.onerror = finish;
+      window.speechSynthesis.speak(u);
+      setTimeout(finish, Math.min(15000, Math.max(2500, text.length * 90)));
+    } catch { resolve(); }
+  });
 }
 
 export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpts) {
@@ -78,91 +81,84 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     return data.session_id;
   }, [sessionId, barbershopId]);
 
-  const playTts = useCallback((text: string): Promise<void> => {
-    if (!text.trim() || mutedRef.current) {
-      setStatus("idle");
-      return Promise.resolve();
-    }
-    setStatus("speaking");
-    return new Promise<void>((resolve) => {
-      speak(text, () => {
-        setStatus("idle");
-        resolve();
-      });
-    });
-  }, []);
-
-  const sendText = useCallback(
-    async (text: string) => {
-      if (!text.trim()) return;
+  const sendTurn = useCallback(
+    async (payload: { user_text?: string; audio_base64?: string; audio_mime?: string }) => {
       setError(null);
-      const userMsg: AuroraMessage = { id: crypto.randomUUID(), role: "user", content: text };
-      setMessages((m) => [...m, userMsg]);
       setStatus("thinking");
       try {
         const sid = await ensureSession();
         const res = await fetch("/api/voice/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sid, user_text: text }),
+          body: JSON.stringify({ session_id: sid, mute: mutedRef.current, ...payload }),
         });
-        const data = (await res.json()) as { text?: string; error?: string };
-        if (!res.ok || !data.text) throw new Error(data.error ?? "chat error");
-        const aiMsg: AuroraMessage = { id: crypto.randomUUID(), role: "assistant", content: data.text };
-        setMessages((m) => [...m, aiMsg]);
-        await playTts(data.text);
+        const data = (await res.json()) as {
+          text?: string;
+          user_text?: string;
+          audio_base64?: string | null;
+          audio_mime?: string | null;
+          error?: string;
+        };
+        if (!res.ok || !data.text) throw new Error(data.error ?? "erro na resposta");
+
+        const userText = (payload.user_text ?? data.user_text ?? "").trim();
+        const newMessages: AuroraMessage[] = [];
+        if (userText) newMessages.push({ id: crypto.randomUUID(), role: "user", content: userText });
+        newMessages.push({ id: crypto.randomUUID(), role: "assistant", content: data.text });
+        setMessages((m) => [...m, ...newMessages]);
+
+        if (!mutedRef.current) {
+          setStatus("speaking");
+          try {
+            if (data.audio_base64 && data.audio_mime) {
+              await playPcmBase64(data.audio_base64, data.audio_mime);
+            } else {
+              await fallbackSpeak(data.text);
+            }
+          } catch {
+            await fallbackSpeak(data.text).catch(() => undefined);
+          }
+        }
+        setStatus("idle");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "erro";
         setError(msg);
         setStatus("error");
+        setTimeout(() => setStatus((s) => (s === "error" ? "idle" : s)), 1500);
       }
     },
-    [ensureSession, playTts],
+    [ensureSession],
   );
 
-  const speech = useSpeechRecognition({
-    onFinal: (text) => {
-      void sendText(text);
-    },
-    onEmpty: () => {
-      setStatus("idle");
-    },
+  const recorder = useVoiceRecorder({
+    onRecorded: (b64, mime) => { void sendTurn({ audio_base64: b64, audio_mime: mime }); },
+    onError: (msg) => { setError(msg); setStatus("idle"); },
   });
 
   useEffect(() => {
-    if (speech.isRecording) {
-      setStatus("listening");
-      return;
-    }
-    setStatus((current) => (current === "listening" ? "idle" : current));
-  }, [speech.isRecording]);
+    if (recorder.isRecording) setStatus("listening");
+    else setStatus((cur) => (cur === "listening" ? "idle" : cur));
+  }, [recorder.isRecording]);
 
-  useEffect(() => {
-    if (speech.error) {
-      setStatus((current) => (current === "listening" ? "idle" : current));
-    }
-  }, [speech.error]);
+  const sendText = useCallback((text: string) => {
+    if (!text.trim()) return;
+    void sendTurn({ user_text: text.trim() });
+  }, [sendTurn]);
 
   const startListening = useCallback(() => {
     setError(null);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
     }
-    speech.start();
-  }, [speech]);
+    void recorder.start();
+  }, [recorder]);
 
-  const stopListening = useCallback(() => {
-    speech.stop();
-  }, [speech]);
+  const stopListening = useCallback(() => { recorder.stop(); }, [recorder]);
 
   const endSession = useCallback(async () => {
+    recorder.cancel();
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    try {
-      speech.stop();
-    } catch {
-      /* noop */
+      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
     }
     if (sessionId) {
       await fetch("/api/voice/end-session", {
@@ -174,33 +170,23 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     setSessionId(null);
     setMessages([]);
     setStatus("idle");
-  }, [sessionId, speech]);
+    setError(null);
+  }, [sessionId, recorder]);
 
   useEffect(() => {
     if (!enabled && typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
+      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
     }
   }, [enabled]);
-
-  // Pseudo "level" for pulse animation while listening (no audio analyser).
-  const [pulse, setPulse] = useState(0);
-  useEffect(() => {
-    if (!speech.isRecording) {
-      setPulse(0);
-      return;
-    }
-    const id = setInterval(() => setPulse(Math.random() * 0.6 + 0.2), 180);
-    return () => clearInterval(id);
-  }, [speech.isRecording]);
 
   return {
     status,
     messages,
     error,
-    level: pulse,
-    interim: speech.interim,
-    isSupported: speech.isSupported,
-    micError: speech.error,
+    level: recorder.level,
+    interim: "",
+    isSupported: recorder.isSupported,
+    micError: recorder.error,
     sendText,
     startListening,
     stopListening,
