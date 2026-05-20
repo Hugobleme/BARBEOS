@@ -1307,6 +1307,75 @@ export type Database = {
           },
         ]
       }
+      wallet_balances: {
+        Row: {
+          balance: number
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          lifetime_credited: number
+          updated_at: string
+        }
+        Insert: {
+          balance?: number
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          lifetime_credited?: number
+          updated_at?: string
+        }
+        Update: {
+          balance?: number
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          lifetime_credited?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          barbershop_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          kind: string
+          transaction_id: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          kind: string
+          transaction_id?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       working_hours: {
         Row: {
           break_end: string | null
@@ -1361,6 +1430,26 @@ export type Database = {
         }
         Returns: number
       }
+      credit_wallet_cashback: {
+        Args: {
+          _amount: number
+          _appointment_id?: string
+          _barbershop_id: string
+          _customer_id: string
+          _description: string
+          _transaction_id?: string
+        }
+        Returns: number
+      }
+      credit_wallet_manual: {
+        Args: {
+          _amount: number
+          _barbershop_id: string
+          _customer_id: string
+          _description?: string
+        }
+        Returns: number
+      }
       has_barbershop_role: {
         Args: {
           _barbershop_id: string
@@ -1383,6 +1472,17 @@ export type Database = {
           _customer_id: string
           _description?: string
           _points: number
+        }
+        Returns: number
+      }
+      redeem_wallet: {
+        Args: {
+          _amount: number
+          _appointment_id?: string
+          _barbershop_id: string
+          _customer_id: string
+          _description?: string
+          _transaction_id?: string
         }
         Returns: number
       }
