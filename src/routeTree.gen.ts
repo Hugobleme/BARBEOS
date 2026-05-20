@@ -28,6 +28,7 @@ import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminRelatoriosRouteImport } from './routes/admin.relatorios'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminPortfolioRouteImport } from './routes/admin.portfolio'
+import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
@@ -133,6 +134,11 @@ const AdminPortfolioRoute = AdminPortfolioRouteImport.update({
   path: '/portfolio',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPdvRoute = AdminPdvRouteImport.update({
+  id: '/pdv',
+  path: '/pdv',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
   id: '/franquia',
   path: '/franquia',
@@ -200,6 +206,7 @@ export interface FileRoutesByFullPath {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByTo {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -351,6 +362,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -513,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPortfolioRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pdv': {
+      id: '/admin/pdv'
+      path: '/pdv'
+      fullPath: '/admin/pdv'
+      preLoaderRoute: typeof AdminPdvRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/franquia': {
       id: '/admin/franquia'
       path: '/franquia'
@@ -589,6 +608,7 @@ interface AdminRouteChildren {
   AdminEquipeRoute: typeof AdminEquipeRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
+  AdminPdvRoute: typeof AdminPdvRoute
   AdminPortfolioRoute: typeof AdminPortfolioRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
   AdminRelatoriosRoute: typeof AdminRelatoriosRoute
@@ -606,6 +626,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEquipeRoute: AdminEquipeRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
+  AdminPdvRoute: AdminPdvRoute,
   AdminPortfolioRoute: AdminPortfolioRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
   AdminRelatoriosRoute: AdminRelatoriosRoute,
