@@ -7,3 +7,5 @@ Disallow: /recuperar-senha
 Disallow: /minha-conta
 Disallow: /avaliar
 Disallow: /convite
+
+Sitemap: /sitemap.xml
