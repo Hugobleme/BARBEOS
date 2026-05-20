@@ -37,19 +37,36 @@ type Service = { id: string; name: string; duration_min: number; price: number; 
 type Pro = { id: string; display_name: string; specialties: string[] | null };
 type WH = { professional_id: string; weekday: number; start_time: string; end_time: string; break_start: string | null; break_end: string | null };
 
-const STEPS = ["Serviços","Profissional","Data","Horário","Identificação","Confirmação"] as const;
+const STEPS = ["Serviços","Profissional","Data","Horário","Dados","Confirmação"] as const;
 
 function Stepper({ step }: { step: number }) {
+  const pct = Math.round(((step + 1) / STEPS.length) * 100);
   return (
-    <ol className="mb-8 flex flex-wrap items-center gap-2 text-xs md:text-sm">
-      {STEPS.map((s, i) => (
-        <li key={s} className="flex items-center gap-2">
-          <span className={`grid h-7 w-7 place-items-center rounded-full border ${i<step?"bg-accent border-accent text-accent-foreground": i===step?"border-primary bg-primary text-primary-foreground":"border-border text-muted-foreground"}`}>{i<step?<Check className="h-3.5 w-3.5"/>:i+1}</span>
-          <span className={i===step?"font-medium":"text-muted-foreground"}>{s}</span>
-          {i<STEPS.length-1 && <ChevronRight className="h-4 w-4 text-muted-foreground"/>}
-        </li>
-      ))}
-    </ol>
+    <div className="mb-8">
+      {/* Mobile: compacto */}
+      <div className="md:hidden">
+        <div className="mb-2 flex items-baseline justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">Passo {step + 1}/{STEPS.length}</span>
+          <span className="font-display text-sm font-semibold text-accent">{STEPS[step]}</span>
+        </div>
+        <div className="h-1 w-full overflow-hidden rounded-full bg-border/60">
+          <div className="h-full bg-accent transition-all duration-300" style={{ width: `${pct}%` }} />
+        </div>
+        {step < STEPS.length - 1 && (
+          <p className="mt-2 text-xs text-muted-foreground">Próximo: <span className="text-foreground">{STEPS[step + 1]}</span></p>
+        )}
+      </div>
+      {/* Desktop: stepper completo */}
+      <ol className="hidden flex-wrap items-center gap-2 text-sm md:flex">
+        {STEPS.map((s, i) => (
+          <li key={s} className="flex items-center gap-2">
+            <span className={`grid h-7 w-7 place-items-center rounded-full border ${i<step?"bg-accent border-accent text-accent-foreground": i===step?"border-primary bg-primary text-primary-foreground":"border-border text-muted-foreground"}`}>{i<step?<Check className="h-3.5 w-3.5"/>:i+1}</span>
+            <span className={i===step?"font-medium":"text-muted-foreground"}>{s}</span>
+            {i<STEPS.length-1 && <ChevronRight className="h-4 w-4 text-muted-foreground"/>}
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
