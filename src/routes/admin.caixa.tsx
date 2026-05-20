@@ -63,6 +63,17 @@ function Caixa() {
   }, { sales: 0, expenses: 0, byMethod: {} as Record<string, number> });
   const net = totals.sales - totals.expenses;
 
+  // Totais por profissional (apenas vendas)
+  const byPro = new Map<string, { name: string; total: number; count: number }>();
+  for (const t of (txs ?? [])) {
+    if (t.kind !== "sale" || !t.professional_id) continue;
+    const cur = byPro.get(t.professional_id) ?? { name: t.professional?.display_name ?? "—", total: 0, count: 0 };
+    cur.total += Number(t.amount); cur.count += 1;
+    byPro.set(t.professional_id, cur);
+  }
+  const proRows = Array.from(byPro.values()).sort((a, b) => b.total - a.total);
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
