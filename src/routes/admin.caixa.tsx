@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Plus, Lock, Unlock } from "lucide-react";
+import { DollarSign, Plus, Lock, Unlock, Receipt, Users } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/caixa")({ component: Caixa });
