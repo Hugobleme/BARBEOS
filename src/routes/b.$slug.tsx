@@ -125,6 +125,14 @@ function ShopPage() {
     queryFn: async () => (await supabase.from("professionals").select("*")
       .eq("barbershop_id", shop.id).eq("active", true)).data ?? [],
   });
+  const { data: portfolio = [] } = useQuery({
+    queryKey: ["shop-portfolio", shop.id],
+    queryFn: async () => (await supabase.from("portfolio_items")
+      .select("id, image_url, caption, professional_id")
+      .eq("barbershop_id", shop.id)
+      .order("created_at", { ascending: false })
+      .limit(12)).data ?? [],
+  });
 
   const addr = shop.address ?? {};
   const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
