@@ -435,6 +435,51 @@ export type Database = {
           },
         ]
       }
+      customer_subscriptions: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          notes: string | null
+          package_id: string
+          purchased_at: string
+          sessions_remaining: number
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          package_id: string
+          purchased_at?: string
+          sessions_remaining: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          notes?: string | null
+          package_id?: string
+          purchased_at?: string
+          sessions_remaining?: number
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           barbershop_id: string
@@ -491,6 +536,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      packages: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price: number
+          sessions_total: number
+          updated_at: string
+          validity_days: number | null
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price?: number
+          sessions_total?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price?: number
+          sessions_total?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Relationships: []
       }
       portfolio_items: {
         Row: {
@@ -753,6 +837,47 @@ export type Database = {
             columns: ["barbershop_id"]
             isOneToOne: false
             referencedRelation: "barbershops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_redemptions: {
+        Row: {
+          appointment_id: string | null
+          barbershop_id: string
+          id: string
+          notes: string | null
+          professional_id: string | null
+          redeemed_at: string
+          redeemed_by: string | null
+          subscription_id: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          barbershop_id: string
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          redeemed_at?: string
+          redeemed_by?: string | null
+          subscription_id: string
+        }
+        Update: {
+          appointment_id?: string | null
+          barbershop_id?: string
+          id?: string
+          notes?: string | null
+          professional_id?: string | null
+          redeemed_at?: string
+          redeemed_by?: string | null
+          subscription_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_redemptions_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "customer_subscriptions"
             referencedColumns: ["id"]
           },
         ]
