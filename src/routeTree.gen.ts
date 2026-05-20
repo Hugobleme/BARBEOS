@@ -28,6 +28,7 @@ import { Route as AdminServicosRouteImport } from './routes/admin.servicos'
 import { Route as AdminRelatoriosRouteImport } from './routes/admin.relatorios'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
+import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
@@ -130,6 +131,11 @@ const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
   path: '/franquia',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFolgasRoute = AdminFolgasRouteImport.update({
+  id: '/folgas',
+  path: '/folgas',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEquipeRoute = AdminEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -179,6 +185,7 @@ export interface FileRoutesByFullPath {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -233,6 +241,7 @@ export interface FileRoutesById {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
   '/admin/relatorios': typeof AdminRelatoriosRoute
@@ -262,6 +271,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/profissionais'
     | '/admin/relatorios'
@@ -477,6 +489,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFranquiaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/folgas': {
+      id: '/admin/folgas'
+      path: '/folgas'
+      fullPath: '/admin/folgas'
+      preLoaderRoute: typeof AdminFolgasRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/equipe': {
       id: '/admin/equipe'
       path: '/equipe'
@@ -529,6 +548,7 @@ interface AdminRouteChildren {
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
+  AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
   AdminRelatoriosRoute: typeof AdminRelatoriosRoute
@@ -543,6 +563,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEquipeRoute: AdminEquipeRoute,
+  AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
   AdminRelatoriosRoute: AdminRelatoriosRoute,
