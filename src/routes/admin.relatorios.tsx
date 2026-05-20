@@ -4,12 +4,13 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Calendar, DollarSign, TrendingUp, Users, Star, Trophy } from "lucide-react";
+import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy } from "lucide-react";
 
 export const Route = createFileRoute("/admin/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — BarberOS" }] }),
@@ -122,14 +123,19 @@ function Relatorios() {
             {format(start, "dd 'de' MMM", { locale: ptBR })} — {format(end, "dd 'de' MMM yyyy", { locale: ptBR })}
           </p>
         </div>
-        <Select value={range} onValueChange={(v) => setRange(v as any)}>
-          <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7">Últimos 7 dias</SelectItem>
-            <SelectItem value="30">Últimos 30 dias</SelectItem>
-            <SelectItem value="90">Últimos 90 dias</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(daily, ranking, topServices)}>
+            <Download className="mr-1 h-4 w-4" /> Exportar CSV
+          </Button>
+          <Select value={range} onValueChange={(v) => setRange(v as any)}>
+            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -210,6 +216,28 @@ function Relatorios() {
       </Card>
     </div>
   );
+}
+
+function exportCSV(daily: any[], ranking: any[], topServices: any[]) {
+  const lines: string[] = [];
+  lines.push("Faturamento por dia");
+  lines.push("Dia;Faturamento;Atendimentos");
+  daily.forEach((d) => lines.push(`${d.day};${d.revenue.toFixed(2)};${d.count}`));
+  lines.push("");
+  lines.push("Ranking de profissionais");
+  lines.push("Profissional;Atendimentos;Faturamento");
+  ranking.forEach((r) => lines.push(`${r.name};${r.count};${r.revenue.toFixed(2)}`));
+  lines.push("");
+  lines.push("Top servicos");
+  lines.push("Servico;Quantidade;Faturamento");
+  topServices.forEach((s) => lines.push(`${s.name};${s.count};${s.revenue.toFixed(2)}`));
+  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `relatorio-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function KPI({ icon: Icon, label, value, hint }: any) {
