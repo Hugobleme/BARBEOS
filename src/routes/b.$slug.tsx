@@ -10,6 +10,7 @@ import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check, Star, Q
 import { brl, minutes } from "@/lib/format";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AuroraFab } from "@/components/aurora/AuroraFab";
 
 type Shop = {
   id: string; name: string; slug: string; description: string | null;
@@ -459,6 +460,7 @@ function ShopPage() {
         </Card>
       </section>
 
+      <AuroraFab barbershopId={shop.id} barbershopName={shop.name} />
       </PublicLayout>
   );
 }
