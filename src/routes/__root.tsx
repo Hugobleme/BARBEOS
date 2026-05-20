@@ -12,6 +12,24 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallAppButton } from "@/components/site/InstallAppButton";
 
+const webManifest = encodeURIComponent(
+  JSON.stringify({
+    name: "BarberOS",
+    short_name: "BarberOS",
+    description: "Agenda online e gestão para barbearias modernas.",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    background_color: "#050505",
+    theme_color: "#050505",
+    lang: "pt-BR",
+    icons: [
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+    ],
+  }),
+);
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -83,13 +101,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
       { name: "theme-color", content: "#050505" },
+      { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-title", content: "BarberOS" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "manifest", href: `data:application/manifest+json,${webManifest}` },
       { rel: "icon", type: "image/png", href: "/icon-512.png" },
       { rel: "apple-touch-icon", href: "/icon-512.png" },
     ],
