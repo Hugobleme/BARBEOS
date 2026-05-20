@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
-import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock } from "lucide-react";
+import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/pdv")({
@@ -27,7 +27,14 @@ const METHODS: { id: Method; label: string; icon: any }[] = [
   { id: "other", label: "Outro", icon: Wallet },
 ];
 
-type CartItem = { id: string; name: string; price: number };
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  productId?: string;
+  qty: number;
+  stockLeft?: number;
+};
 
 function PDV() {
   const shopId = useCurrentShopId();
@@ -37,6 +44,7 @@ function PDV() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [custom, setCustom] = useState("");
   const [filter, setFilter] = useState("");
+  const [tab, setTab] = useState<"services" | "products">("services");
   const [busy, setBusy] = useState(false);
 
   const { data: session } = useQuery({
@@ -60,22 +68,60 @@ function PDV() {
       .order("sort").order("name")).data ?? [],
   });
 
-  const filtered = useMemo(() => {
+  const { data: products, refetch: refetchProducts } = useQuery({
+    queryKey: ["pdv-products", shopId], enabled: !!shopId,
+    queryFn: async () => (await supabase.from("products")
+      .select("id, name, price, stock_qty").eq("barbershop_id", shopId).eq("active", true)
+      .order("name")).data ?? [],
+  });
+
+  const filteredServices = useMemo(() => {
     const list = services ?? [];
     if (!filter.trim()) return list;
     const f = filter.toLowerCase();
     return list.filter((s: any) => s.name.toLowerCase().includes(f));
   }, [services, filter]);
 
-  const total = cart.reduce((s, i) => s + i.price, 0);
+  const filteredProducts = useMemo(() => {
+    const list = products ?? [];
+    if (!filter.trim()) return list;
+    const f = filter.toLowerCase();
+    return list.filter((p: any) => p.name.toLowerCase().includes(f));
+  }, [products, filter]);
+
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
   function addService(s: any) {
-    setCart(c => [...c, { id: `${s.id}-${Date.now()}`, name: s.name, price: Number(s.price) }]);
+    setCart(c => [...c, { id: `${s.id}-${Date.now()}`, name: s.name, price: Number(s.price), qty: 1 }]);
+  }
+  function addProduct(p: any) {
+    const stock = Number(p.stock_qty ?? 0);
+    setCart(c => {
+      const existing = c.find(i => i.productId === p.id);
+      if (existing) {
+        if (existing.qty + 1 > stock) { toast.error(`Estoque insuficiente (${stock})`); return c; }
+        return c.map(i => i.productId === p.id ? { ...i, qty: i.qty + 1 } : i);
+      }
+      if (stock < 1) { toast.error("Sem estoque"); return c; }
+      return [...c, { id: `prod-${p.id}-${Date.now()}`, productId: p.id, name: p.name, price: Number(p.price), qty: 1, stockLeft: stock }];
+    });
+  }
+  function changeQty(id: string, delta: number) {
+    setCart(c => c.flatMap(i => {
+      if (i.id !== id) return [i];
+      const next = i.qty + delta;
+      if (next <= 0) return [];
+      if (i.productId && i.stockLeft != null && next > i.stockLeft) {
+        toast.error(`Estoque insuficiente (${i.stockLeft})`);
+        return [i];
+      }
+      return [{ ...i, qty: next }];
+    }));
   }
   function addCustom() {
     const v = Number(custom.replace(",", "."));
     if (!v || v <= 0) return;
-    setCart(c => [...c, { id: `custom-${Date.now()}`, name: "Avulso", price: v }]);
+    setCart(c => [...c, { id: `custom-${Date.now()}`, name: "Avulso", price: v, qty: 1 }]);
     setCustom("");
   }
   function removeItem(id: string) { setCart(c => c.filter(i => i.id !== id)); }
@@ -85,14 +131,27 @@ function PDV() {
     if (cart.length === 0) return toast.error("Adicione itens à venda");
     setBusy(true);
     const pro = (pros ?? []).find((p: any) => p.id === proId);
-    const description = cart.map(i => i.name).join(", ");
+    const description = cart.map(i => i.qty > 1 ? `${i.qty}× ${i.name}` : i.name).join(", ");
     const { data: tx, error } = await supabase.from("cash_transactions").insert({
       barbershop_id: shopId, session_id: session.id, kind: "sale", method,
       amount: total, description, created_by: user?.id, professional_id: proId,
     }).select("id").single();
     if (error || !tx) { setBusy(false); return toast.error(error?.message ?? "Erro ao registrar venda"); }
 
-    // Cria comissão se houver regra
+    // Baixa de estoque para produtos
+    const productItems = cart.filter(i => i.productId);
+    for (const item of productItems) {
+      const { error: smErr } = await supabase.from("stock_movements").insert({
+        barbershop_id: shopId, product_id: item.productId!, kind: "out",
+        quantity: item.qty, transaction_id: tx.id, created_by: user?.id,
+        notes: `Venda PDV`,
+      });
+      if (smErr) { toast.error(`Estoque: ${smErr.message}`); continue; }
+      const newQty = Math.max(0, (item.stockLeft ?? 0) - item.qty);
+      await supabase.from("products").update({ stock_qty: newQty }).eq("id", item.productId!);
+    }
+
+    // Cria comissão se houver regra (sobre o total da venda)
     if (pro && proId) {
       const rule: any = pro.commission_rule ?? {};
       const rate = Number(rule.rate ?? rule.percent ?? 0);
@@ -107,6 +166,7 @@ function PDV() {
     setBusy(false);
     toast.success(`Venda de ${brl(total)} registrada`);
     setCart([]); setCustom("");
+    if (productItems.length) refetchProducts();
   }
 
   if (!session) {
@@ -128,7 +188,7 @@ function PDV() {
       <div className="space-y-4">
         <div>
           <h1 className="font-display text-3xl font-bold">PDV</h1>
-          <p className="text-sm text-muted-foreground">Toque nos serviços para adicionar à venda</p>
+          <p className="text-sm text-muted-foreground">Toque nos itens para adicionar à venda</p>
         </div>
 
         <Card className="p-4">
@@ -146,19 +206,49 @@ function PDV() {
 
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="text-sm font-medium text-muted-foreground">Serviços</div>
+            <div className="inline-flex rounded-md border border-border p-0.5">
+              <button onClick={()=>setTab("services")}
+                className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition ${tab==="services"?"bg-accent/15 text-accent":"text-muted-foreground hover:bg-muted/40"}`}>
+                <Scissors className="h-3.5 w-3.5"/> Serviços
+              </button>
+              <button onClick={()=>setTab("products")}
+                className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition ${tab==="products"?"bg-accent/15 text-accent":"text-muted-foreground hover:bg-muted/40"}`}>
+                <Package className="h-3.5 w-3.5"/> Produtos
+              </button>
+            </div>
             <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Buscar…" className="h-8 max-w-[200px]"/>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {filtered.map((s: any) => (
-              <button key={s.id} onClick={() => addService(s)}
-                className="group flex flex-col items-start gap-1 rounded-lg border border-border p-3 text-left transition hover:border-accent hover:bg-accent/5 active:scale-[0.98]">
-                <span className="line-clamp-2 text-sm font-medium">{s.name}</span>
-                <span className="font-mono text-xs text-muted-foreground group-hover:text-accent">{brl(Number(s.price))}</span>
-              </button>
-            ))}
-            {filtered.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Nenhum serviço.</p>}
-          </div>
+
+          {tab === "services" ? (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {filteredServices.map((s: any) => (
+                <button key={s.id} onClick={() => addService(s)}
+                  className="group flex flex-col items-start gap-1 rounded-lg border border-border p-3 text-left transition hover:border-accent hover:bg-accent/5 active:scale-[0.98]">
+                  <span className="line-clamp-2 text-sm font-medium">{s.name}</span>
+                  <span className="font-mono text-xs text-muted-foreground group-hover:text-accent">{brl(Number(s.price))}</span>
+                </button>
+              ))}
+              {filteredServices.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Nenhum serviço.</p>}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {filteredProducts.map((p: any) => {
+                const stock = Number(p.stock_qty ?? 0);
+                const out = stock < 1;
+                return (
+                  <button key={p.id} onClick={() => !out && addProduct(p)} disabled={out}
+                    className={`group flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition ${out?"cursor-not-allowed border-border opacity-50":"border-border hover:border-accent hover:bg-accent/5 active:scale-[0.98]"}`}>
+                    <span className="line-clamp-2 text-sm font-medium">{p.name}</span>
+                    <div className="flex w-full items-center justify-between">
+                      <span className="font-mono text-xs text-muted-foreground group-hover:text-accent">{brl(Number(p.price))}</span>
+                      <span className={`text-[10px] ${out?"text-destructive":"text-muted-foreground"}`}>est. {stock}</span>
+                    </div>
+                  </button>
+                );
+              })}
+              {filteredProducts.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Nenhum produto.</p>}
+            </div>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -184,11 +274,20 @@ function PDV() {
             {cart.length === 0 ? (
               <p className="p-6 text-center text-sm text-muted-foreground">Carrinho vazio</p>
             ) : cart.map(i => (
-              <div key={i.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span className="truncate pr-2">{i.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono">{brl(i.price)}</span>
-                  <button onClick={()=>removeItem(i.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5"/></button>
+              <div key={i.id} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    {i.productId && <Package className="h-3 w-3 text-muted-foreground"/>}
+                    <span className="truncate">{i.name}</span>
+                  </div>
+                  <span className="font-mono text-[11px] text-muted-foreground">{brl(i.price)} {i.qty>1 && `× ${i.qty}`}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button onClick={()=>changeQty(i.id,-1)} className="rounded border border-border p-1 hover:bg-muted/40"><Minus className="h-3 w-3"/></button>
+                  <span className="w-6 text-center font-mono text-xs">{i.qty}</span>
+                  <button onClick={()=>changeQty(i.id,+1)} className="rounded border border-border p-1 hover:bg-muted/40"><Plus className="h-3 w-3"/></button>
+                  <span className="ml-2 font-mono text-xs">{brl(i.price * i.qty)}</span>
+                  <button onClick={()=>removeItem(i.id)} className="ml-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5"/></button>
                 </div>
               </div>
             ))}
