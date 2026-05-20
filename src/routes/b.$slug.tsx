@@ -125,6 +125,14 @@ function ShopPage() {
     queryFn: async () => (await supabase.from("professionals").select("*")
       .eq("barbershop_id", shop.id).eq("active", true)).data ?? [],
   });
+  const { data: portfolio = [] } = useQuery({
+    queryKey: ["shop-portfolio", shop.id],
+    queryFn: async () => (await supabase.from("portfolio_items")
+      .select("id, image_url, caption, professional_id")
+      .eq("barbershop_id", shop.id)
+      .order("created_at", { ascending: false })
+      .limit(12)).data ?? [],
+  });
 
   const addr = shop.address ?? {};
   const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
@@ -297,6 +305,33 @@ function ShopPage() {
                 );
               })}
             </div>
+          </div>
+        </section>
+      )}
+
+      {/* Portfólio */}
+      {portfolio.length > 0 && (
+        <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+          <div className="mb-6">
+            <h2 className="font-display text-3xl font-bold md:text-4xl">Portfólio</h2>
+            <p className="mt-2 text-muted-foreground">Alguns dos nossos trabalhos recentes.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {portfolio.map((p: any) => (
+              <figure key={p.id} className="group relative overflow-hidden rounded-2xl border border-border">
+                <img
+                  src={p.image_url}
+                  alt={p.caption ?? "Trabalho realizado"}
+                  loading="lazy"
+                  className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
+                />
+                {p.caption && (
+                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-xs text-white opacity-0 transition group-hover:opacity-100">
+                    {p.caption}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
           </div>
         </section>
       )}

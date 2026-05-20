@@ -492,6 +492,39 @@ export type Database = {
           },
         ]
       }
+      portfolio_items: {
+        Row: {
+          barbershop_id: string
+          caption: string | null
+          created_at: string
+          id: string
+          image_url: string
+          professional_id: string | null
+          sort: number
+          storage_path: string | null
+        }
+        Insert: {
+          barbershop_id: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url: string
+          professional_id?: string | null
+          sort?: number
+          storage_path?: string | null
+        }
+        Update: {
+          barbershop_id?: string
+          caption?: string | null
+          created_at?: string
+          id?: string
+          image_url?: string
+          professional_id?: string | null
+          sort?: number
+          storage_path?: string | null
+        }
+        Relationships: []
+      }
       professionals: {
         Row: {
           active: boolean
