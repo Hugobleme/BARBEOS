@@ -29,6 +29,7 @@ import { Route as AdminRelatoriosRouteImport } from './routes/admin.relatorios'
 import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissionais'
 import { Route as AdminPortfolioRouteImport } from './routes/admin.portfolio'
 import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
+import { Route as AdminPacotesRouteImport } from './routes/admin.pacotes'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
@@ -139,6 +140,11 @@ const AdminPdvRoute = AdminPdvRouteImport.update({
   path: '/pdv',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPacotesRoute = AdminPacotesRouteImport.update({
+  id: '/pacotes',
+  path: '/pacotes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
   id: '/franquia',
   path: '/franquia',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
   '/admin/profissionais': typeof AdminProfissionaisRoute
@@ -301,6 +310,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
@@ -331,6 +341,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/admin/equipe'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
     | '/admin/profissionais'
@@ -532,6 +544,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPdvRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pacotes': {
+      id: '/admin/pacotes'
+      path: '/pacotes'
+      fullPath: '/admin/pacotes'
+      preLoaderRoute: typeof AdminPacotesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/franquia': {
       id: '/admin/franquia'
       path: '/franquia'
@@ -608,6 +627,7 @@ interface AdminRouteChildren {
   AdminEquipeRoute: typeof AdminEquipeRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
+  AdminPacotesRoute: typeof AdminPacotesRoute
   AdminPdvRoute: typeof AdminPdvRoute
   AdminPortfolioRoute: typeof AdminPortfolioRoute
   AdminProfissionaisRoute: typeof AdminProfissionaisRoute
@@ -626,6 +646,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEquipeRoute: AdminEquipeRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
+  AdminPacotesRoute: AdminPacotesRoute,
   AdminPdvRoute: AdminPdvRoute,
   AdminPortfolioRoute: AdminPortfolioRoute,
   AdminProfissionaisRoute: AdminProfissionaisRoute,
@@ -655,3 +676,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
