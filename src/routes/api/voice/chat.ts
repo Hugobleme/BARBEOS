@@ -1,6 +1,6 @@
 import "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
-import { chatCompletion, maskPII, type ChatMessage } from "@/lib/voice/openai.server";
+import { chatCompletion, maskPII, type ChatMessage } from "@/lib/voice/gateway.server";
 import { auroraTools, runTool } from "@/lib/voice/tools.server";
 import { buildSystemPrompt } from "@/lib/voice/system-prompt";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
