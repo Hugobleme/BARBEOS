@@ -233,9 +233,15 @@ function Booking() {
       let customerId: string | null = null;
       if (userId) {
         const { data: existing } = await supabase.from("customers")
-          .select("id").eq("barbershop_id", shopId).eq("profile_id", userId).maybeSingle();
-        if (existing) customerId = existing.id;
-        else {
+          .select("id, blocked, no_show_count").eq("barbershop_id", shopId).eq("profile_id", userId).maybeSingle();
+        if (existing) {
+          if ((existing as any).blocked) throw new Error("Seu cadastro está bloqueado para agendamentos. Entre em contato com a barbearia.");
+          const maxNs = Number(policy.max_no_shows ?? 0);
+          if (maxNs > 0 && Number((existing as any).no_show_count ?? 0) >= maxNs) {
+            throw new Error("Limite de faltas atingido. Entre em contato com a barbearia para regularizar.");
+          }
+          customerId = existing.id;
+        } else {
           const { data: c, error } = await supabase.from("customers").insert({
             barbershop_id: shopId, profile_id: userId,
             full_name: form.name, phone: form.phone, email: form.email || null,
@@ -251,6 +257,7 @@ function Booking() {
         if (error) throw error;
         customerId = c.id;
       }
+
 
       const { data: appt, error: aerr } = await supabase.from("appointments").insert({
         barbershop_id: shopId,
