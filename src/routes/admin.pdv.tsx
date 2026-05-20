@@ -92,7 +92,37 @@ function PDV() {
     return list.filter((p: any) => p.name.toLowerCase().includes(f));
   }, [products, filter]);
 
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discount = useMemo(() => {
+    if (!coupon) return 0;
+    if (Number(coupon.min_amount ?? 0) > 0 && subtotal < Number(coupon.min_amount)) return 0;
+    if (coupon.kind === "percent" || coupon.kind === "first_visit") {
+      return +(subtotal * Number(coupon.value) / 100).toFixed(2);
+    }
+    return Math.min(subtotal, Number(coupon.value));
+  }, [coupon, subtotal]);
+  const total = Math.max(0, +(subtotal - discount).toFixed(2));
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponBusy(true);
+    const { data, error } = await supabase.from("coupons" as any)
+      .select("*").eq("barbershop_id", shopId).eq("code", code).maybeSingle();
+    setCouponBusy(false);
+    if (error || !data) return toast.error("Cupom inválido");
+    const c: any = data;
+    if (!c.active) return toast.error("Cupom inativo");
+    const now = Date.now();
+    if (c.valid_from && now < new Date(c.valid_from).getTime()) return toast.error("Cupom ainda não está válido");
+    if (c.valid_until && now > new Date(c.valid_until).getTime()) return toast.error("Cupom expirado");
+    if (c.usage_limit != null && Number(c.used_count) >= Number(c.usage_limit)) return toast.error("Limite de uso atingido");
+    if (Number(c.min_amount ?? 0) > 0 && subtotal < Number(c.min_amount)) return toast.error(`Valor mínimo de ${brl(Number(c.min_amount))}`);
+    setCoupon(c);
+    toast.success(`Cupom ${c.code} aplicado`);
+  }
+  function clearCoupon() { setCoupon(null); setCouponInput(""); }
+
 
   function addService(s: any) {
     setCart(c => [...c, { id: `${s.id}-${Date.now()}`, name: s.name, price: Number(s.price), qty: 1 }]);
