@@ -115,9 +115,6 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
           {!aurora.isSupported && (
             <p className="text-xs text-destructive text-center">Seu navegador não suporta gravação de áudio.</p>
           )}
-          {aurora.micError && (
-            <p className="text-xs text-destructive text-center">Sem acesso ao microfone: {aurora.micError}</p>
-          )}
         </div>
 
         <div className="border-t border-border/40 px-5 py-4 space-y-3 bg-background/50 backdrop-blur">
