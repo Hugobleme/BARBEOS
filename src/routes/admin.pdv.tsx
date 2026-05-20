@@ -336,6 +336,24 @@ function PDV() {
           </div>
 
           <div className="border-t border-border px-4 py-3">
+            {/* Cupom */}
+            <div className="mb-3">
+              {coupon ? (
+                <div className="flex items-center justify-between rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-accent">
+                    <TicketPercent className="h-3.5 w-3.5"/>{coupon.code} aplicado
+                  </span>
+                  <button onClick={clearCoupon} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5"/></button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="Cupom" className="h-8 text-xs"/>
+                  <Button size="sm" variant="outline" onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
+                    <TicketPercent className="mr-1 h-3.5 w-3.5"/>Aplicar
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="mb-3 grid grid-cols-3 gap-1.5">
               {METHODS.map(m => (
                 <button key={m.id} onClick={()=>setMethod(m.id)}
@@ -344,6 +362,16 @@ function PDV() {
                 </button>
               ))}
             </div>
+            {discount > 0 && (
+              <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground">
+                <span>Subtotal</span><span className="font-mono">{brl(subtotal)}</span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="mb-2 flex items-baseline justify-between text-xs text-accent">
+                <span>Desconto</span><span className="font-mono">− {brl(discount)}</span>
+              </div>
+            )}
             <div className="mb-3 flex items-baseline justify-between">
               <span className="text-sm text-muted-foreground">Total</span>
               <span className="font-display text-2xl font-bold">{brl(total)}</span>
