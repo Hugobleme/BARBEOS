@@ -207,6 +207,16 @@ function Booking() {
       const start = parse(time, "HH:mm", date);
       const end = addMinutes(start, totalDuration);
 
+      // Política anti no-show: antecedência mínima
+      const { data: shopCfg } = await supabase.from("barbershops").select("settings").eq("id", shopId).maybeSingle();
+      const policy = (shopCfg?.settings as any)?.policy ?? {};
+      const minLead = Number(policy.min_lead_hours ?? 0);
+      if (minLead > 0) {
+        const diffHours = (start.getTime() - Date.now()) / 36e5;
+        if (diffHours < minLead) throw new Error(`Esta barbearia exige no mínimo ${minLead}h de antecedência.`);
+      }
+
+
       // create account?
       let userId: string | null = user?.id ?? null;
       if (!user && form.createAccount) {
