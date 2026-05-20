@@ -40,6 +40,7 @@ import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
 import { Route as AdminAvaliacoesRouteImport } from './routes/admin.avaliacoes'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
+import { Route as BSlugPProSlugRouteImport } from './routes/b.$slug.p.$proSlug'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -196,6 +197,11 @@ const AdminAgendaRoute = AdminAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AdminRoute,
 } as any)
+const BSlugPProSlugRoute = BSlugPProSlugRouteImport.update({
+  id: '/p/$proSlug',
+  path: '/p/$proSlug',
+  getParentRoute: () => BSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -226,9 +232,10 @@ export interface FileRoutesByFullPath {
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
-  '/b/$slug': typeof BSlugRoute
+  '/b/$slug': typeof BSlugRouteWithChildren
   '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -258,9 +265,10 @@ export interface FileRoutesByTo {
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
-  '/b/$slug': typeof BSlugRoute
+  '/b/$slug': typeof BSlugRouteWithChildren
   '/convite/$token': typeof ConviteTokenRoute
   '/admin': typeof AdminIndexRoute
+  '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -292,9 +300,10 @@ export interface FileRoutesById {
   '/admin/relatorios': typeof AdminRelatoriosRoute
   '/admin/servicos': typeof AdminServicosRoute
   '/avaliar/$appointmentId': typeof AvaliarAppointmentIdRoute
-  '/b/$slug': typeof BSlugRoute
+  '/b/$slug': typeof BSlugRouteWithChildren
   '/convite/$token': typeof ConviteTokenRoute
   '/admin/': typeof AdminIndexRoute
+  '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/convite/$token'
     | '/admin/'
+    | '/b/$slug/p/$proSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -362,6 +372,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/convite/$token'
     | '/admin'
+    | '/b/$slug/p/$proSlug'
   id:
     | '__root__'
     | '/'
@@ -395,6 +406,7 @@ export interface FileRouteTypes {
     | '/b/$slug'
     | '/convite/$token'
     | '/admin/'
+    | '/b/$slug/p/$proSlug'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -410,7 +422,7 @@ export interface RootRouteChildren {
   ServicosRoute: typeof ServicosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
-  BSlugRoute: typeof BSlugRoute
+  BSlugRoute: typeof BSlugRouteWithChildren
   ConviteTokenRoute: typeof ConviteTokenRoute
 }
 
@@ -633,6 +645,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgendaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/b/$slug/p/$proSlug': {
+      id: '/b/$slug/p/$proSlug'
+      path: '/p/$proSlug'
+      fullPath: '/b/$slug/p/$proSlug'
+      preLoaderRoute: typeof BSlugPProSlugRouteImport
+      parentRoute: typeof BSlugRoute
+    }
   }
 }
 
@@ -678,6 +697,16 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface BSlugRouteChildren {
+  BSlugPProSlugRoute: typeof BSlugPProSlugRoute
+}
+
+const BSlugRouteChildren: BSlugRouteChildren = {
+  BSlugPProSlugRoute: BSlugPProSlugRoute,
+}
+
+const BSlugRouteWithChildren = BSlugRoute._addFileChildren(BSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
@@ -691,19 +720,9 @@ const rootRouteChildren: RootRouteChildren = {
   ServicosRoute: ServicosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
-  BSlugRoute: BSlugRoute,
+  BSlugRoute: BSlugRouteWithChildren,
   ConviteTokenRoute: ConviteTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

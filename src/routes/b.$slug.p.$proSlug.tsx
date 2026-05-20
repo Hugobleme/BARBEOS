@@ -122,7 +122,7 @@ function ProPage() {
     return vals.reduce((a: number, b: number) => a + b, 0) / vals.length;
   })();
 
-  const initials = pro.display_name.split(" ").map((n) => n[0]).slice(0, 2).join("");
+  const initials = pro.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("");
 
   return (
     <PublicLayout>
