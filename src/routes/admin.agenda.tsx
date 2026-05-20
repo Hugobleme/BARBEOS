@@ -66,7 +66,45 @@ function Agenda() {
   async function setStatus(id: string, status: "scheduled"|"in_progress"|"cancelled"|"no_show") {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) return toast.error(error.message);
-    toast.success("Status atualizado");
+
+    if (status === "no_show") {
+      const appt = data?.find((a: any) => a.id === id);
+      if (appt?.customer_id) {
+        // incrementa contador
+        const { data: cur } = await supabase.from("customers").select("no_show_count").eq("id", appt.customer_id).maybeSingle();
+        const next = Number((cur as any)?.no_show_count ?? 0) + 1;
+        await supabase.from("customers").update({ no_show_count: next }).eq("id", appt.customer_id);
+
+        // taxa configurada?
+        const { data: shopCfg } = await supabase.from("barbershops").select("settings").eq("id", shopId).maybeSingle();
+        const policy = (shopCfg?.settings as any)?.policy ?? {};
+        const fee = Number(policy.no_show_fee ?? 0);
+        const maxNs = Number(policy.max_no_shows ?? 0);
+        if (fee > 0) {
+          const { data: openS } = await supabase.from("cash_sessions")
+            .select("id").eq("barbershop_id", shopId).eq("status", "open")
+            .order("opened_at", { ascending: false }).limit(1).maybeSingle();
+          if (openS?.id) {
+            await supabase.from("cash_transactions").insert({
+              barbershop_id: shopId, session_id: openS.id, appointment_id: id,
+              customer_id: appt.customer_id, kind: "fee", method: "other",
+              amount: fee, description: `Taxa de no-show — ${appt.customer?.full_name ?? ""}`.trim(),
+              created_by: user?.id,
+            });
+          }
+        }
+        if (maxNs > 0 && next >= maxNs) {
+          await supabase.from("customers").update({ blocked: true }).eq("id", appt.customer_id);
+          toast.warning(`Cliente atingiu ${next} faltas e foi bloqueado.`);
+        } else {
+          toast.success(`Falta registrada (${next}).`);
+        }
+      } else {
+        toast.success("Status atualizado");
+      }
+    } else {
+      toast.success("Status atualizado");
+    }
     refetch();
   }
 

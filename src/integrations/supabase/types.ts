@@ -484,10 +484,12 @@ export type Database = {
         Row: {
           barbershop_id: string
           birth_date: string | null
+          blocked: boolean
           created_at: string
           email: string | null
           full_name: string
           id: string
+          no_show_count: number
           notes: string | null
           phone: string | null
           profile_id: string | null
@@ -497,10 +499,12 @@ export type Database = {
         Insert: {
           barbershop_id: string
           birth_date?: string | null
+          blocked?: boolean
           created_at?: string
           email?: string | null
           full_name: string
           id?: string
+          no_show_count?: number
           notes?: string | null
           phone?: string | null
           profile_id?: string | null
@@ -510,10 +514,12 @@ export type Database = {
         Update: {
           barbershop_id?: string
           birth_date?: string | null
+          blocked?: boolean
           created_at?: string
           email?: string | null
           full_name?: string
           id?: string
+          no_show_count?: number
           notes?: string | null
           phone?: string | null
           profile_id?: string | null
