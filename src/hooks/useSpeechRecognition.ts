@@ -71,7 +71,18 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
       rec.continuous = false;
       rec.interimResults = true;
       rec.maxAlternatives = 1;
-      rec.onstart = () => setIsRecording(true);
+      rec.onstart = () => {
+        setIsRecording(true);
+        // Safety: if nothing happens in 15s, force-stop so UI doesn't hang.
+        clearSafety();
+        safetyTimerRef.current = setTimeout(() => {
+          try {
+            recRef.current?.stop();
+          } catch {
+            /* noop */
+          }
+        }, 15000);
+      };
       rec.onresult = (e) => {
         let interimText = "";
         for (let i = 0; i < e.results.length; i++) {
@@ -80,6 +91,7 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
           if (res.isFinal) finalRef.current += alt.transcript;
           else interimText += alt.transcript;
         }
+        interimRef.current = interimText;
         setInterim(interimText);
       };
       rec.onerror = (e) => {
@@ -103,11 +115,14 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
         setError(e.error);
       };
       rec.onend = () => {
+        clearSafety();
         setIsRecording(false);
         setInterim("");
         recRef.current = null;
-        const text = finalRef.current.trim();
+        // Fallback: if no final result arrived, use whatever interim we captured.
+        const text = (finalRef.current.trim() || interimRef.current.trim()).trim();
         finalRef.current = "";
+        interimRef.current = "";
         if (text) onFinalRef.current(text);
       };
       recRef.current = rec;
@@ -119,11 +134,16 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
   }, [SR, lang]);
 
   const stop = useCallback(() => {
-    recRef.current?.stop();
+    try {
+      recRef.current?.stop();
+    } catch {
+      /* noop */
+    }
   }, []);
 
   useEffect(
     () => () => {
+      clearSafety();
       try {
         recRef.current?.abort();
       } catch {
