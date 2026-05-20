@@ -32,6 +32,7 @@ import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
 import { Route as AdminPacotesRouteImport } from './routes/admin.pacotes'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
+import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
@@ -155,6 +156,11 @@ const AdminFolgasRoute = AdminFolgasRouteImport.update({
   path: '/folgas',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminEstoqueRoute = AdminEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEquipeRoute = AdminEquipeRouteImport.update({
   id: '/equipe',
   path: '/equipe',
@@ -210,6 +216,7 @@ export interface FileRoutesByFullPath {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
   '/admin/equipe': typeof AdminEquipeRoute
+  '/admin/estoque': typeof AdminEstoqueRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/estoque'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/estoque'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/admin/comissoes'
     | '/admin/configuracoes'
     | '/admin/equipe'
+    | '/admin/estoque'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -565,6 +577,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFolgasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/estoque': {
+      id: '/admin/estoque'
+      path: '/estoque'
+      fullPath: '/admin/estoque'
+      preLoaderRoute: typeof AdminEstoqueRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/equipe': {
       id: '/admin/equipe'
       path: '/equipe'
@@ -625,6 +644,7 @@ interface AdminRouteChildren {
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
+  AdminEstoqueRoute: typeof AdminEstoqueRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
   AdminPacotesRoute: typeof AdminPacotesRoute
@@ -644,6 +664,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
   AdminEquipeRoute: AdminEquipeRoute,
+  AdminEstoqueRoute: AdminEstoqueRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
   AdminPacotesRoute: AdminPacotesRoute,
