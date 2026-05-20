@@ -130,6 +130,29 @@ function Caixa() {
       </Card>
 
       <Card className="p-5">
+        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
+          <Users className="h-4 w-4 text-accent"/> Por profissional (vendas do dia)
+        </h2>
+        {proRows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sem vendas registradas a profissionais.</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {proRows.map((p, i) => (
+              <li key={i} className="flex items-center justify-between py-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">{p.name}</span>
+                  <Badge variant="outline" className="text-xs">{p.count} atend.</Badge>
+                </div>
+                <span className="font-mono font-medium">{brl(p.total)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+
+
+      <Card className="p-5">
         <h2 className="mb-3 font-display text-lg font-semibold">Lançamentos do dia</h2>
         {(!txs || txs.length === 0) ? (
           <div className="grid place-items-center py-10 text-center">
