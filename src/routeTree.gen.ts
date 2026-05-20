@@ -35,6 +35,7 @@ import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configura
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
 import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
+import { Route as AdminAvaliacoesRouteImport } from './routes/admin.avaliacoes'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -167,6 +168,11 @@ const AdminCaixaRoute = AdminCaixaRouteImport.update({
   path: '/caixa',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAvaliacoesRoute = AdminAvaliacoesRouteImport.update({
+  id: '/avaliacoes',
+  path: '/avaliacoes',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAgendaRoute = AdminAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
@@ -186,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
@@ -214,6 +221,7 @@ export interface FileRoutesByTo {
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
@@ -244,6 +252,7 @@ export interface FileRoutesById {
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/agenda': typeof AdminAgendaRoute
+  '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/servicos'
     | '/sitemap.xml'
     | '/admin/agenda'
+    | '/admin/avaliacoes'
     | '/admin/caixa'
     | '/admin/clientes'
     | '/admin/comissoes'
@@ -303,6 +313,7 @@ export interface FileRouteTypes {
     | '/servicos'
     | '/sitemap.xml'
     | '/admin/agenda'
+    | '/admin/avaliacoes'
     | '/admin/caixa'
     | '/admin/clientes'
     | '/admin/comissoes'
@@ -332,6 +343,7 @@ export interface FileRouteTypes {
     | '/servicos'
     | '/sitemap.xml'
     | '/admin/agenda'
+    | '/admin/avaliacoes'
     | '/admin/caixa'
     | '/admin/clientes'
     | '/admin/comissoes'
@@ -550,6 +562,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCaixaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/avaliacoes': {
+      id: '/admin/avaliacoes'
+      path: '/avaliacoes'
+      fullPath: '/admin/avaliacoes'
+      preLoaderRoute: typeof AdminAvaliacoesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/agenda': {
       id: '/admin/agenda'
       path: '/agenda'
@@ -562,6 +581,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
+  AdminAvaliacoesRoute: typeof AdminAvaliacoesRoute
   AdminCaixaRoute: typeof AdminCaixaRoute
   AdminClientesRoute: typeof AdminClientesRoute
   AdminComissoesRoute: typeof AdminComissoesRoute
@@ -578,6 +598,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
+  AdminAvaliacoesRoute: AdminAvaliacoesRoute,
   AdminCaixaRoute: AdminCaixaRoute,
   AdminClientesRoute: AdminClientesRoute,
   AdminComissoesRoute: AdminComissoesRoute,
