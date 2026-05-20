@@ -322,7 +322,7 @@ function SellDialog({ open, onOpenChange, onDone }: any) {
           </div>
           <div>
             <Label>Método de pagamento</Label>
-            <Select value={method} onValueChange={setMethod}>
+            <Select value={method} onValueChange={(v: any) => setMethod(v)}>
               <SelectTrigger><SelectValue/></SelectTrigger>
               <SelectContent>
                 <SelectItem value="cash">Dinheiro</SelectItem>
