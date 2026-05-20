@@ -111,14 +111,27 @@ export const Route = createFileRoute("/api/voice/chat")({
             }
           }
 
-          // Current user turn
+          // Current user turn — if audio, transcribe first (separate cheap call) so we have clean text in history.
           if (body.audio_base64) {
-            contents.push({
-              role: "user",
-              parts: [
-                { inlineData: { mimeType: body.audio_mime || "audio/webm", data: body.audio_base64 } },
-              ],
-            });
+            try {
+              const stt = await geminiGenerate({
+                systemInstruction: "Transcreva fielmente o áudio em português do Brasil. Responda apenas com a transcrição, sem comentários.",
+                contents: [{
+                  role: "user",
+                  parts: [{ inlineData: { mimeType: body.audio_mime || "audio/webm", data: body.audio_base64 } }],
+                }],
+              });
+              const t = stt.candidates?.[0]?.content?.parts?.find(
+                (p): p is { text: string } => "text" in p && typeof p.text === "string",
+              )?.text?.trim();
+              userTranscript = t || "";
+            } catch {
+              userTranscript = "";
+            }
+            if (!userTranscript) {
+              return Response.json({ error: "Não entendi o áudio, pode repetir?" }, { status: 422 });
+            }
+            contents.push({ role: "user", parts: [{ text: userTranscript }] });
           } else {
             contents.push({ role: "user", parts: [{ text: body.user_text! }] });
           }
