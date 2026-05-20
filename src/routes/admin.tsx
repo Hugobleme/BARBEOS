@@ -33,6 +33,7 @@ const NAV = [
   { to: "/admin/pdv", label: "PDV", icon: ShoppingCart },
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
   { to: "/admin/pacotes", label: "Pacotes", icon: Package },
+  { to: "/admin/cupons", label: "Cupons", icon: TicketPercent },
   { to: "/admin/estoque", label: "Estoque", icon: Boxes },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/franquia", label: "Franquia", icon: Building2 },
