@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check } from "lucide-react";
+import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check, Star, Quote } from "lucide-react";
 import { brl, minutes } from "@/lib/format";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -133,6 +133,21 @@ function ShopPage() {
       .order("created_at", { ascending: false })
       .limit(12)).data ?? [],
   });
+  const { data: reviews = [] } = useQuery({
+    queryKey: ["shop-reviews", shop.id],
+    queryFn: async () => (await supabase.from("satisfaction_surveys")
+      .select("id, shop_rating, professional_rating, comment, answered_at, professional:professionals(display_name)")
+      .eq("barbershop_id", shop.id)
+      .eq("is_public", true)
+      .not("comment", "is", null)
+      .order("answered_at", { ascending: false })
+      .limit(9)).data ?? [],
+  });
+  const ratingAvg = (() => {
+    const vals = reviews.map((r: any) => r.shop_rating).filter((v: number | null): v is number => v != null);
+    if (!vals.length) return null;
+    return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
+  })();
 
   const addr = shop.address ?? {};
   const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
@@ -332,6 +347,50 @@ function ShopPage() {
                 )}
               </figure>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Avaliações */}
+      {reviews.length > 0 && (
+        <section className="bg-card/40">
+          <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="font-display text-3xl font-bold md:text-4xl">O que dizem</h2>
+                <p className="mt-2 text-muted-foreground">Depoimentos reais de clientes da {shop.name}.</p>
+              </div>
+              {ratingAvg != null && (
+                <div className="flex items-center gap-3">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <Star key={i} className={cn("h-5 w-5", i <= Math.round(ratingAvg) ? "fill-accent text-accent" : "text-muted-foreground/30")} />
+                    ))}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    <span className="font-semibold text-foreground">{ratingAvg.toFixed(1)}</span> · {reviews.length} avaliações
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {reviews.map((r: any) => (
+                <Card key={r.id} className="flex h-full flex-col gap-3 p-5">
+                  <Quote className="h-6 w-6 text-accent/60" />
+                  <p className="flex-1 text-sm leading-relaxed text-foreground/90">{r.comment}</p>
+                  <div className="flex items-center justify-between border-t border-border pt-3">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((i) => (
+                        <Star key={i} className={cn("h-3.5 w-3.5", i <= (r.shop_rating ?? 0) ? "fill-accent text-accent" : "text-muted-foreground/30")} />
+                      ))}
+                    </div>
+                    {r.professional?.display_name && (
+                      <span className="text-xs text-muted-foreground">com {r.professional.display_name}</span>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
           </div>
         </section>
       )}
