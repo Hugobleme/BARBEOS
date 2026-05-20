@@ -26,10 +26,33 @@ export const Route = createFileRoute("/b/$slug")({
     if (error || !data) throw notFound();
     return { shop: data as Shop };
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const shop = loaderData?.shop;
     if (!shop) return { meta: [{ title: "Barbearia — BarberOS" }] };
     const desc = shop.description ?? `Agende online na ${shop.name}. Cortes, barba e cuidados.`;
+    const addr = (shop.address ?? {}) as any;
+    const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
+    const ld: Record<string, unknown> = {
+      "@context": "https://schema.org",
+      "@type": "HairSalon",
+      name: shop.name,
+      description: desc,
+      url: `/b/${shop.slug}`,
+      ...(shop.logo_url ? { image: shop.logo_url } : {}),
+      ...(phone ? { telephone: phone } : {}),
+      ...(addr.street || addr.city
+        ? {
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: addr.street ?? undefined,
+              addressLocality: addr.city ?? undefined,
+              addressRegion: addr.state ?? undefined,
+              postalCode: addr.zip ?? undefined,
+              addressCountry: addr.country ?? "BR",
+            },
+          }
+        : {}),
+    };
     return {
       meta: [
         { title: `${shop.name} — Agende online` },
@@ -37,9 +60,13 @@ export const Route = createFileRoute("/b/$slug")({
         { property: "og:title", content: shop.name },
         { property: "og:description", content: desc.slice(0, 155) },
         { property: "og:type", content: "website" },
+        { property: "og:url", content: `/b/${params.slug}` },
         ...(shop.banner_url ? [{ property: "og:image", content: shop.banner_url }] : []),
       ],
       links: [{ rel: "canonical", href: `/b/${shop.slug}` }],
+      scripts: [
+        { type: "application/ld+json", children: JSON.stringify(ld) },
+      ],
     };
   },
   notFoundComponent: () => (
