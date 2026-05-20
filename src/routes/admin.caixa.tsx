@@ -179,7 +179,7 @@ function Caixa() {
       </Card>
 
       <OpenSessionDialog open={openDlg} onOpenChange={setOpenDlg} userId={user?.id} onDone={() => refetchSession()} />
-      <NewTxDialog open={txDlg} onOpenChange={setTxDlg} sessionId={session?.id} userId={user?.id} onDone={() => refetchTxs()} />
+      <NewTxDialog open={txDlg} onOpenChange={(o:boolean)=>{ setTxDlg(o); if(!o) setTxPreset(null); }} preset={txPreset} sessionId={session?.id} userId={user?.id} onDone={() => refetchTxs()} />
     </div>
   );
 }
