@@ -300,7 +300,7 @@ function ShopPage() {
                     key={p.id}
                     onClick={() => setSelectedPro(active ? null : p.id)}
                     className={cn(
-                      "relative flex cursor-pointer items-center gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
+                      "relative flex cursor-pointer flex-col gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
                       active && "border-accent ring-2 ring-accent/40 shadow-md",
                     )}
                   >
@@ -309,13 +309,25 @@ function ShopPage() {
                         <Check className="h-3.5 w-3.5" />
                       </span>
                     )}
-                    <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}</AvatarFallback></Avatar>
-                    <div className="min-w-0">
-                      <div className="font-semibold">{p.display_name}</div>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {p.specialties?.slice(0, 3).map((s: string) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}</AvatarFallback></Avatar>
+                      <div className="min-w-0">
+                        <div className="font-semibold">{p.display_name}</div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {p.specialties?.slice(0, 3).map((s: string) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
+                        </div>
                       </div>
                     </div>
+                    {p.slug && (
+                      <Link
+                        to="/b/$slug/p/$proSlug"
+                        params={{ slug: shop.slug, proSlug: p.slug }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm font-medium text-accent hover:underline"
+                      >
+                        Ver perfil completo →
+                      </Link>
+                    )}
                   </Card>
                 );
               })}
