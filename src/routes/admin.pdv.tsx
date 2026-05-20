@@ -198,7 +198,16 @@ function PDV() {
     }
     setBusy(false);
     toast.success(`Venda de ${brl(total)} registrada`);
-    setCart([]); setCustom("");
+
+    // Registrar uso do cupom
+    if (coupon && discount > 0) {
+      await supabase.from("coupon_redemptions" as any).insert({
+        barbershop_id: shopId, coupon_id: coupon.id, transaction_id: tx.id, discount_amount: discount,
+      });
+      await supabase.from("coupons" as any).update({ used_count: Number(coupon.used_count) + 1 }).eq("id", coupon.id);
+    }
+
+    setCart([]); setCustom(""); clearCoupon();
     if (productItems.length) refetchProducts();
   }
 
