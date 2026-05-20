@@ -250,7 +250,7 @@ function SellDialog({ open, onOpenChange, onDone }: any) {
   const { user } = useAuth();
   const [customerId, setCustomerId] = useState<string>("");
   const [packageId, setPackageId] = useState<string>("");
-  const [method, setMethod] = useState<string>("cash");
+  const [method, setMethod] = useState<"cash"|"pix"|"debit"|"credit"|"transfer"|"other">("cash");
   const [busy, setBusy] = useState(false);
 
   const { data: customers } = useQuery({
