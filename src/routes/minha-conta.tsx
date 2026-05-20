@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, LogOut } from "lucide-react";
+import { Calendar, Clock, Gift, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minha-conta")({
@@ -48,6 +48,21 @@ function Page() {
     },
   });
 
+  const { data: loyalty } = useQuery({
+    enabled: !!user,
+    queryKey: ["my-loyalty", user?.id],
+    queryFn: async () => {
+      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
+      const ids = (customers ?? []).map((c) => c.id);
+      if (ids.length === 0) return { balances: [], txs: [] };
+      const [{ data: balances }, { data: txs }] = await Promise.all([
+        supabase.from("loyalty_balances").select("points, lifetime_points, barbershop:barbershops(id, name)").in("customer_id", ids),
+        supabase.from("loyalty_transactions").select("id, kind, points, description, created_at, barbershop:barbershops(name)").in("customer_id", ids).order("created_at", { ascending: false }).limit(20),
+      ]);
+      return { balances: balances ?? [], txs: txs ?? [] };
+    },
+  });
+
   if (loading || !user) return null;
   const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
   const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
@@ -83,6 +98,39 @@ function Page() {
               Sair
             </Button>
           </div>
+
+          {(loyalty?.balances?.length ?? 0) > 0 && (
+            <>
+              <SectionTitle eyebrow="★" title="Seus pontos de fidelidade" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {loyalty!.balances.map((b: any, i: number) => (
+                  <article key={i} className="flex items-center justify-between border border-accent/30 bg-accent/5 p-5">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
+                        <Gift className="h-4 w-4" /> {b.barbershop?.name}
+                      </div>
+                      <div className="mt-2 font-serif text-3xl font-bold">{b.points} pts</div>
+                      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Acumulou {b.lifetime_points} no total</div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              {loyalty!.txs.length > 0 && (
+                <details className="mt-3 border border-border/50 p-4 text-sm">
+                  <summary className="cursor-pointer text-xs uppercase tracking-[0.2em] text-muted-foreground">Ver extrato (últimos 20)</summary>
+                  <ul className="mt-3 divide-y divide-border/40">
+                    {loyalty!.txs.map((t: any) => (
+                      <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-xs">
+                        <span className="text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy", { locale: ptBR })} · {t.barbershop?.name}</span>
+                        <span className="flex-1 truncate px-2">{t.description ?? (t.kind === "earn" ? "Ganho" : t.kind === "redeem" ? "Resgate" : t.kind)}</span>
+                        <span className={`font-mono ${t.points > 0 ? "text-accent" : "text-muted-foreground"}`}>{t.points > 0 ? "+" : ""}{t.points}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+            </>
+          )}
 
           <SectionTitle eyebrow="01" title="Próximos atendimentos" />
           <div className="grid gap-3">

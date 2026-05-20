@@ -32,6 +32,7 @@ import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
 import { Route as AdminPacotesRouteImport } from './routes/admin.pacotes'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
+import { Route as AdminFidelidadeRouteImport } from './routes/admin.fidelidade'
 import { Route as AdminEstoqueRouteImport } from './routes/admin.estoque'
 import { Route as AdminEquipeRouteImport } from './routes/admin.equipe'
 import { Route as AdminCuponsRouteImport } from './routes/admin.cupons'
@@ -161,6 +162,11 @@ const AdminFolgasRoute = AdminFolgasRouteImport.update({
   path: '/folgas',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminFidelidadeRoute = AdminFidelidadeRouteImport.update({
+  id: '/fidelidade',
+  path: '/fidelidade',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminEstoqueRoute = AdminEstoqueRouteImport.update({
   id: '/estoque',
   path: '/estoque',
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -285,6 +292,7 @@ export interface FileRoutesByTo {
   '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -324,6 +332,7 @@ export interface FileRoutesById {
   '/admin/cupons': typeof AdminCuponsRoute
   '/admin/equipe': typeof AdminEquipeRoute
   '/admin/estoque': typeof AdminEstoqueRoute
+  '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
   '/admin/pacotes': typeof AdminPacotesRoute
@@ -364,6 +373,7 @@ export interface FileRouteTypes {
     | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
+    | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
+    | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -439,6 +450,7 @@ export interface FileRouteTypes {
     | '/admin/cupons'
     | '/admin/equipe'
     | '/admin/estoque'
+    | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
     | '/admin/pacotes'
@@ -640,6 +652,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFolgasRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/fidelidade': {
+      id: '/admin/fidelidade'
+      path: '/fidelidade'
+      fullPath: '/admin/fidelidade'
+      preLoaderRoute: typeof AdminFidelidadeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/estoque': {
       id: '/admin/estoque'
       path: '/estoque'
@@ -744,6 +763,7 @@ interface AdminRouteChildren {
   AdminCuponsRoute: typeof AdminCuponsRoute
   AdminEquipeRoute: typeof AdminEquipeRoute
   AdminEstoqueRoute: typeof AdminEstoqueRoute
+  AdminFidelidadeRoute: typeof AdminFidelidadeRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
   AdminPacotesRoute: typeof AdminPacotesRoute
@@ -765,6 +785,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCuponsRoute: AdminCuponsRoute,
   AdminEquipeRoute: AdminEquipeRoute,
   AdminEstoqueRoute: AdminEstoqueRoute,
+  AdminFidelidadeRoute: AdminFidelidadeRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
   AdminPacotesRoute: AdminPacotesRoute,

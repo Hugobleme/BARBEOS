@@ -624,6 +624,78 @@ export type Database = {
           },
         ]
       }
+      loyalty_balances: {
+        Row: {
+          barbershop_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          lifetime_points: number
+          points: number
+          updated_at: string
+        }
+        Insert: {
+          barbershop_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          lifetime_points?: number
+          points?: number
+          updated_at?: string
+        }
+        Update: {
+          barbershop_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          lifetime_points?: number
+          points?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          amount_reference: number
+          appointment_id: string | null
+          barbershop_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          kind: string
+          points: number
+          transaction_id: string | null
+        }
+        Insert: {
+          amount_reference?: number
+          appointment_id?: string | null
+          barbershop_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          kind: string
+          points: number
+          transaction_id?: string | null
+        }
+        Update: {
+          amount_reference?: number
+          appointment_id?: string | null
+          barbershop_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          points?: number
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
       packages: {
         Row: {
           active: boolean
@@ -1278,6 +1350,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      credit_loyalty_points: {
+        Args: {
+          _amount: number
+          _appointment_id?: string
+          _barbershop_id: string
+          _customer_id: string
+          _description: string
+          _transaction_id?: string
+        }
+        Returns: number
+      }
       has_barbershop_role: {
         Args: {
           _barbershop_id: string
@@ -1293,6 +1376,15 @@ export type Database = {
       is_barbershop_staff: {
         Args: { _barbershop_id: string; _user_id: string }
         Returns: boolean
+      }
+      redeem_loyalty_points: {
+        Args: {
+          _barbershop_id: string
+          _customer_id: string
+          _description?: string
+          _points: number
+        }
+        Returns: number
       }
     }
     Enums: {
