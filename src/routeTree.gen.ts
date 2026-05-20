@@ -41,8 +41,6 @@ import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
 import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
 import { Route as AdminAvaliacoesRouteImport } from './routes/admin.avaliacoes'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
-import { Route as ApiVoiceTranscribeRouteImport } from './routes/api/voice/transcribe'
-import { Route as ApiVoiceSynthesizeRouteImport } from './routes/api/voice/synthesize'
 import { Route as ApiVoiceSessionRouteImport } from './routes/api/voice/session'
 import { Route as ApiVoiceEndSessionRouteImport } from './routes/api/voice/end-session'
 import { Route as ApiVoiceChatRouteImport } from './routes/api/voice/chat'
@@ -208,16 +206,6 @@ const AdminAgendaRoute = AdminAgendaRouteImport.update({
   path: '/agenda',
   getParentRoute: () => AdminRoute,
 } as any)
-const ApiVoiceTranscribeRoute = ApiVoiceTranscribeRouteImport.update({
-  id: '/api/voice/transcribe',
-  path: '/api/voice/transcribe',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiVoiceSynthesizeRoute = ApiVoiceSynthesizeRouteImport.update({
-  id: '/api/voice/synthesize',
-  path: '/api/voice/synthesize',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiVoiceSessionRoute = ApiVoiceSessionRouteImport.update({
   id: '/api/voice/session',
   path: '/api/voice/session',
@@ -275,8 +263,6 @@ export interface FileRoutesByFullPath {
   '/api/voice/chat': typeof ApiVoiceChatRoute
   '/api/voice/end-session': typeof ApiVoiceEndSessionRoute
   '/api/voice/session': typeof ApiVoiceSessionRoute
-  '/api/voice/synthesize': typeof ApiVoiceSynthesizeRoute
-  '/api/voice/transcribe': typeof ApiVoiceTranscribeRoute
   '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRoutesByTo {
@@ -314,8 +300,6 @@ export interface FileRoutesByTo {
   '/api/voice/chat': typeof ApiVoiceChatRoute
   '/api/voice/end-session': typeof ApiVoiceEndSessionRoute
   '/api/voice/session': typeof ApiVoiceSessionRoute
-  '/api/voice/synthesize': typeof ApiVoiceSynthesizeRoute
-  '/api/voice/transcribe': typeof ApiVoiceTranscribeRoute
   '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRoutesById {
@@ -355,8 +339,6 @@ export interface FileRoutesById {
   '/api/voice/chat': typeof ApiVoiceChatRoute
   '/api/voice/end-session': typeof ApiVoiceEndSessionRoute
   '/api/voice/session': typeof ApiVoiceSessionRoute
-  '/api/voice/synthesize': typeof ApiVoiceSynthesizeRoute
-  '/api/voice/transcribe': typeof ApiVoiceTranscribeRoute
   '/b/$slug/p/$proSlug': typeof BSlugPProSlugRoute
 }
 export interface FileRouteTypes {
@@ -397,8 +379,6 @@ export interface FileRouteTypes {
     | '/api/voice/chat'
     | '/api/voice/end-session'
     | '/api/voice/session'
-    | '/api/voice/synthesize'
-    | '/api/voice/transcribe'
     | '/b/$slug/p/$proSlug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -436,8 +416,6 @@ export interface FileRouteTypes {
     | '/api/voice/chat'
     | '/api/voice/end-session'
     | '/api/voice/session'
-    | '/api/voice/synthesize'
-    | '/api/voice/transcribe'
     | '/b/$slug/p/$proSlug'
   id:
     | '__root__'
@@ -476,8 +454,6 @@ export interface FileRouteTypes {
     | '/api/voice/chat'
     | '/api/voice/end-session'
     | '/api/voice/session'
-    | '/api/voice/synthesize'
-    | '/api/voice/transcribe'
     | '/b/$slug/p/$proSlug'
   fileRoutesById: FileRoutesById
 }
@@ -499,8 +475,6 @@ export interface RootRouteChildren {
   ApiVoiceChatRoute: typeof ApiVoiceChatRoute
   ApiVoiceEndSessionRoute: typeof ApiVoiceEndSessionRoute
   ApiVoiceSessionRoute: typeof ApiVoiceSessionRoute
-  ApiVoiceSynthesizeRoute: typeof ApiVoiceSynthesizeRoute
-  ApiVoiceTranscribeRoute: typeof ApiVoiceTranscribeRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -729,20 +703,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgendaRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/api/voice/transcribe': {
-      id: '/api/voice/transcribe'
-      path: '/api/voice/transcribe'
-      fullPath: '/api/voice/transcribe'
-      preLoaderRoute: typeof ApiVoiceTranscribeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/voice/synthesize': {
-      id: '/api/voice/synthesize'
-      path: '/api/voice/synthesize'
-      fullPath: '/api/voice/synthesize'
-      preLoaderRoute: typeof ApiVoiceSynthesizeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/voice/session': {
       id: '/api/voice/session'
       path: '/api/voice/session'
@@ -846,19 +806,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiVoiceChatRoute: ApiVoiceChatRoute,
   ApiVoiceEndSessionRoute: ApiVoiceEndSessionRoute,
   ApiVoiceSessionRoute: ApiVoiceSessionRoute,
-  ApiVoiceSynthesizeRoute: ApiVoiceSynthesizeRoute,
-  ApiVoiceTranscribeRoute: ApiVoiceTranscribeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

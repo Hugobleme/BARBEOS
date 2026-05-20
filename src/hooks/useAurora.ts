@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useVoiceRecorder } from "./useVoiceRecorder";
+import { useSpeechRecognition } from "./useSpeechRecognition";
 
 export type AuroraStatus = "idle" | "listening" | "thinking" | "speaking" | "error";
 
@@ -15,16 +15,37 @@ interface UseAuroraOpts {
   muted?: boolean;
 }
 
+function speak(text: string, onDone: () => void): void {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    onDone();
+    return;
+  }
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "pt-BR";
+    u.rate = 1.05;
+    u.pitch = 1;
+    // Prefer a Portuguese voice if available.
+    const voices = window.speechSynthesis.getVoices();
+    const pt = voices.find((v) => v.lang?.toLowerCase().startsWith("pt"));
+    if (pt) u.voice = pt;
+    u.onend = () => onDone();
+    u.onerror = () => onDone();
+    window.speechSynthesis.speak(u);
+  } catch {
+    onDone();
+  }
+}
+
 export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpts) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [status, setStatus] = useState<AuroraStatus>("idle");
   const [messages, setMessages] = useState<AuroraMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const mutedRef = useRef(muted);
   mutedRef.current = muted;
 
-  // Create session lazily
   const ensureSession = useCallback(async () => {
     if (sessionId) return sessionId;
     const res = await fetch("/api/voice/session", {
@@ -41,31 +62,15 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     return data.session_id;
   }, [sessionId, barbershopId]);
 
-  const playTts = useCallback(async (text: string) => {
-    if (mutedRef.current || !text) return;
+  const playTts = useCallback((text: string): Promise<void> => {
+    if (mutedRef.current || !text) return Promise.resolve();
     setStatus("speaking");
-    const res = await fetch("/api/voice/synthesize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    if (!res.ok) {
-      setStatus("idle");
-      return;
-    }
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioRef.current = audio;
-    await new Promise<void>((resolve) => {
-      audio.onended = () => {
-        URL.revokeObjectURL(url);
+    return new Promise<void>((resolve) => {
+      speak(text, () => {
+        setStatus("idle");
         resolve();
-      };
-      audio.onerror = () => resolve();
-      audio.play().catch(() => resolve());
+      });
     });
-    setStatus("idle");
   }, []);
 
   const sendText = useCallback(
@@ -96,64 +101,37 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     [ensureSession, playTts],
   );
 
-  const recorder = useVoiceRecorder({
-    onAutoStop: async (blob) => {
-      try {
-        setStatus("thinking");
-        const sid = await ensureSession();
-        const form = new FormData();
-        form.append("audio", blob, "audio.webm");
-        form.append("session_id", sid);
-        const tres = await fetch("/api/voice/transcribe", { method: "POST", body: form });
-        const tdata = (await tres.json()) as { text?: string; error?: string };
-        if (!tres.ok || !tdata.text) throw new Error(tdata.error ?? "transcribe error");
-        await sendText(tdata.text);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "erro";
-        setError(msg);
-        setStatus("error");
-      }
+  const speech = useSpeechRecognition({
+    onFinal: (text) => {
+      void sendText(text);
     },
   });
 
-  // Reflect recorder state into status
   useEffect(() => {
-    if (recorder.isRecording) setStatus("listening");
-  }, [recorder.isRecording]);
+    if (speech.isRecording) setStatus("listening");
+  }, [speech.isRecording]);
 
-  const startListening = useCallback(async () => {
+  const startListening = useCallback(() => {
     setError(null);
-    audioRef.current?.pause();
-    await recorder.start();
-  }, [recorder]);
-
-  const stopListening = useCallback(async () => {
-    const blob = await recorder.stop();
-    if (blob && blob.size > 1000) {
-      // manually trigger the onAutoStop path via the recorder option
-      // (already wired via onAutoStop, which is also called by VAD; manual stop just resolves blob without callback)
-      try {
-        setStatus("thinking");
-        const sid = await ensureSession();
-        const form = new FormData();
-        form.append("audio", blob, "audio.webm");
-        form.append("session_id", sid);
-        const tres = await fetch("/api/voice/transcribe", { method: "POST", body: form });
-        const tdata = (await tres.json()) as { text?: string; error?: string };
-        if (!tres.ok || !tdata.text) throw new Error(tdata.error ?? "transcribe error");
-        await sendText(tdata.text);
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : "erro";
-        setError(msg);
-        setStatus("error");
-      }
-    } else {
-      setStatus("idle");
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
-  }, [recorder, ensureSession, sendText]);
+    speech.start();
+  }, [speech]);
+
+  const stopListening = useCallback(() => {
+    speech.stop();
+  }, [speech]);
 
   const endSession = useCallback(async () => {
-    audioRef.current?.pause();
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    try {
+      speech.stop();
+    } catch {
+      /* noop */
+    }
     if (sessionId) {
       await fetch("/api/voice/end-session", {
         method: "POST",
@@ -164,22 +142,33 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     setSessionId(null);
     setMessages([]);
     setStatus("idle");
-  }, [sessionId]);
+  }, [sessionId, speech]);
 
-  // Reset when disabled
   useEffect(() => {
-    if (!enabled) {
-      audioRef.current?.pause();
+    if (!enabled && typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
   }, [enabled]);
+
+  // Pseudo "level" for pulse animation while listening (no audio analyser).
+  const [pulse, setPulse] = useState(0);
+  useEffect(() => {
+    if (!speech.isRecording) {
+      setPulse(0);
+      return;
+    }
+    const id = setInterval(() => setPulse(Math.random() * 0.6 + 0.2), 180);
+    return () => clearInterval(id);
+  }, [speech.isRecording]);
 
   return {
     status,
     messages,
     error,
-    level: recorder.level,
-    isSupported: recorder.isSupported,
-    micError: recorder.error,
+    level: pulse,
+    interim: speech.interim,
+    isSupported: speech.isSupported,
+    micError: speech.error,
     sendText,
     startListening,
     stopListening,
