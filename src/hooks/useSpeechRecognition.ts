@@ -25,9 +25,10 @@ function getSR(): SRConstructor | null {
 interface Options {
   lang?: string;
   onFinal: (text: string) => void;
+  onEmpty?: () => void;
 }
 
-export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
+export function useSpeechRecognition({ lang = "pt-BR", onFinal, onEmpty }: Options) {
   const SR = typeof window !== "undefined" ? getSR() : null;
   const [isSupported] = useState(!!SR);
   const [isRecording, setIsRecording] = useState(false);
@@ -38,7 +39,9 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
   const interimRef = useRef("");
   const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFinalRef = useRef(onFinal);
+  const onEmptyRef = useRef(onEmpty);
   onFinalRef.current = onFinal;
+  onEmptyRef.current = onEmpty;
 
   const clearSafety = () => {
     if (safetyTimerRef.current) {
@@ -124,6 +127,7 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
         finalRef.current = "";
         interimRef.current = "";
         if (text) onFinalRef.current(text);
+        else onEmptyRef.current?.();
       };
       recRef.current = rec;
       rec.start();
