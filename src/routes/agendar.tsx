@@ -274,7 +274,7 @@ function Booking() {
 
   return (
     <PublicLayout>
-      <div className="mx-auto max-w-3xl px-4 py-12 md:px-6 md:py-16">
+      <div className="mx-auto max-w-3xl px-4 py-12 pb-32 md:px-6 md:py-16 md:pb-16">
         <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Reserva</div>
         <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Agendar <span className="italic font-normal">horário</span></h1>
         <p className="mt-2 text-muted-foreground">Escolha serviços, profissional, data e horário.</p>
@@ -398,7 +398,8 @@ function Booking() {
             </Card>
           )}
 
-          <div className="mt-6 flex items-center justify-between">
+          {/* Desktop nav */}
+          <div className="mt-6 hidden items-center justify-between md:flex">
             <Button variant="ghost" disabled={step===0} onClick={()=>setStep(s=>s-1)}><ChevronLeft className="mr-1 h-4 w-4"/>Voltar</Button>
             {step < 5 ? (
               <Button disabled={!canNext} onClick={()=>setStep(s=>s+1)}>Continuar<ChevronRight className="ml-1 h-4 w-4"/></Button>
@@ -406,6 +407,41 @@ function Booking() {
               <Button disabled={submitting} onClick={submit}>{submitting?"Confirmando...":"Confirmar agendamento"}</Button>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* Mobile sticky bottom bar */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-xl md:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3">
+          <button
+            disabled={step===0}
+            onClick={()=>setStep(s=>s-1)}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-md border border-border text-muted-foreground transition disabled:opacity-30 enabled:hover:border-accent enabled:hover:text-accent"
+            aria-label="Voltar"
+          >
+            <ChevronLeft className="h-5 w-5"/>
+          </button>
+          <div className="min-w-0 flex-1">
+            {pickedServices.length > 0 ? (
+              <>
+                <div className="truncate text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {pickedServices.length} {pickedServices.length===1?"item":"itens"} · {minutes(totalDuration)}
+                </div>
+                <div className="font-serif text-lg font-semibold leading-tight">{brl(totalPrice)}</div>
+              </>
+            ) : (
+              <div className="text-xs text-muted-foreground">Selecione os serviços para começar</div>
+            )}
+          </div>
+          {step < 5 ? (
+            <Button disabled={!canNext} onClick={()=>setStep(s=>s+1)} className="h-11 rounded-none bg-accent px-5 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background">
+              Continuar<ChevronRight className="ml-1 h-4 w-4"/>
+            </Button>
+          ) : (
+            <Button disabled={submitting} onClick={submit} className="h-11 rounded-none bg-accent px-5 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background">
+              {submitting?"...":"Confirmar"}
+            </Button>
+          )}
         </div>
       </div>
     </PublicLayout>
