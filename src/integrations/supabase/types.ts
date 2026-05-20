@@ -435,6 +435,87 @@ export type Database = {
           },
         ]
       }
+      coupon_redemptions: {
+        Row: {
+          appointment_id: string | null
+          barbershop_id: string
+          coupon_id: string
+          created_at: string
+          customer_id: string | null
+          discount_amount: number
+          id: string
+          transaction_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          barbershop_id: string
+          coupon_id: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          id?: string
+          transaction_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          barbershop_id?: string
+          coupon_id?: string
+          created_at?: string
+          customer_id?: string | null
+          discount_amount?: number
+          id?: string
+          transaction_id?: string | null
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          barbershop_id: string
+          code: string
+          created_at: string
+          id: string
+          kind: string
+          min_amount: number
+          updated_at: string
+          usage_limit: number | null
+          used_count: number
+          valid_from: string | null
+          valid_until: string | null
+          value: number
+        }
+        Insert: {
+          active?: boolean
+          barbershop_id: string
+          code: string
+          created_at?: string
+          id?: string
+          kind?: string
+          min_amount?: number
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Update: {
+          active?: boolean
+          barbershop_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          min_amount?: number
+          updated_at?: string
+          usage_limit?: number | null
+          used_count?: number
+          valid_from?: string | null
+          valid_until?: string | null
+          value?: number
+        }
+        Relationships: []
+      }
       customer_subscriptions: {
         Row: {
           barbershop_id: string

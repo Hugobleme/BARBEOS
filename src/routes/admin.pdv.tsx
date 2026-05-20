@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
-import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus } from "lucide-react";
+import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus, TicketPercent, X } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/pdv")({
@@ -46,6 +46,9 @@ function PDV() {
   const [filter, setFilter] = useState("");
   const [tab, setTab] = useState<"services" | "products">("services");
   const [busy, setBusy] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<any>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const { data: session } = useQuery({
     queryKey: ["pdv-session", shopId], enabled: !!shopId,
@@ -89,7 +92,37 @@ function PDV() {
     return list.filter((p: any) => p.name.toLowerCase().includes(f));
   }, [products, filter]);
 
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  const discount = useMemo(() => {
+    if (!coupon) return 0;
+    if (Number(coupon.min_amount ?? 0) > 0 && subtotal < Number(coupon.min_amount)) return 0;
+    if (coupon.kind === "percent" || coupon.kind === "first_visit") {
+      return +(subtotal * Number(coupon.value) / 100).toFixed(2);
+    }
+    return Math.min(subtotal, Number(coupon.value));
+  }, [coupon, subtotal]);
+  const total = Math.max(0, +(subtotal - discount).toFixed(2));
+
+  async function applyCoupon() {
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponBusy(true);
+    const { data, error } = await supabase.from("coupons" as any)
+      .select("*").eq("barbershop_id", shopId).eq("code", code).maybeSingle();
+    setCouponBusy(false);
+    if (error || !data) return toast.error("Cupom inválido");
+    const c: any = data;
+    if (!c.active) return toast.error("Cupom inativo");
+    const now = Date.now();
+    if (c.valid_from && now < new Date(c.valid_from).getTime()) return toast.error("Cupom ainda não está válido");
+    if (c.valid_until && now > new Date(c.valid_until).getTime()) return toast.error("Cupom expirado");
+    if (c.usage_limit != null && Number(c.used_count) >= Number(c.usage_limit)) return toast.error("Limite de uso atingido");
+    if (Number(c.min_amount ?? 0) > 0 && subtotal < Number(c.min_amount)) return toast.error(`Valor mínimo de ${brl(Number(c.min_amount))}`);
+    setCoupon(c);
+    toast.success(`Cupom ${c.code} aplicado`);
+  }
+  function clearCoupon() { setCoupon(null); setCouponInput(""); }
+
 
   function addService(s: any) {
     setCart(c => [...c, { id: `${s.id}-${Date.now()}`, name: s.name, price: Number(s.price), qty: 1 }]);
@@ -165,7 +198,16 @@ function PDV() {
     }
     setBusy(false);
     toast.success(`Venda de ${brl(total)} registrada`);
-    setCart([]); setCustom("");
+
+    // Registrar uso do cupom
+    if (coupon && discount > 0) {
+      await supabase.from("coupon_redemptions" as any).insert({
+        barbershop_id: shopId, coupon_id: coupon.id, transaction_id: tx.id, discount_amount: discount,
+      });
+      await supabase.from("coupons" as any).update({ used_count: Number(coupon.used_count) + 1 }).eq("id", coupon.id);
+    }
+
+    setCart([]); setCustom(""); clearCoupon();
     if (productItems.length) refetchProducts();
   }
 
@@ -294,6 +336,24 @@ function PDV() {
           </div>
 
           <div className="border-t border-border px-4 py-3">
+            {/* Cupom */}
+            <div className="mb-3">
+              {coupon ? (
+                <div className="flex items-center justify-between rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
+                  <span className="inline-flex items-center gap-1.5 font-medium text-accent">
+                    <TicketPercent className="h-3.5 w-3.5"/>{coupon.code} aplicado
+                  </span>
+                  <button onClick={clearCoupon} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5"/></button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="Cupom" className="h-8 text-xs"/>
+                  <Button size="sm" variant="outline" onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
+                    <TicketPercent className="mr-1 h-3.5 w-3.5"/>Aplicar
+                  </Button>
+                </div>
+              )}
+            </div>
             <div className="mb-3 grid grid-cols-3 gap-1.5">
               {METHODS.map(m => (
                 <button key={m.id} onClick={()=>setMethod(m.id)}
@@ -302,6 +362,16 @@ function PDV() {
                 </button>
               ))}
             </div>
+            {discount > 0 && (
+              <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground">
+                <span>Subtotal</span><span className="font-mono">{brl(subtotal)}</span>
+              </div>
+            )}
+            {discount > 0 && (
+              <div className="mb-2 flex items-baseline justify-between text-xs text-accent">
+                <span>Desconto</span><span className="font-mono">− {brl(discount)}</span>
+              </div>
+            )}
             <div className="mb-3 flex items-baseline justify-between">
               <span className="text-sm text-muted-foreground">Total</span>
               <span className="font-display text-2xl font-bold">{brl(total)}</span>
