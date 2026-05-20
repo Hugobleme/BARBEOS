@@ -39,6 +39,7 @@ import { Route as AdminCuponsRouteImport } from './routes/admin.cupons'
 import { Route as AdminConfiguracoesRouteImport } from './routes/admin.configuracoes'
 import { Route as AdminComissoesRouteImport } from './routes/admin.comissoes'
 import { Route as AdminClientesRouteImport } from './routes/admin.clientes'
+import { Route as AdminCarteiraRouteImport } from './routes/admin.carteira'
 import { Route as AdminCaixaRouteImport } from './routes/admin.caixa'
 import { Route as AdminAvaliacoesRouteImport } from './routes/admin.avaliacoes'
 import { Route as AdminAgendaRouteImport } from './routes/admin.agenda'
@@ -197,6 +198,11 @@ const AdminClientesRoute = AdminClientesRouteImport.update({
   path: '/clientes',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCarteiraRoute = AdminCarteiraRouteImport.update({
+  id: '/carteira',
+  path: '/carteira',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCaixaRoute = AdminCaixaRouteImport.update({
   id: '/caixa',
   path: '/caixa',
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
+  '/admin/carteira': typeof AdminCarteiraRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
+  '/admin/carteira': typeof AdminCarteiraRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
@@ -326,6 +334,7 @@ export interface FileRoutesById {
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
+  '/admin/carteira': typeof AdminCarteiraRoute
   '/admin/clientes': typeof AdminClientesRoute
   '/admin/comissoes': typeof AdminComissoesRoute
   '/admin/configuracoes': typeof AdminConfiguracoesRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
+    | '/admin/carteira'
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
+    | '/admin/carteira'
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
@@ -444,6 +455,7 @@ export interface FileRouteTypes {
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
+    | '/admin/carteira'
     | '/admin/clientes'
     | '/admin/comissoes'
     | '/admin/configuracoes'
@@ -701,6 +713,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminClientesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/carteira': {
+      id: '/admin/carteira'
+      path: '/carteira'
+      fullPath: '/admin/carteira'
+      preLoaderRoute: typeof AdminCarteiraRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/caixa': {
       id: '/admin/caixa'
       path: '/caixa'
@@ -757,6 +776,7 @@ interface AdminRouteChildren {
   AdminAgendaRoute: typeof AdminAgendaRoute
   AdminAvaliacoesRoute: typeof AdminAvaliacoesRoute
   AdminCaixaRoute: typeof AdminCaixaRoute
+  AdminCarteiraRoute: typeof AdminCarteiraRoute
   AdminClientesRoute: typeof AdminClientesRoute
   AdminComissoesRoute: typeof AdminComissoesRoute
   AdminConfiguracoesRoute: typeof AdminConfiguracoesRoute
@@ -779,6 +799,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAgendaRoute: AdminAgendaRoute,
   AdminAvaliacoesRoute: AdminAvaliacoesRoute,
   AdminCaixaRoute: AdminCaixaRoute,
+  AdminCarteiraRoute: AdminCarteiraRoute,
   AdminClientesRoute: AdminClientesRoute,
   AdminComissoesRoute: AdminComissoesRoute,
   AdminConfiguracoesRoute: AdminConfiguracoesRoute,
