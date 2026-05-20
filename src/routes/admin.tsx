@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { BarChart3, Building2, Calendar, CalendarOff, Coins, DollarSign, Image as ImageIcon, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Moon, Plus, Scissors, Settings, ShoppingCart, Sun, Users, UserCog, UsersRound, X } from "lucide-react";
+import { BarChart3, Building2, Calendar, CalendarOff, Coins, DollarSign, Image as ImageIcon, LayoutDashboard, LogOut, Menu, MessageSquare, MoreHorizontal, Moon, Package, Plus, Scissors, Settings, ShoppingCart, Sun, Users, UserCog, UsersRound, X } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/use-theme";
@@ -32,6 +32,7 @@ const NAV = [
   { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
   { to: "/admin/pdv", label: "PDV", icon: ShoppingCart },
   { to: "/admin/comissoes", label: "Comissões", icon: Coins },
+  { to: "/admin/pacotes", label: "Pacotes", icon: Package },
   { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
   { to: "/admin/franquia", label: "Franquia", icon: Building2 },
   { to: "/admin/clientes", label: "Clientes", icon: Users },
