@@ -163,9 +163,9 @@ function AdminShell() {
         </header>
         <main className="p-4 pb-24 md:p-8 md:pb-8"><Outlet /></main>
 
-        {/* Mobile bottom navigation */}
+        {/* Mobile bottom navigation — 4 principais + Mais */}
         <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
-          {NAV.slice(0, 5).map((n) => {
+          {NAV.slice(0, 4).map((n) => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
               <Link key={n.to} to={n.to} className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] ${active ? "text-accent" : "text-muted-foreground"}`}>
@@ -174,6 +174,31 @@ function AdminShell() {
               </Link>
             );
           })}
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : "text-muted-foreground"}`}>
+                <MoreHorizontal className="h-5 w-5" />
+                <span>Mais</span>
+              </button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl border-border bg-background pb-8">
+              <SheetHeader className="text-left">
+                <SheetTitle className="font-serif text-xl">Mais opções</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {NAV.slice(4).map((n) => {
+                  const active = loc.pathname.startsWith(n.to);
+                  return (
+                    <Link key={n.to} to={n.to}
+                      className={`flex flex-col items-center justify-center gap-1.5 rounded-lg border p-4 text-xs transition ${active ? "border-accent bg-accent/10 text-accent" : "border-border text-foreground hover:bg-muted/40"}`}>
+                      <n.icon className="h-5 w-5" />
+                      <span className="text-center">{n.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </SheetContent>
+          </Sheet>
         </nav>
       </div>
     </div>
