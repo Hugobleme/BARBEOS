@@ -30,6 +30,13 @@ function Caixa() {
   const today = new Date();
   const [openDlg, setOpenDlg] = useState(false);
   const [txDlg, setTxDlg] = useState(false);
+  const [txPreset, setTxPreset] = useState<{ kind: "sale"|"expense"|"adjustment"; description?: string } | null>(null);
+
+  function openNewTx(preset?: { kind: "sale"|"expense"|"adjustment"; description?: string }) {
+    setTxPreset(preset ?? null);
+    setTxDlg(true);
+  }
+
 
   const { data: session, refetch: refetchSession } = useQuery({
     queryKey: ["cash-session", shopId], enabled: !!shopId,
