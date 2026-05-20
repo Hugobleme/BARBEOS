@@ -35,8 +35,17 @@ export function useSpeechRecognition({ lang = "pt-BR", onFinal }: Options) {
   const [interim, setInterim] = useState("");
   const recRef = useRef<SpeechRecognitionInstance | null>(null);
   const finalRef = useRef("");
+  const interimRef = useRef("");
+  const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onFinalRef = useRef(onFinal);
   onFinalRef.current = onFinal;
+
+  const clearSafety = () => {
+    if (safetyTimerRef.current) {
+      clearTimeout(safetyTimerRef.current);
+      safetyTimerRef.current = null;
+    }
+  };
 
   const start = useCallback(() => {
     if (!SR) {
