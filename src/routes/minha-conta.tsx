@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, LogOut } from "lucide-react";
+import { Calendar, Clock, Gift, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minha-conta")({
