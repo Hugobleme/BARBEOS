@@ -28,6 +28,7 @@ export const Route = createFileRoute("/sitemap.xml")({
           const { data: shops } = await supabaseAdmin
             .from("barbershops")
             .select("slug, updated_at")
+            .eq("active", true)
             .not("slug", "is", null);
 
           for (const shop of shops ?? []) {
