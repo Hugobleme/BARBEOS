@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search } from "lucide-react";
 
 export const Route = createFileRoute("/admin/estoque")({
   head: () => ({ meta: [{ title: "Estoque — BarberOS" }] }),
