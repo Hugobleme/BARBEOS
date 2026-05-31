@@ -1,66 +1,54 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { brl } from "@/lib/format";
-import { startOfDay, endOfDay, format } from "date-fns";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DollarSign, Plus, Lock, Unlock, Receipt, Users } from "lucide-react";
-import { toast } from "sonner";
+import { Plus, Unlock, Users } from "lucide-react";
+import { useCash } from "@/hooks/queries/useCash";
+import { KPI } from "@/components/admin/caixa/KPI";
+import { CashShortcuts } from "@/components/admin/caixa/CashShortcuts";
+import { TransactionDialog } from "@/components/admin/caixa/TransactionDialog";
+import { CloseSessionButton } from "@/components/admin/caixa/CloseSessionButton";
+import { PaymentMethod } from "@/services/cash.service";
 
-export const Route = createFileRoute("/admin/caixa")({ component: Caixa });
-
-type Method = "cash" | "debit" | "credit" | "pix" | "transfer" | "other";
-const METHOD_LABEL: Record<Method, string> = {
+const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "Dinheiro", debit: "Débito", credit: "Crédito", pix: "Pix", transfer: "Transferência", other: "Outro"
 };
+
+export const Route = createFileRoute("/admin/caixa")({ component: Caixa });
 
 function Caixa() {
   const shopId = useCurrentShopId();
   const { user } = useAuth();
   const today = new Date();
+  
   const [openDlg, setOpenDlg] = useState(false);
   const [txDlg, setTxDlg] = useState(false);
-  const [txPreset, setTxPreset] = useState<{ kind: "sale"|"expense"|"adjustment"; description?: string } | null>(null);
+  const [txPreset, setTxPreset] = useState<{ kind: string; description?: string } | null>(null);
 
-  function openNewTx(preset?: { kind: "sale"|"expense"|"adjustment"; description?: string }) {
+  const { session, useTransactions, refetchSession, openSession } = useCash(shopId);
+  const { data: txs, refetch: refetchTxs } = useTransactions(today);
+
+  function openNewTx(preset?: { kind: string; description?: string }) {
     setTxPreset(preset ?? null);
     setTxDlg(true);
   }
 
-
-  const { data: session, refetch: refetchSession } = useQuery({
-    queryKey: ["cash-session", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("cash_sessions")
-      .select("*").eq("barbershop_id", shopId).eq("status", "open")
-      .order("opened_at", { ascending: false }).limit(1).maybeSingle()).data,
-  });
-
-  const { data: txs, refetch: refetchTxs } = useQuery({
-    queryKey: ["cash-tx", today.toDateString(), shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("cash_transactions")
-      .select("*, professional:professionals(display_name), customer:customers(full_name)")
-      .eq("barbershop_id", shopId)
-      .gte("created_at", startOfDay(today).toISOString())
-      .lte("created_at", endOfDay(today).toISOString())
-      .order("created_at", { ascending: false })).data ?? [],
-  });
-
   const totals = (txs ?? []).reduce((acc: any, t: any) => {
     const v = Number(t.amount);
-    if (t.kind === "sale") { acc.sales += v; acc.byMethod[t.method] = (acc.byMethod[t.method] ?? 0) + v; }
+    if (t.kind === "sale") { 
+      acc.sales += v; 
+      acc.byMethod[t.method] = (acc.byMethod[t.method] ?? 0) + v; 
+    }
     if (t.kind === "expense") acc.expenses += v;
     return acc;
   }, { sales: 0, expenses: 0, byMethod: {} as Record<string, number> });
+  
   const net = totals.sales - totals.expenses;
 
   // Totais por profissional (apenas vendas)
@@ -73,7 +61,6 @@ function Caixa() {
   }
   const proRows = Array.from(byPro.values()).sort((a, b) => b.total - a.total);
 
-
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -85,7 +72,7 @@ function Caixa() {
           {session ? (
             <>
               <Badge className="bg-success/15 text-success" variant="outline"><Unlock className="mr-1 h-3 w-3"/>Caixa aberto</Badge>
-              <CloseSessionButton session={session} onDone={() => { refetchSession(); }} />
+              <CloseSessionButton session={session} onDone={refetchSession} />
               <Button onClick={() => openNewTx()}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
             </>
           ) : (
@@ -94,20 +81,7 @@ function Caixa() {
         </div>
       </div>
 
-      {session && (
-        <Card className="p-4">
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Receipt className="h-4 w-4"/> Atalhos de despesa
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Vale profissional" })}>Vale</Button>
-            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Material" })}>Material</Button>
-            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Limpeza" })}>Limpeza</Button>
-            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Contas (água/luz/internet)" })}>Contas</Button>
-            <Button variant="outline" size="sm" onClick={() => openNewTx({ kind: "expense", description: "Outros" })}>Outros</Button>
-          </div>
-        </Card>
-      )}
+      {session && <CashShortcuts onOpenTx={openNewTx} />}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPI label="Vendas (dia)" value={brl(totals.sales)} accent />
@@ -116,11 +90,10 @@ function Caixa() {
         <KPI label="Em dinheiro" value={brl(totals.byMethod.cash ?? 0)} />
       </div>
 
-
       <Card className="p-5">
         <h2 className="mb-3 font-display text-lg font-semibold">Por método de pagamento</h2>
         <div className="grid gap-2 sm:grid-cols-3">
-          {(Object.keys(METHOD_LABEL) as Method[]).map(m => (
+          {(Object.keys(METHOD_LABEL) as PaymentMethod[]).map(m => (
             <div key={m} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
               <span className="text-muted-foreground">{METHOD_LABEL[m]}</span>
               <span className="font-medium">{brl(totals.byMethod[m] ?? 0)}</span>
@@ -150,191 +123,14 @@ function Caixa() {
         )}
       </Card>
 
-
-
-      <Card className="p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold">Lançamentos do dia</h2>
-        {(!txs || txs.length === 0) ? (
-          <div className="grid place-items-center py-10 text-center">
-            <DollarSign className="h-8 w-8 text-muted-foreground"/>
-            <p className="mt-2 text-sm text-muted-foreground">Nenhum lançamento ainda.</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {txs.map((t: any) => (
-              <li key={t.id} className="flex items-center justify-between py-3 text-sm">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline" className={t.kind==="sale"?"bg-success/10 text-success":t.kind==="expense"?"bg-destructive/10 text-destructive":""}>
-                    {t.kind === "sale" ? "Venda" : t.kind === "expense" ? "Despesa" : "Ajuste"}
-                  </Badge>
-                  <span className="font-mono text-xs text-muted-foreground">{format(new Date(t.created_at), "HH:mm")}</span>
-                  <span>{t.description ?? (t.customer?.full_name ? `Cliente: ${t.customer.full_name}` : "—")}</span>
-                  <span className="text-xs text-muted-foreground">{METHOD_LABEL[t.method as Method]}</span>
-                </div>
-                <span className={`font-medium ${t.kind==="expense"?"text-destructive":""}`}>{t.kind==="expense"?"-":""}{brl(Number(t.amount))}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
-      <OpenSessionDialog open={openDlg} onOpenChange={setOpenDlg} userId={user?.id} onDone={() => refetchSession()} />
-      <NewTxDialog open={txDlg} onOpenChange={(o:boolean)=>{ setTxDlg(o); if(!o) setTxPreset(null); }} preset={txPreset} sessionId={session?.id} userId={user?.id} onDone={() => refetchTxs()} />
+      <TransactionDialog 
+        open={txDlg} 
+        onOpenChange={setTxDlg} 
+        shopId={shopId} 
+        sessionId={session?.id} 
+        preset={txPreset} 
+        onDone={() => { refetchTxs(); refetchSession(); }} 
+      />
     </div>
-  );
-}
-
-function KPI({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <Card className={`p-5 ${accent ? "border-accent/40" : ""}`}>
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="mt-2 font-display text-2xl font-semibold">{value}</div>
-    </Card>
-  );
-}
-
-function OpenSessionDialog({ open, onOpenChange, userId, onDone }: any) {
-  const shopId = useCurrentShopId();
-  const [amount, setAmount] = useState("0");
-  async function submit() {
-    const { error } = await supabase.from("cash_sessions").insert({
-      barbershop_id: shopId, opened_by: userId, opening_amount: Number(amount) || 0,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Caixa aberto"); onOpenChange(false); onDone();
-  }
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Abrir caixa</DialogTitle></DialogHeader>
-        <div className="space-y-2">
-          <Label>Valor de abertura (R$)</Label>
-          <Input type="number" value={amount} onChange={e=>setAmount(e.target.value)} />
-        </div>
-        <DialogFooter><Button onClick={submit}>Abrir</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CloseSessionButton({ session, onDone }: any) {
-  const shopId = useCurrentShopId();
-  const [open, setOpen] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const { data: sessionTxs } = useQuery({
-    enabled: open && !!session?.id,
-    queryKey: ["session-tx", session?.id],
-    queryFn: async () => (await supabase.from("cash_transactions")
-      .select("kind, method, amount").eq("session_id", session.id)).data ?? [],
-  });
-
-  const expected = (() => {
-    const opening = Number(session?.opening_amount ?? 0);
-    const cashIn = (sessionTxs ?? []).filter((t: any) => t.kind === "sale" && t.method === "cash").reduce((s: number, t: any) => s + Number(t.amount), 0);
-    const cashOut = (sessionTxs ?? []).filter((t: any) => t.kind === "expense" && t.method === "cash").reduce((s: number, t: any) => s + Number(t.amount), 0);
-    return opening + cashIn - cashOut;
-  })();
-  const counted = Number(amount || 0);
-  const diff = counted - expected;
-
-  async function submit() {
-    const { error } = await supabase.from("cash_sessions").update({
-      status: "closed", closed_at: new Date().toISOString(),
-      closing_amount: counted, notes: notes || null,
-    }).eq("id", session.id);
-    if (error) return toast.error(error.message);
-    toast.success("Caixa fechado"); setOpen(false); onDone();
-  }
-  return (
-    <>
-      <Button variant="outline" onClick={() => setOpen(true)}><Lock className="mr-1 h-4 w-4"/>Fechar caixa</Button>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Fechar caixa</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Abertura</span><span className="font-mono">{brl(Number(session?.opening_amount ?? 0))}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">+ Vendas em dinheiro</span><span className="font-mono">{brl((sessionTxs ?? []).filter((t:any)=>t.kind==="sale"&&t.method==="cash").reduce((s:number,t:any)=>s+Number(t.amount),0))}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">− Despesas em dinheiro</span><span className="font-mono">{brl((sessionTxs ?? []).filter((t:any)=>t.kind==="expense"&&t.method==="cash").reduce((s:number,t:any)=>s+Number(t.amount),0))}</span></div>
-              <div className="mt-2 flex justify-between border-t border-border pt-2 font-medium"><span>Esperado em caixa</span><span className="font-mono">{brl(expected)}</span></div>
-            </div>
-            <div>
-              <Label>Valor contado (R$)</Label>
-              <Input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0,00" autoFocus />
-            </div>
-            {amount !== "" && (
-              <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium ${Math.abs(diff) < 0.01 ? "bg-success/15 text-success" : diff > 0 ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive"}`}>
-                <span>Diferença</span><span className="font-mono">{diff > 0 ? "+" : ""}{brl(diff)}</span>
-              </div>
-            )}
-            <div>
-              <Label>Observações (opcional)</Label>
-              <Input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Ex: troca de turno" />
-            </div>
-          </div>
-          <DialogFooter><Button onClick={submit} disabled={amount === ""}>Fechar caixa</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-function NewTxDialog({ open, onOpenChange, sessionId, userId, onDone, preset }: any) {
-  const shopId = useCurrentShopId();
-  const [kind, setKind] = useState<"sale"|"expense"|"adjustment">("sale");
-  const [method, setMethod] = useState<Method>("cash");
-  const [amount, setAmount] = useState("");
-  const [desc, setDesc] = useState("");
-  useEffect(() => {
-    if (open) {
-      setKind(preset?.kind ?? "sale");
-      setDesc(preset?.description ?? "");
-      setAmount("");
-      setMethod("cash");
-    }
-  }, [open, preset]);
-  async function submit() {
-    if (!sessionId) return toast.error("Abra o caixa antes");
-    const { error } = await supabase.from("cash_transactions").insert({
-      barbershop_id: shopId, session_id: sessionId, kind, method,
-      amount: Number(amount), description: desc || null, created_by: userId,
-    });
-    if (error) return toast.error(error.message);
-    toast.success("Lançamento registrado");
-    setAmount(""); setDesc(""); onOpenChange(false); onDone();
-  }
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Novo lançamento</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Tipo</Label>
-              <Select value={kind} onValueChange={(v:any)=>setKind(v)}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sale">Venda</SelectItem>
-                  <SelectItem value="expense">Despesa</SelectItem>
-                  <SelectItem value="adjustment">Ajuste</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Método</Label>
-              <Select value={method} onValueChange={(v:any)=>setMethod(v)}>
-                <SelectTrigger><SelectValue/></SelectTrigger>
-                <SelectContent>
-                  {(Object.keys(METHOD_LABEL) as Method[]).map(m=> <SelectItem key={m} value={m}>{METHOD_LABEL[m]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div><Label>Valor (R$)</Label><Input type="number" value={amount} onChange={e=>setAmount(e.target.value)}/></div>
-          <div><Label>Descrição</Label><Input value={desc} onChange={e=>setDesc(e.target.value)}/></div>
-        </div>
-        <DialogFooter><Button onClick={submit}>Lançar</Button></DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
