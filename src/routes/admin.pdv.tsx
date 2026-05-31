@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
-import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus, TicketPercent, X } from "lucide-react";
+import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus, TicketPercent, X, Search } from "lucide-react";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/admin/pdv")({
   head: () => ({ meta: [{ title: "PDV — BarberOS" }, { name: "robots", content: "noindex,nofollow" }] }),
@@ -47,20 +48,8 @@ function PDV() {
   const [tab, setTab] = useState<"services" | "products">("services");
   const [busy, setBusy] = useState(false);
   const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState<{
-    id: string;
-    code: string;
-    active: boolean;
-    kind: string;
-    value: number;
-    min_amount?: number;
-    valid_from?: string;
-    valid_until?: string;
-    used_count: number;
-    usage_limit?: number;
-  } | null>(null);
+  const [coupon, setCoupon] = useState<any>(null);
   const [couponBusy, setCouponBusy] = useState(false);
-
 
   const { data: session } = useQuery({
     queryKey: ["pdv-session", shopId], enabled: !!shopId,
@@ -123,7 +112,7 @@ function PDV() {
       .select("*").eq("barbershop_id", shopId).eq("code", code).maybeSingle();
     setCouponBusy(false);
     if (!data || !("active" in data)) return toast.error("Cupom inválido");
-    const c = data as any; // Cast as any because of complex union types in generated types
+    const c = data as any;
 
     if (!c.active) return toast.error("Cupom inativo");
     const now = Date.now();
@@ -136,9 +125,9 @@ function PDV() {
   }
   function clearCoupon() { setCoupon(null); setCouponInput(""); }
 
-
   function addService(s: any) {
     setCart(c => [...c, { id: `${s.id}-${Date.now()}`, name: s.name, price: Number(s.price), qty: 1 }]);
+    toast.success(`${s.name} adicionado`);
   }
   function addProduct(p: any) {
     const stock = Number(p.stock_qty ?? 0);
@@ -151,6 +140,7 @@ function PDV() {
       if (stock < 1) { toast.error("Sem estoque"); return c; }
       return [...c, { id: `prod-${p.id}-${Date.now()}`, productId: p.id, name: p.name, price: Number(p.price), qty: 1, stockLeft: stock }];
     });
+    toast.success(`${p.name} adicionado`);
   }
   function changeQty(id: string, delta: number) {
     setCart(c => c.flatMap(i => {
@@ -184,20 +174,17 @@ function PDV() {
     }).select("id").single();
     if (error || !tx) { setBusy(false); return toast.error(error?.message ?? "Erro ao registrar venda"); }
 
-    // Baixa de estoque para produtos
     const productItems = cart.filter(i => i.productId);
     for (const item of productItems) {
-      const { error: smErr } = await supabase.from("stock_movements").insert({
+      await supabase.from("stock_movements").insert({
         barbershop_id: shopId, product_id: item.productId!, kind: "out",
         quantity: item.qty, transaction_id: tx.id, created_by: user?.id,
         notes: `Venda PDV`,
       });
-      if (smErr) { toast.error(`Estoque: ${smErr.message}`); continue; }
       const newQty = Math.max(0, (item.stockLeft ?? 0) - item.qty);
       await supabase.from("products").update({ stock_qty: newQty }).eq("id", item.productId!);
     }
 
-    // Cria comissão se houver regra (sobre o total da venda)
     if (pro && proId) {
       const rule: any = pro.commission_rule ?? {};
       const rate = Number(rule.rate ?? rule.percent ?? 0);
@@ -212,7 +199,6 @@ function PDV() {
     setBusy(false);
     toast.success(`Venda de ${brl(total)} registrada`);
 
-    // Registrar uso do cupom
     if (coupon && discount > 0) {
       await supabase.from("coupon_redemptions" as any).insert({
         barbershop_id: shopId, coupon_id: coupon.id, transaction_id: tx.id, discount_amount: discount,
@@ -226,136 +212,141 @@ function PDV() {
 
   if (!session) {
     return (
-      <div className="grid place-items-center py-20 text-center">
-        <Card className="max-w-sm p-8">
-          <Lock className="mx-auto h-8 w-8 text-muted-foreground"/>
-          <h1 className="mt-3 font-display text-xl font-semibold">Caixa fechado</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Abra o caixa para iniciar vendas pelo PDV.</p>
-          <Button asChild className="mt-4 w-full"><Link to="/admin/caixa">Ir para o caixa</Link></Button>
+      <div className="grid place-items-center py-20 text-center px-4">
+        <Card className="max-w-sm p-8 border-none bg-card/50 shadow-xl backdrop-blur-md">
+          <div className="mx-auto h-16 w-16 grid place-items-center rounded-2xl bg-muted/20 text-muted-foreground/40 mb-4">
+            <Lock className="h-8 w-8"/>
+          </div>
+          <h1 className="font-display text-2xl font-bold tracking-tight">Caixa fechado</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Abra o caixa para iniciar vendas pelo PDV.</p>
+          <Button asChild className="mt-6 w-full rounded-xl h-12 font-bold"><Link to="/admin/caixa">Ir para o caixa</Link></Button>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-      {/* Catálogo / lado esquerdo */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="font-display text-3xl font-bold">PDV</h1>
-          <p className="text-sm text-muted-foreground">Toque nos itens para adicionar à venda</p>
+    <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+      {/* Catálogo */}
+      <div className="space-y-6">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-display text-4xl font-bold tracking-tight">PDV</h1>
+          <p className="text-sm font-medium text-muted-foreground">Selecione os itens para realizar uma venda rápida</p>
         </div>
 
-        <Card className="p-4">
-          <div className="mb-3 text-sm font-medium text-muted-foreground">Profissional</div>
+        <Card className="overflow-hidden border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+            <Users className="h-4 w-4 text-accent" /> Profissional
+          </div>
           <div className="flex flex-wrap gap-2">
             {(pros ?? []).map((p: any) => (
               <button key={p.id} onClick={() => setProId(p.id === proId ? null : p.id)}
-                className={`rounded-full border px-3 py-1.5 text-sm transition ${proId === p.id ? "border-accent bg-accent/15 text-accent" : "border-border hover:bg-muted/40"}`}>
+                className={`rounded-xl border px-4 py-2 text-sm font-bold transition-all active:scale-95 ${proId === p.id ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-background/40 hover:bg-muted/40"}`}>
                 {p.display_name}
               </button>
             ))}
-            {(pros ?? []).length === 0 && <p className="text-sm text-muted-foreground">Nenhum profissional ativo.</p>}
+            {(pros ?? []).length === 0 && <p className="text-xs text-muted-foreground">Nenhum profissional cadastrado.</p>}
           </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <div className="inline-flex rounded-md border border-border p-0.5">
+        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="inline-flex rounded-xl border border-border/40 bg-muted/20 p-1">
               <button onClick={()=>setTab("services")}
-                className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition ${tab==="services"?"bg-accent/15 text-accent":"text-muted-foreground hover:bg-muted/40"}`}>
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-tight transition-all ${tab==="services"?"bg-background text-accent shadow-sm":"text-muted-foreground hover:text-foreground"}`}>
                 <Scissors className="h-3.5 w-3.5"/> Serviços
               </button>
               <button onClick={()=>setTab("products")}
-                className={`inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm transition ${tab==="products"?"bg-accent/15 text-accent":"text-muted-foreground hover:bg-muted/40"}`}>
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-tight transition-all ${tab==="products"?"bg-background text-accent shadow-sm":"text-muted-foreground hover:text-foreground"}`}>
                 <Package className="h-3.5 w-3.5"/> Produtos
               </button>
             </div>
-            <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Buscar…" className="h-8 max-w-[200px]"/>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+              <Input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Buscar itens…" className="h-10 w-full pl-9 rounded-xl border-border/40 bg-background/40 sm:w-[240px]"/>
+            </div>
           </div>
 
-          {tab === "services" ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {filteredServices.map((s: any) => (
-                <button key={s.id} onClick={() => addService(s)}
-                  className="group flex flex-col items-start gap-1 rounded-lg border border-border p-3 text-left transition hover:border-accent hover:bg-accent/5 active:scale-[0.98]">
-                  <span className="line-clamp-2 text-sm font-medium">{s.name}</span>
-                  <span className="font-mono text-xs text-muted-foreground group-hover:text-accent">{brl(Number(s.price))}</span>
-                </button>
-              ))}
-              {filteredServices.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Nenhum serviço.</p>}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {filteredProducts.map((p: any) => {
-                const stock = Number(p.stock_qty ?? 0);
-                const out = stock < 1;
-                return (
-                  <button key={p.id} onClick={() => !out && addProduct(p)} disabled={out}
-                    className={`group flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition ${out?"cursor-not-allowed border-border opacity-50":"border-border hover:border-accent hover:bg-accent/5 active:scale-[0.98]"}`}>
-                    <span className="line-clamp-2 text-sm font-medium">{p.name}</span>
-                    <div className="flex w-full items-center justify-between">
-                      <span className="font-mono text-xs text-muted-foreground group-hover:text-accent">{brl(Number(p.price))}</span>
-                      <span className={`text-[10px] ${out?"text-destructive":"text-muted-foreground"}`}>est. {stock}</span>
-                    </div>
+          <div className="max-h-[500px] overflow-y-auto p-6 pt-0">
+            {tab === "services" ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {filteredServices.map((s: any) => (
+                  <button key={s.id} onClick={() => addService(s)}
+                    className="group flex flex-col items-start gap-2 rounded-2xl border border-border/40 bg-background/40 p-4 text-left transition-all hover:border-accent hover:bg-accent/5 active:scale-[0.97]">
+                    <span className="line-clamp-2 text-sm font-bold leading-tight">{s.name}</span>
+                    <span className="font-display font-bold text-accent">{brl(Number(s.price))}</span>
                   </button>
-                );
-              })}
-              {filteredProducts.length === 0 && <p className="col-span-full text-sm text-muted-foreground">Nenhum produto.</p>}
-            </div>
-          )}
+                ))}
+                {filteredServices.length === 0 && <p className="col-span-full py-8 text-center text-sm text-muted-foreground">Nenhum serviço encontrado.</p>}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {filteredProducts.map((p: any) => {
+                  const stock = Number(p.stock_qty ?? 0);
+                  const out = stock < 1;
+                  return (
+                    <button key={p.id} onClick={() => !out && addProduct(p)} disabled={out}
+                      className={`group flex flex-col items-start gap-2 rounded-2xl border p-4 text-left transition-all active:scale-[0.97] ${out?"cursor-not-allowed border-border/20 opacity-40":"border-border/40 bg-background/40 hover:border-accent hover:bg-accent/5"}`}>
+                      <span className="line-clamp-2 text-sm font-bold leading-tight">{p.name}</span>
+                      <div className="flex w-full items-center justify-between mt-auto">
+                        <span className="font-display font-bold text-accent">{brl(Number(p.price))}</span>
+                        <span className={`text-[10px] font-bold ${out?"text-destructive":"text-muted-foreground/60"}`}>EST. {stock}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+                {filteredProducts.length === 0 && <p className="col-span-full py-8 text-center text-sm text-muted-foreground">Nenhum produto encontrado.</p>}
+              </div>
+            )}
+          </div>
         </Card>
 
-        <Card className="p-4">
-          <div className="mb-2 text-sm font-medium text-muted-foreground">Valor avulso</div>
-          <div className="flex gap-2">
-            <Input inputMode="decimal" value={custom} onChange={e=>setCustom(e.target.value)} placeholder="R$ 0,00" />
-            <Button variant="outline" onClick={addCustom}>Adicionar</Button>
+        <Card className="overflow-hidden border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Lançamento avulso</div>
+          <div className="flex gap-3">
+            <Input inputMode="decimal" value={custom} onChange={e=>setCustom(e.target.value)} placeholder="R$ 0,00" className="h-12 rounded-xl border-border/40 bg-background/40 text-lg font-bold" />
+            <Button variant="outline" onClick={addCustom} className="h-12 rounded-xl px-6 font-bold">Adicionar</Button>
           </div>
         </Card>
       </div>
 
-      {/* Carrinho / lado direito (sticky no desktop) */}
-      <div className="lg:sticky lg:top-20 lg:self-start">
-        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
-          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
-            <div className="flex items-center gap-2 font-display text-base font-bold text-foreground">
-              <ShoppingCart className="h-4 w-4 text-accent"/> Venda atual
+      {/* Carrinho */}
+      <div className="lg:sticky lg:top-24 lg:self-start">
+        <Card className="flex flex-col border-none bg-card/50 shadow-2xl shadow-black/10 backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-border/40 p-5">
+            <div className="flex items-center gap-3 font-display text-lg font-bold">
+              <div className="grid h-8 w-8 place-items-center rounded-lg bg-accent/10 text-accent">
+                <ShoppingCart className="h-4 w-4" />
+              </div>
+              Venda atual
             </div>
-            {cart.length > 0 && (
-              <Badge variant="outline" className="bg-accent/10 border-accent/20 text-accent font-bold">
-                {cart.length} {cart.length===1?"item":"itens"}
-              </Badge>
-            )}
+            {cart.length > 0 && <Badge className="bg-accent/10 text-accent border-accent/20 font-bold">{cart.length} itens</Badge>}
           </div>
 
-          <div className="max-h-[40vh] divide-y divide-border/30 overflow-y-auto lg:max-h-[calc(100vh-400px)]">
+          <div className="max-h-[40vh] divide-y divide-border/20 overflow-y-auto lg:max-h-[calc(100vh-500px)]">
             {cart.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-12 text-center">
-                <div className="rounded-full bg-muted/30 p-4 mb-3">
-                  <ShoppingCart className="h-6 w-6 text-muted-foreground/40" />
-                </div>
-                <p className="text-sm font-medium text-muted-foreground">Carrinho vazio</p>
+              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                <ShoppingCart className="mb-4 h-12 w-12 opacity-10" />
+                <p className="text-sm font-medium">Carrinho vazio</p>
               </div>
             ) : cart.map(i => (
-              <div key={i.id} className="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-black/5">
+              <div key={i.id} className="group flex items-center justify-between gap-4 p-5 transition-colors hover:bg-black/5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    {i.productId && <Package className="h-3 w-3 text-accent/60"/>}
                     <span className="truncate font-bold text-foreground">{i.name}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                  <div className="flex items-center gap-2 mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                     <span>{brl(i.price)}</span>
                     {i.qty > 1 && <span className="text-accent">× {i.qty}</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center overflow-hidden rounded-lg border border-border/40 bg-background/40">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center rounded-lg border border-border/40 bg-background/40 overflow-hidden">
                     <button onClick={()=>changeQty(i.id,-1)} className="p-1.5 hover:bg-muted/60 transition-colors"><Minus className="h-3 w-3"/></button>
-                    <span className="w-7 text-center font-mono text-xs font-bold">{i.qty}</span>
+                    <span className="w-8 text-center font-mono text-xs font-bold">{i.qty}</span>
                     <button onClick={()=>changeQty(i.id,+1)} className="p-1.5 hover:bg-muted/60 transition-colors"><Plus className="h-3 w-3"/></button>
                   </div>
-                  <button onClick={()=>removeItem(i.id)} className="ml-1 rounded-lg p-1.5 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive">
+                  <button onClick={()=>removeItem(i.id)} className="rounded-lg p-2 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive">
                     <Trash2 className="h-4 w-4"/>
                   </button>
                 </div>
@@ -363,95 +354,60 @@ function PDV() {
             ))}
           </div>
 
-          <div className="border-t border-border/40 bg-muted/10 px-4 py-4">
-            {/* Cupom */}
-            <div className="mb-4">
-              {coupon ? (
-                <div className="flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-3 py-2.5">
-                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-tight text-accent">
-                    <TicketPercent className="h-4 w-4"/>{coupon.code}
-                  </span>
-                  <button onClick={clearCoupon} className="rounded-lg p-1 text-accent/60 hover:bg-accent/20 hover:text-accent transition-colors">
-                    <X className="h-4 w-4"/>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <Input 
-                    value={couponInput} 
-                    onChange={e=>setCouponInput(e.target.value.toUpperCase())} 
-                    placeholder="Cupom" 
-                    className="h-10 rounded-xl bg-background/50 text-xs font-bold uppercase tracking-widest placeholder:normal-case"
-                  />
-                  <Button 
-                    variant="outline" 
-                    onClick={applyCoupon} 
-                    disabled={couponBusy || !couponInput.trim()}
-                    className="h-10 rounded-xl px-4 font-bold"
-                  >
-                    Aplicar
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between text-xs font-medium text-muted-foreground">
-                <span>Subtotal</span>
-                <span className="font-mono">{brl(subtotal)}</span>
+          <div className="mt-auto border-t border-border/40 bg-muted/10 p-5">
+            <div className="mb-6 space-y-4">
+              <div className="flex items-center gap-2">
+                {coupon ? (
+                  <div className="flex flex-1 items-center justify-between rounded-xl border border-accent/30 bg-accent/10 px-4 py-2.5">
+                    <span className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-accent">
+                      <TicketPercent className="h-4 w-4"/> {coupon.code}
+                    </span>
+                    <button onClick={clearCoupon} className="text-accent/60 hover:text-accent"><X className="h-4 w-4"/></button>
+                  </div>
+                ) : (
+                  <div className="flex flex-1 gap-2">
+                    <Input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="CUPOM" className="h-10 rounded-xl bg-background/40 font-bold uppercase" />
+                    <Button variant="outline" size="sm" onClick={applyCoupon} disabled={couponBusy || !couponInput} className="h-10 rounded-xl font-bold">Aplicar</Button>
+                  </div>
+                )}
               </div>
-              {discount > 0 && (
-                <div className="flex justify-between text-xs font-bold text-accent">
-                  <span>Desconto</span>
-                  <span className="font-mono">-{brl(discount)}</span>
+
+              <div className="space-y-2 border-y border-border/20 py-4">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted-foreground/60">
+                  <span>Subtotal</span>
+                  <span className="font-mono">{brl(subtotal)}</span>
                 </div>
-              )}
-              <div className="flex justify-between pt-2 border-t border-border/30">
-                <span className="font-display text-lg font-bold text-foreground">Total</span>
-                <span className="font-display text-lg font-black text-accent">{brl(total)}</span>
+                {discount > 0 && (
+                  <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-accent">
+                    <span>Desconto</span>
+                    <span className="font-mono">-{brl(discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between pt-2">
+                  <span className="font-display text-xl font-bold text-foreground">Total</span>
+                  <span className="font-display text-xl font-black text-accent">{brl(total)}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {METHODS.map(m => (
+                  <button key={m.id} onClick={()=>setMethod(m.id)}
+                    className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-3 transition-all active:scale-95 ${method === m.id ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-background/40 text-muted-foreground/60 hover:bg-muted/40 hover:text-foreground"}`}>
+                    <m.icon className="h-4 w-4" />
+                    <span className="text-[10px] font-bold uppercase tracking-tighter">{m.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="mb-4 grid grid-cols-3 gap-2">
-              {METHODS.map(m => (
-                <button 
-                  key={m.id} 
-                  onClick={()=>setMethod(m.id)}
-                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 transition-all active:scale-95 ${method === m.id ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-background/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground"}`}
-                >
-                  <m.icon className="h-4 w-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-tighter">{m.label}</span>
-                </button>
-              ))}
-            </div>
-                  className={`flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-[11px] transition ${method===m.id?"border-accent bg-accent/15 text-accent":"border-border text-muted-foreground hover:bg-muted/40"}`}>
-                  <m.icon className="h-4 w-4"/>{m.label}
-                </button>
-              ))}
-            </div>
-            {discount > 0 && (
-              <div className="mb-1 flex items-baseline justify-between text-xs text-muted-foreground">
-                <span>Subtotal</span><span className="font-mono">{brl(subtotal)}</span>
-              </div>
-            )}
-            {discount > 0 && (
-              <div className="mb-2 flex items-baseline justify-between text-xs text-accent">
-                <span>Desconto</span><span className="font-mono">− {brl(discount)}</span>
-              </div>
-            )}
-            <div className="mb-3 flex items-baseline justify-between">
-              <span className="text-sm text-muted-foreground">Total</span>
-              <span className="font-display text-2xl font-bold">{brl(total)}</span>
-            </div>
-            <Button className="h-12 w-full text-base" onClick={finalize} disabled={busy || cart.length === 0}>
-              <Check className="mr-2 h-4 w-4"/>{busy ? "Registrando…" : "Confirmar venda"}
+            <Button onClick={finalize} disabled={busy || cart.length === 0} className="h-14 w-full rounded-2xl bg-accent text-lg font-black uppercase tracking-[0.2em] text-accent-foreground shadow-xl shadow-accent/20 hover:scale-[1.02] hover:bg-accent/90 active:scale-95">
+              {busy ? "Processando…" : "Finalizar Venda"}
             </Button>
-            {!proId && cart.length > 0 && (
-              <p className="mt-2 text-center text-[11px] text-muted-foreground">Sem profissional — comissão não será gerada.</p>
-            )}
           </div>
         </Card>
       </div>
     </div>
   );
 }
+
+export default PDV;
