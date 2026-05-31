@@ -317,59 +317,113 @@ function PDV() {
 
       {/* Carrinho / lado direito (sticky no desktop) */}
       <div className="lg:sticky lg:top-20 lg:self-start">
-        <Card className="overflow-hidden">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <div className="flex items-center gap-2 font-display text-base font-semibold">
+        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="flex items-center justify-between border-b border-border/40 px-4 py-3">
+            <div className="flex items-center gap-2 font-display text-base font-bold text-foreground">
               <ShoppingCart className="h-4 w-4 text-accent"/> Venda atual
             </div>
-            {cart.length > 0 && <Badge variant="outline">{cart.length} {cart.length===1?"item":"itens"}</Badge>}
+            {cart.length > 0 && (
+              <Badge variant="outline" className="bg-accent/10 border-accent/20 text-accent font-bold">
+                {cart.length} {cart.length===1?"item":"itens"}
+              </Badge>
+            )}
           </div>
 
-          <div className="max-h-[40vh] divide-y divide-border overflow-y-auto">
+          <div className="max-h-[40vh] divide-y divide-border/30 overflow-y-auto lg:max-h-[calc(100vh-400px)]">
             {cart.length === 0 ? (
-              <p className="p-6 text-center text-sm text-muted-foreground">Carrinho vazio</p>
-            ) : cart.map(i => (
-              <div key={i.id} className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5">
-                    {i.productId && <Package className="h-3 w-3 text-muted-foreground"/>}
-                    <span className="truncate">{i.name}</span>
-                  </div>
-                  <span className="font-mono text-[11px] text-muted-foreground">{brl(i.price)} {i.qty>1 && `× ${i.qty}`}</span>
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="rounded-full bg-muted/30 p-4 mb-3">
+                  <ShoppingCart className="h-6 w-6 text-muted-foreground/40" />
                 </div>
-                <div className="flex items-center gap-1">
-                  <button onClick={()=>changeQty(i.id,-1)} className="rounded border border-border p-1 hover:bg-muted/40"><Minus className="h-3 w-3"/></button>
-                  <span className="w-6 text-center font-mono text-xs">{i.qty}</span>
-                  <button onClick={()=>changeQty(i.id,+1)} className="rounded border border-border p-1 hover:bg-muted/40"><Plus className="h-3 w-3"/></button>
-                  <span className="ml-2 font-mono text-xs">{brl(i.price * i.qty)}</span>
-                  <button onClick={()=>removeItem(i.id)} className="ml-1 text-muted-foreground hover:text-destructive"><Trash2 className="h-3.5 w-3.5"/></button>
+                <p className="text-sm font-medium text-muted-foreground">Carrinho vazio</p>
+              </div>
+            ) : cart.map(i => (
+              <div key={i.id} className="group flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-black/5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    {i.productId && <Package className="h-3 w-3 text-accent/60"/>}
+                    <span className="truncate font-bold text-foreground">{i.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                    <span>{brl(i.price)}</span>
+                    {i.qty > 1 && <span className="text-accent">× {i.qty}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center overflow-hidden rounded-lg border border-border/40 bg-background/40">
+                    <button onClick={()=>changeQty(i.id,-1)} className="p-1.5 hover:bg-muted/60 transition-colors"><Minus className="h-3 w-3"/></button>
+                    <span className="w-7 text-center font-mono text-xs font-bold">{i.qty}</span>
+                    <button onClick={()=>changeQty(i.id,+1)} className="p-1.5 hover:bg-muted/60 transition-colors"><Plus className="h-3 w-3"/></button>
+                  </div>
+                  <button onClick={()=>removeItem(i.id)} className="ml-1 rounded-lg p-1.5 text-muted-foreground/40 transition-colors hover:bg-destructive/10 hover:text-destructive">
+                    <Trash2 className="h-4 w-4"/>
+                  </button>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="border-t border-border px-4 py-3">
+          <div className="border-t border-border/40 bg-muted/10 px-4 py-4">
             {/* Cupom */}
-            <div className="mb-3">
+            <div className="mb-4">
               {coupon ? (
-                <div className="flex items-center justify-between rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs">
-                  <span className="inline-flex items-center gap-1.5 font-medium text-accent">
-                    <TicketPercent className="h-3.5 w-3.5"/>{coupon.code} aplicado
+                <div className="flex items-center justify-between rounded-xl border border-accent/40 bg-accent/10 px-3 py-2.5">
+                  <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-tight text-accent">
+                    <TicketPercent className="h-4 w-4"/>{coupon.code}
                   </span>
-                  <button onClick={clearCoupon} className="text-muted-foreground hover:text-destructive"><X className="h-3.5 w-3.5"/></button>
+                  <button onClick={clearCoupon} className="rounded-lg p-1 text-accent/60 hover:bg-accent/20 hover:text-accent transition-colors">
+                    <X className="h-4 w-4"/>
+                  </button>
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <Input value={couponInput} onChange={e=>setCouponInput(e.target.value.toUpperCase())} placeholder="Cupom" className="h-8 text-xs"/>
-                  <Button size="sm" variant="outline" onClick={applyCoupon} disabled={couponBusy || !couponInput.trim()}>
-                    <TicketPercent className="mr-1 h-3.5 w-3.5"/>Aplicar
+                  <Input 
+                    value={couponInput} 
+                    onChange={e=>setCouponInput(e.target.value.toUpperCase())} 
+                    placeholder="Cupom" 
+                    className="h-10 rounded-xl bg-background/50 text-xs font-bold uppercase tracking-widest placeholder:normal-case"
+                  />
+                  <Button 
+                    variant="outline" 
+                    onClick={applyCoupon} 
+                    disabled={couponBusy || !couponInput.trim()}
+                    className="h-10 rounded-xl px-4 font-bold"
+                  >
+                    Aplicar
                   </Button>
                 </div>
               )}
             </div>
-            <div className="mb-3 grid grid-cols-3 gap-1.5">
+            
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-xs font-medium text-muted-foreground">
+                <span>Subtotal</span>
+                <span className="font-mono">{brl(subtotal)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-xs font-bold text-accent">
+                  <span>Desconto</span>
+                  <span className="font-mono">-{brl(discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 border-t border-border/30">
+                <span className="font-display text-lg font-bold text-foreground">Total</span>
+                <span className="font-display text-lg font-black text-accent">{brl(total)}</span>
+              </div>
+            </div>
+
+            <div className="mb-4 grid grid-cols-3 gap-2">
               {METHODS.map(m => (
-                <button key={m.id} onClick={()=>setMethod(m.id)}
+                <button 
+                  key={m.id} 
+                  onClick={()=>setMethod(m.id)}
+                  className={`flex flex-col items-center justify-center gap-1.5 rounded-xl border p-2.5 transition-all active:scale-95 ${method === m.id ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-background/40 text-muted-foreground hover:bg-muted/40 hover:text-foreground"}`}
+                >
+                  <m.icon className="h-4 w-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-tighter">{m.label}</span>
+                </button>
+              ))}
+            </div>
                   className={`flex flex-col items-center gap-1 rounded-md border px-2 py-2 text-[11px] transition ${method===m.id?"border-accent bg-accent/15 text-accent":"border-border text-muted-foreground hover:bg-muted/40"}`}>
                   <m.icon className="h-4 w-4"/>{m.label}
                 </button>
