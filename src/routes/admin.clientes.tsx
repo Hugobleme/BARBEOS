@@ -48,45 +48,51 @@ function Page() {
           description={q ? "Tente outro termo de busca." : "Os clientes aparecem aqui automaticamente após o primeiro agendamento."}
         />
       ) : (
-        <Card className="overflow-hidden p-0">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Telefone</th>
-                <th className="px-4 py-3">E-mail</th>
-                <th className="px-4 py-3">Faltas</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((c: any) => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-medium">{c.full_name}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.phone}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.email}</td>
-                  <td className="px-4 py-3">
-                    {Number(c.no_show_count ?? 0) > 0 ? (
-                      <Badge variant="outline" className="bg-destructive/15 text-destructive">{c.no_show_count}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">0</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {c.blocked
-                      ? <Badge className="bg-destructive/15 text-destructive" variant="outline">Bloqueado</Badge>
-                      : <Badge variant="outline" className="bg-success/15 text-success">Ativo</Badge>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => toggleBlock(c)}>
-                      {c.blocked ? <><ShieldCheck className="mr-1.5 h-4 w-4"/>Desbloquear</> : <><ShieldOff className="mr-1.5 h-4 w-4"/>Bloquear</>}
-                    </Button>
-                  </td>
+        <Card className="overflow-hidden p-0 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border/40 bg-muted/40 text-left text-xs uppercase tracking-widest text-muted-foreground/60">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Nome</th>
+                  <th className="px-6 py-4 font-bold">Telefone</th>
+                  <th className="px-6 py-4 font-bold">E-mail</th>
+                  <th className="px-6 py-4 font-bold">Faltas</th>
+                  <th className="px-6 py-4 font-bold">Status</th>
+                  <th className="px-6 py-4 text-right font-bold">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {filtered.map((c: any) => (
+                  <tr key={c.id} className="transition-colors hover:bg-black/5">
+                    <td className="px-6 py-4">
+                      <div className="font-bold text-foreground">{c.full_name}</div>
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground font-medium">{c.phone}</td>
+                    <td className="px-6 py-4 text-muted-foreground font-medium">{c.email}</td>
+                    <td className="px-6 py-4">
+                      {Number(c.no_show_count ?? 0) > 0 ? (
+                        <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-bold">
+                          {c.no_show_count} {Number(c.no_show_count) === 1 ? 'falta' : 'faltas'}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground/40 font-medium">0</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {c.blocked
+                        ? <Badge className="bg-destructive/10 text-destructive border-destructive/20 font-bold" variant="outline">Bloqueado</Badge>
+                        : <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-bold">Ativo</Badge>}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => toggleBlock(c)} className="rounded-lg hover:bg-muted/50">
+                        {c.blocked ? <><ShieldCheck className="mr-2 h-4 w-4 text-success"/>Desbloquear</> : <><ShieldOff className="mr-2 h-4 w-4 text-destructive"/>Bloquear</>}
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </div>
