@@ -77,21 +77,36 @@ function Page() {
           action={<Button onClick={openNew}><Plus className="mr-1 h-4 w-4"/>Novo profissional</Button>}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map(p => (
-            <Card key={p.id} className="flex flex-col gap-3 p-5">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map(n=>n[0]).slice(0,2).join("")}</AvatarFallback></Avatar>
-                <div>
-                  <div className="font-display font-semibold">{p.display_name}</div>
-                  {!p.active && <Badge variant="secondary">Inativo</Badge>}
+            <Card key={p.id} className="group relative flex flex-col gap-5 border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md transition-all hover:bg-card/80">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-14 w-14 rounded-2xl border-2 border-accent/20">
+                  <AvatarFallback className="bg-accent/10 font-display text-lg font-bold text-accent">
+                    {p.display_name.split(" ").map(n=>n[0]).slice(0,2).join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="font-display text-lg font-bold tracking-tight text-foreground truncate">{p.display_name}</div>
+                  {!p.active && <Badge variant="secondary" className="bg-muted/50 text-[10px] font-bold uppercase mt-1">Inativo</Badge>}
                 </div>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">{p.bio}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {p.specialties?.map(s => <Badge key={s} variant="outline" className="font-normal">{s}</Badge>)}
+              
+              <div className="flex-1 space-y-4">
+                {p.bio && <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">{p.bio}</p>}
+                <div className="flex flex-wrap gap-1.5">
+                  {p.specialties?.map(s => (
+                    <Badge key={s} variant="outline" className="bg-muted/30 border-border/40 text-[10px] font-bold uppercase tracking-tight text-foreground/70">
+                      {s}
+                    </Badge>
+                  ))}
+                </div>
               </div>
-              <Button size="sm" variant="outline" onClick={()=>openEdit(p)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
+
+              <Button size="sm" variant="outline" onClick={()=>openEdit(p)} className="h-10 rounded-xl font-bold border-border/40 bg-background/40 hover:bg-accent/10 hover:text-accent mt-2">
+                <Pencil className="mr-2 h-3.5 w-3.5"/>
+                Editar profissional
+              </Button>
             </Card>
           ))}
         </div>

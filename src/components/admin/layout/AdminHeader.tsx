@@ -35,26 +35,26 @@ export function AdminHeader({
           <Menu className="h-5 w-5" />
         </button>
         
-        <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-1.5 transition-all hover:bg-muted/50">
-          <Building2 className="h-4 w-4 text-accent" />
+        <div className="flex items-center gap-1.5 sm:gap-2 rounded-xl border border-border/60 bg-muted/30 px-2 sm:px-3 py-1.5 transition-all hover:bg-muted/50">
+          <Building2 className="h-4 w-4 text-accent shrink-0" />
           <Select value={shopId ?? undefined} onValueChange={setShopId}>
-            <SelectTrigger className="h-7 w-[180px] border-none bg-transparent p-0 text-sm font-semibold focus:ring-0">
-              <SelectValue placeholder="Selecionar barbearia" />
+            <SelectTrigger className="h-7 w-[120px] sm:w-[180px] border-none bg-transparent p-0 text-sm font-semibold focus:ring-0">
+              <SelectValue placeholder="Selecionar" />
             </SelectTrigger>
             <SelectContent className="rounded-xl border-border/40">
               {shops.map((s) => (
                 <SelectItem key={s.id} value={s.id} className="rounded-lg">
                   <div className="flex items-center justify-between gap-2">
-                    <span>{s.name}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">{s.role}</span>
+                    <span className="truncate max-w-[120px]">{s.name}</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shrink-0">{s.role}</span>
                   </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="h-4 w-[1px] bg-border/60 mx-1" />
+          <div className="h-4 w-[1px] bg-border/60 mx-1 shrink-0" />
           <NewShopDialog onCreated={refresh} trigger={
-            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-accent/20 hover:text-accent">
+            <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-accent/20 hover:text-accent shrink-0">
               <Plus className="h-4 w-4"/>
             </Button>
           } />

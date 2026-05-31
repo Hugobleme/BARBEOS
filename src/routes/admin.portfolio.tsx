@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -64,27 +65,33 @@ function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Portfólio</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h1 className="font-display text-4xl font-bold tracking-tight">Portfólio</h1>
+          <p className="text-sm font-medium text-muted-foreground">
             Fotos de cortes e atendimentos exibidas na página pública da barbearia.
           </p>
         </div>
         <UploadCard shopId={shopId} pros={pros} onUploaded={refetch} />
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Label className="text-muted-foreground">Filtrar por profissional:</Label>
-          <Select value={filterPro} onValueChange={setFilterPro}>
-            <SelectTrigger className="h-9 w-[220px]"><SelectValue/></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} foto(s)</span>
+      <Card className="overflow-hidden border-none bg-card/50 p-4 shadow-xl shadow-black/5 backdrop-blur-md">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex items-center gap-3">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Filtrar:</Label>
+            <Select value={filterPro} onValueChange={setFilterPro}>
+              <SelectTrigger className="h-10 w-[240px] rounded-xl border-border/40 bg-background/40 font-bold">
+                <SelectValue/>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border/40">
+                <SelectItem value="all">Todos os trabalhos</SelectItem>
+                {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="outline" className="ml-auto bg-accent/10 border-accent/20 text-accent font-bold">
+            {filtered.length} {filtered.length === 1 ? 'foto' : 'fotos'}
+          </Badge>
         </div>
       </Card>
 
@@ -94,18 +101,18 @@ function Portfolio() {
           Nenhuma foto ainda. Use o botão acima para adicionar.
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map(it => (
-            <Card key={it.id} className="group relative overflow-hidden p-0">
+            <Card key={it.id} className="group relative overflow-hidden border-none bg-card/50 shadow-lg shadow-black/5 backdrop-blur-md aspect-square rounded-2xl transition-all hover:scale-[1.02] hover:shadow-xl">
               <img src={it.image_url} alt={it.caption ?? ""} loading="lazy"
-                className="aspect-square w-full object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-[11px] text-white">
-                <div className="truncate">{nameOf(it.professional_id)}</div>
-                {it.caption && <div className="truncate opacity-80">{it.caption}</div>}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <div className="font-bold text-white text-xs">{nameOf(it.professional_id)}</div>
+                {it.caption && <div className="mt-1 text-[10px] text-white/80 line-clamp-1">{it.caption}</div>}
               </div>
               <button
                 onClick={() => remove(it)}
-                className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl bg-black/40 text-white backdrop-blur-md opacity-0 transition-all duration-300 hover:bg-destructive group-hover:opacity-100"
                 aria-label="Remover">
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -158,24 +165,26 @@ function UploadCard({
   }
 
   return (
-    <Card className="flex flex-wrap items-end gap-3 p-3">
-      <div className="grid gap-1">
-        <Label className="text-xs">Profissional</Label>
+    <Card className="flex flex-wrap items-end gap-4 p-5 border-none bg-accent shadow-xl shadow-accent/20 text-accent-foreground rounded-2xl">
+      <div className="grid gap-2">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-foreground/60">Profissional</Label>
         <Select value={proId} onValueChange={setProId}>
-          <SelectTrigger className="h-9 w-[180px]"><SelectValue/></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Geral (sem profissional)</SelectItem>
+          <SelectTrigger className="h-10 w-[200px] border-none bg-white/20 text-white placeholder:text-white/40 focus:ring-0 rounded-xl">
+            <SelectValue/>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/40">
+            <SelectItem value="none">Geral (Loja)</SelectItem>
             {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-      <div className="grid gap-1">
-        <Label className="text-xs">Legenda (opcional)</Label>
+      <div className="grid gap-2 flex-1 min-w-[200px]">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-foreground/60">Legenda da foto</Label>
         <Input
           value={caption}
           onChange={e => setCaption(e.target.value)}
-          className="h-9 w-[220px]"
-          placeholder="Ex: fade clássico"
+          className="h-10 border-none bg-white/20 text-white placeholder:text-white/40 rounded-xl"
+          placeholder="Ex: Corte degrade navalhado"
         />
       </div>
       <input
@@ -185,9 +194,13 @@ function UploadCard({
         hidden
         onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
-      <Button onClick={() => inputRef.current?.click()} disabled={busy}>
-        <Upload className="mr-2 h-4 w-4" />
-        {busy ? "Enviando…" : "Enviar foto"}
+      <Button 
+        onClick={() => inputRef.current?.click()} 
+        disabled={busy}
+        className="h-10 px-6 rounded-xl bg-white font-bold text-accent hover:bg-white/90 active:scale-95 transition-all shadow-lg shadow-black/10"
+      >
+        {busy ? <Upload className="mr-2 h-4 w-4 animate-bounce" /> : <ImagePlus className="mr-2 h-4 w-4" />}
+        {busy ? "Enviando…" : "Adicionar Foto"}
       </Button>
     </Card>
   );

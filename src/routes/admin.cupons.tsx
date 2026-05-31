@@ -70,42 +70,69 @@ function Page() {
       ) : !data || data.length === 0 ? (
         <EmptyState icon={TicketPercent} title="Nenhum cupom cadastrado" description="Crie um cupom para começar a oferecer descontos." />
       ) : (
-        <Card className="overflow-hidden p-0">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Código</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Valor</th>
-                <th className="px-4 py-3">Mínimo</th>
-                <th className="px-4 py-3">Validade</th>
-                <th className="px-4 py-3">Uso</th>
-                <th className="px-4 py-3">Ativo</th>
-                <th className="px-4 py-3 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map(c => (
-                <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30">
-                  <td className="px-4 py-3 font-mono font-semibold">{c.code}</td>
-                  <td className="px-4 py-3"><Badge variant="outline">{c.kind === "percent" ? "Percentual" : c.kind === "fixed" ? "Valor fixo" : "1ª visita"}</Badge></td>
-                  <td className="px-4 py-3">{c.kind === "percent" ? `${c.value}%` : brl(Number(c.value))}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{Number(c.min_amount) > 0 ? brl(Number(c.min_amount)) : "—"}</td>
-                  <td className="px-4 py-3 text-muted-foreground text-xs">
-                    {c.valid_from && <div>de {new Date(c.valid_from).toLocaleDateString("pt-BR")}</div>}
-                    {c.valid_until && <div>até {new Date(c.valid_until).toLocaleDateString("pt-BR")}</div>}
-                    {!c.valid_from && !c.valid_until && "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.used_count}{c.usage_limit ? `/${c.usage_limit}` : ""}</td>
-                  <td className="px-4 py-3"><Switch checked={c.active} onCheckedChange={() => toggleActive(c)} /></td>
-                  <td className="px-4 py-3 text-right">
-                    <Button size="sm" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }}><Pencil className="h-4 w-4"/></Button>
-                    <Button size="sm" variant="ghost" onClick={() => remove(c.id)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
-                  </td>
+        <Card className="overflow-hidden p-0 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border/40 bg-muted/40 text-left text-xs uppercase tracking-widest text-muted-foreground/60">
+                <tr>
+                  <th className="px-6 py-4 font-bold">Código</th>
+                  <th className="px-6 py-4 font-bold">Tipo</th>
+                  <th className="px-6 py-4 font-bold">Valor</th>
+                  <th className="px-6 py-4 font-bold">Mínimo</th>
+                  <th className="px-6 py-4 font-bold">Validade</th>
+                  <th className="px-6 py-4 font-bold">Uso</th>
+                  <th className="px-6 py-4 font-bold">Ativo</th>
+                  <th className="px-6 py-4 text-right font-bold">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/30">
+                {data.map(c => (
+                  <tr key={c.id} className="transition-colors hover:bg-black/5">
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-base font-black text-accent">{c.code}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline" className="bg-muted/30 font-bold uppercase tracking-tight text-[10px]">
+                        {c.kind === "percent" ? "Percentual" : c.kind === "fixed" ? "Valor fixo" : "1ª visita"}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-foreground">
+                      {c.kind === "percent" ? `${c.value}%` : brl(Number(c.value))}
+                    </td>
+                    <td className="px-6 py-4 text-muted-foreground font-medium">
+                      {Number(c.min_amount) > 0 ? brl(Number(c.min_amount)) : "—"}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70">
+                        {c.valid_from && <span>De {new Date(c.valid_from).toLocaleDateString("pt-BR")}</span>}
+                        {c.valid_until && <span>Até {new Date(c.valid_until).toLocaleDateString("pt-BR")}</span>}
+                        {!c.valid_from && !c.valid_until && <span className="text-muted-foreground/30">—</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-foreground">{c.used_count}</span>
+                        {c.usage_limit && <span className="text-muted-foreground/40 text-xs">/ {c.usage_limit}</span>}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Switch checked={c.active} onCheckedChange={() => toggleActive(c)} className="data-[state=checked]:bg-accent" />
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button size="icon" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }} className="h-9 w-9 rounded-xl hover:bg-muted/50">
+                          <Pencil className="h-4 w-4 text-muted-foreground"/>
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => remove(c.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive">
+                          <Trash2 className="h-4 w-4"/>
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
     </div>

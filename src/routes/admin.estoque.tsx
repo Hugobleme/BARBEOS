@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2 } from "lucide-react";
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search } from "lucide-react";
 
 export const Route = createFileRoute("/admin/estoque")({
   head: () => ({ meta: [{ title: "Estoque — BarberOS" }] }),
@@ -81,8 +81,8 @@ function Page() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KPI icon={Package} label="Produtos ativos" value={totals.count} />
-        <KPI icon={Boxes} label="Valor em estoque" value={brl(totals.value)} hint="Quantidade × custo" />
-        <KPI icon={AlertTriangle} label="Itens em alerta" value={totals.low} hint="Abaixo do mínimo" tone={totals.low > 0 ? "warn" : undefined} />
+        <KPI icon={Boxes} label="Valor em estoque" value={brl(totals.value)} hint="Custo Total" />
+        <KPI icon={AlertTriangle} label="Itens em alerta" value={totals.low} hint="Abaixo do mín." tone={totals.low > 0 ? "warn" : undefined} />
       </div>
 
       <Tabs defaultValue="catalogo">
@@ -145,32 +145,58 @@ function ProductsList({ products, shopId, onChange }: { products: Product[]; sho
 
   return (
     <div className="space-y-4">
-      <Input placeholder="Buscar por nome ou SKU…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
-      <div className="grid gap-3">
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+        <Input placeholder="Buscar por nome ou SKU…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 h-11 rounded-xl border-border/40 bg-card/50" />
+      </div>
+      <div className="grid gap-4">
         {filtered.map((p) => {
           const low = Number(p.stock_qty) <= Number(p.min_stock);
           return (
-            <Card key={p.id} className="flex flex-wrap items-center gap-4 p-4">
-              <div className="grid h-11 w-11 place-items-center rounded-lg bg-accent/15 text-accent"><Package className="h-5 w-5"/></div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-display text-base font-semibold">{p.name}</span>
-                  {p.sku && <Badge variant="outline" className="text-xs">{p.sku}</Badge>}
-                  {!p.active && <Badge variant="secondary">Inativo</Badge>}
-                  {low && p.active && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/>Mínimo</Badge>}
+            <Card key={p.id} className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                  <Package className="h-6 w-6"/>
                 </div>
-                {p.description && <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.description}</p>}
-              </div>
-              <div className="grid grid-cols-3 gap-4 text-right text-sm">
-                <Mini label="Preço" value={brl(Number(p.price))} />
-                <Mini label="Custo" value={brl(Number(p.cost))} />
-                <Mini label="Estoque" value={`${Number(p.stock_qty)} ${p.unit}`} highlight={low && p.active} />
-              </div>
-              <div className="flex items-center gap-2">
-                <MovementDialog product={p} shopId={shopId} onSaved={onChange} trigger={<Button size="sm" variant="outline"><Settings2 className="mr-1 h-4 w-4"/>Movimentar</Button>} />
-                <ProductDialog product={p} shopId={shopId} onSaved={onChange} trigger={<Button size="icon" variant="ghost"><Pencil className="h-4 w-4"/></Button>} />
-                <Switch checked={p.active} onCheckedChange={() => toggleActive(p)} />
-                <Button size="icon" variant="ghost" onClick={() => remove(p)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-display text-lg font-bold tracking-tight text-foreground">{p.name}</span>
+                    {p.sku && <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold uppercase tracking-tight">{p.sku}</Badge>}
+                    {!p.active && <Badge variant="secondary" className="text-[10px] font-bold uppercase">Inativo</Badge>}
+                    {low && p.active && (
+                      <Badge variant="destructive" className="gap-1 bg-destructive/10 text-destructive border-destructive/20 text-[10px] font-bold uppercase">
+                        <AlertTriangle className="h-3 w-3"/> Crítico
+                      </Badge>
+                    )}
+                  </div>
+                  {p.description && <p className="line-clamp-1 text-xs text-muted-foreground">{p.description}</p>}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-6 border-y border-border/20 py-3 sm:border-none sm:py-0">
+                  <Mini label="Venda" value={brl(Number(p.price))} />
+                  <Mini label="Custo" value={brl(Number(p.cost))} />
+                  <Mini label="Estoque" value={`${Number(p.stock_qty)} ${p.unit}`} highlight={low && p.active} />
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <MovementDialog product={p} shopId={shopId} onSaved={onChange} trigger={
+                    <Button size="sm" variant="outline" className="rounded-xl font-bold h-9">
+                      <Settings2 className="mr-2 h-4 w-4"/>
+                      Ajustar
+                    </Button>
+                  } />
+                  <div className="flex items-center gap-1 border-l border-border/40 pl-2 ml-1">
+                    <ProductDialog product={p} shopId={shopId} onSaved={onChange} trigger={
+                      <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl text-muted-foreground/60 hover:text-foreground">
+                        <Pencil className="h-4 w-4"/>
+                      </Button>
+                    } />
+                    <Button size="icon" variant="ghost" onClick={() => remove(p)} className="h-9 w-9 rounded-xl text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 className="h-4 w-4"/>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </Card>
           );
@@ -357,29 +383,31 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
   }
 
   return (
-    <Card className="divide-y divide-border">
+    <Card className="divide-y divide-border/20 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
       {data.map((m) => {
         const iconCfg = m.kind === "in"
-          ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada" }
-          : m.kind === "out"
-          ? { Icon: ArrowUpCircle, color: "text-destructive", label: "Saída" }
-          : m.kind === "sale"
-          ? { Icon: ArrowUpCircle, color: "text-destructive", label: "Venda" }
-          : { Icon: Settings2, color: "text-accent", label: "Ajuste" };
+          ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada", bg: "bg-emerald-500/10" }
+          : m.kind === "out" || m.kind === "sale"
+          ? { Icon: ArrowUpCircle, color: "text-destructive", label: m.kind === "out" ? "Saída" : "Venda", bg: "bg-destructive/10" }
+          : { Icon: Settings2, color: "text-accent", label: "Ajuste", bg: "bg-accent/10" };
         return (
-          <div key={m.id} className="flex items-center gap-4 p-4">
-            <iconCfg.Icon className={`h-5 w-5 ${iconCfg.color}`} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-semibold">{nameById.get(m.product_id) ?? "—"}</span>
-                <Badge variant="outline" className="text-xs">{iconCfg.label}</Badge>
-              </div>
-              {m.notes && <div className="text-xs text-muted-foreground">{m.notes}</div>}
-              <div className="text-xs text-muted-foreground">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</div>
+          <div key={m.id} className="flex items-center gap-4 p-5 transition-colors hover:bg-black/5">
+            <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconCfg.bg} ${iconCfg.color}`}>
+              <iconCfg.Icon className="h-5 w-5" />
             </div>
-            <div className="text-right text-sm">
-              <div className="font-semibold">{Number(m.quantity)}</div>
-              {m.unit_cost != null && <div className="text-xs text-muted-foreground">{brl(Number(m.unit_cost))}</div>}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-foreground">{nameById.get(m.product_id) ?? "—"}</span>
+                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${iconCfg.bg} ${iconCfg.color} border-transparent`}>{iconCfg.label}</Badge>
+              </div>
+              <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                {m.notes && <span className="line-clamp-1">{m.notes}</span>}
+                <span>{format(new Date(m.created_at), "dd/MM/yyyy · HH:mm")}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-display text-lg font-bold text-foreground">{m.kind === "in" ? "+" : "-"}{Number(m.quantity)}</div>
+              {m.unit_cost != null && <div className="text-[10px] font-bold text-muted-foreground/40">{brl(Number(m.unit_cost))} un.</div>}
             </div>
           </div>
         );
