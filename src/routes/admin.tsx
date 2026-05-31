@@ -47,7 +47,7 @@ const NAV = [
   { to: "/admin/folgas", label: "Folgas", icon: CalendarOff },
   { to: "/admin/avaliacoes", label: "Avaliações", icon: MessageSquare },
   { to: "/admin/configuracoes", label: "Configurações", icon: Settings },
-];
+] as const;
 
 function slugify(v: string) {
   return v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -62,6 +62,7 @@ function AdminLayout() {
   const { data: memberships, refetch, isLoading } = useQuery({
     enabled: !!user,
     queryKey: ["memberships", user?.id],
+    staleTime: 1000 * 60 * 10, // Memberships don't change often
     queryFn: async () => {
       const { data: ms } = await supabase
         .from("barbershop_members")
