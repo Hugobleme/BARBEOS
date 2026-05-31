@@ -32,6 +32,7 @@ function Page() {
       const c = ((data?.settings as any)?.cashback ?? {}) as { enabled?: boolean; percent?: number };
       return { enabled: !!c.enabled, percent: Number(c.percent ?? 5) };
     },
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: balances, refetch: refetchBalances } = useQuery({
@@ -46,6 +47,7 @@ function Page() {
         .limit(500);
       return data ?? [];
     },
+    staleTime: 1000 * 60 * 1, // 1 minute
   });
 
   const filtered = useMemo(() => {

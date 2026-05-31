@@ -35,13 +35,14 @@ function Page() {
   const { data: appts } = useQuery({
     enabled: !!user,
     queryKey: ["my-appts", user?.id],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: async () => {
       const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
       const ids = (customers ?? []).map((c) => c.id);
       if (ids.length === 0) return [];
       const { data } = await supabase
         .from("appointments")
-        .select("*, professional:professionals(display_name), services:appointment_services(service:services(name))")
+        .select("id, status, scheduled_start, scheduled_end, total_amount, professional:professionals(display_name), services:appointment_services(service:services(name))")
         .in("customer_id", ids)
         .order("scheduled_start", { ascending: false });
       return data ?? [];
@@ -51,6 +52,7 @@ function Page() {
   const { data: loyalty } = useQuery({
     enabled: !!user,
     queryKey: ["my-loyalty", user?.id],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: async () => {
       const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
       const ids = (customers ?? []).map((c) => c.id);
@@ -66,6 +68,7 @@ function Page() {
   const { data: wallet } = useQuery({
     enabled: !!user,
     queryKey: ["my-wallet", user?.id],
+    staleTime: 1000 * 60 * 5, // 5 minutes
     queryFn: async () => {
       const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
       const ids = (customers ?? []).map((c) => c.id);
@@ -82,11 +85,12 @@ function Page() {
   const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
   const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
 
+  const { queryClient } = Route.useRouteContext();
   async function cancel(id: string) {
     const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Agendamento cancelado");
-    location.reload();
+    queryClient.invalidateQueries({ queryKey: ["my-appts"] });
   }
 
   return (

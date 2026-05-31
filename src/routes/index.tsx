@@ -43,24 +43,26 @@ function Landing() {
     queryFn: async () => {
       const { data } = await supabase
         .from("services")
-        .select("*")
+        .select("id, name, description, price, duration_min, sort")
         .eq("barbershop_id", DEMO_BARBERSHOP_ID)
         .eq("active", true)
         .order("sort")
         .limit(6);
       return data ?? [];
     },
+    staleTime: 1000 * 60 * 60, // Services rarely change, cache for 1 hour
   });
   const { data: pros } = useQuery({
     queryKey: ["pros-featured"],
     queryFn: async () => {
       const { data } = await supabase
         .from("professionals")
-        .select("*")
+        .select("id, display_name, specialties")
         .eq("barbershop_id", DEMO_BARBERSHOP_ID)
         .eq("active", true);
       return data ?? [];
     },
+    staleTime: 1000 * 60 * 60, // Professionals rarely change, cache for 1 hour
   });
 
   return (
@@ -137,6 +139,9 @@ function Landing() {
                 alt="Interior moderno da BarberOS"
                 width={1024}
                 height={1280}
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
                 className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-90" />

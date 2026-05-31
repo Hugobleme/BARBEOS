@@ -28,26 +28,26 @@ export const Route = createFileRoute("/admin")({
 
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/admin/agenda", label: "Agenda", icon: Calendar },
-  { to: "/admin/caixa", label: "Caixa", icon: DollarSign },
-  { to: "/admin/pdv", label: "PDV", icon: ShoppingCart },
-  { to: "/admin/comissoes", label: "Comissões", icon: Coins },
-  { to: "/admin/pacotes", label: "Pacotes", icon: Package },
-  { to: "/admin/cupons", label: "Cupons", icon: TicketPercent },
-  { to: "/admin/fidelidade", label: "Fidelidade", icon: Gift },
-  { to: "/admin/carteira", label: "Carteira", icon: Wallet },
-  { to: "/admin/estoque", label: "Estoque", icon: Boxes },
-  { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
-  { to: "/admin/franquia", label: "Franquia", icon: Building2 },
-  { to: "/admin/clientes", label: "Clientes", icon: Users },
-  { to: "/admin/profissionais", label: "Profissionais", icon: UserCog },
-  { to: "/admin/servicos", label: "Serviços", icon: Scissors },
-  { to: "/admin/portfolio", label: "Portfólio", icon: ImageIcon },
-  { to: "/admin/equipe", label: "Equipe", icon: UsersRound },
-  { to: "/admin/folgas", label: "Folgas", icon: CalendarOff },
-  { to: "/admin/avaliacoes", label: "Avaliações", icon: MessageSquare },
-  { to: "/admin/configuracoes", label: "Configurações", icon: Settings },
-];
+  { to: "/admin/agenda", label: "Agenda", icon: Calendar, exact: false },
+  { to: "/admin/caixa", label: "Caixa", icon: DollarSign, exact: false },
+  { to: "/admin/pdv", label: "PDV", icon: ShoppingCart, exact: false },
+  { to: "/admin/comissoes", label: "Comissões", icon: Coins, exact: false },
+  { to: "/admin/pacotes", label: "Pacotes", icon: Package, exact: false },
+  { to: "/admin/cupons", label: "Cupons", icon: TicketPercent, exact: false },
+  { to: "/admin/fidelidade", label: "Fidelidade", icon: Gift, exact: false },
+  { to: "/admin/carteira", label: "Carteira", icon: Wallet, exact: false },
+  { to: "/admin/estoque", label: "Estoque", icon: Boxes, exact: false },
+  { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3, exact: false },
+  { to: "/admin/franquia", label: "Franquia", icon: Building2, exact: false },
+  { to: "/admin/clientes", label: "Clientes", icon: Users, exact: false },
+  { to: "/admin/profissionais", label: "Profissionais", icon: UserCog, exact: false },
+  { to: "/admin/servicos", label: "Serviços", icon: Scissors, exact: false },
+  { to: "/admin/portfolio", label: "Portfólio", icon: ImageIcon, exact: false },
+  { to: "/admin/equipe", label: "Equipe", icon: UsersRound, exact: false },
+  { to: "/admin/folgas", label: "Folgas", icon: CalendarOff, exact: false },
+  { to: "/admin/avaliacoes", label: "Avaliações", icon: MessageSquare, exact: false },
+  { to: "/admin/configuracoes", label: "Configurações", icon: Settings, exact: false },
+] as const;
 
 function slugify(v: string) {
   return v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -62,6 +62,7 @@ function AdminLayout() {
   const { data: memberships, refetch, isLoading } = useQuery({
     enabled: !!user,
     queryKey: ["memberships", user?.id],
+    staleTime: 1000 * 60 * 10, // Memberships don't change often
     queryFn: async () => {
       const { data: ms } = await supabase
         .from("barbershop_members")
@@ -137,7 +138,7 @@ function AdminShell() {
           {NAV.map(n => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to} onClick={()=>setOpen(false)}
+              <Link key={n.to} to={n.to} onClick={()=>setOpen(false)} preload="intent"
                 className={`group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${active?"bg-sidebar-accent text-sidebar-accent-foreground":"text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"}`}>
                 <span className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-accent transition-opacity ${active?"opacity-100":"opacity-0"}`} />
                 <n.icon className={`h-4 w-4 ${active?"text-accent":""}`}/>{n.label}

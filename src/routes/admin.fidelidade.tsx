@@ -32,6 +32,7 @@ function Page() {
       const l = ((data?.settings as any)?.loyalty ?? {}) as { enabled?: boolean; points_per_real?: number; redeem_rate?: number };
       return { enabled: !!l.enabled, points_per_real: Number(l.points_per_real ?? 1), redeem_rate: Number(l.redeem_rate ?? 100) };
     },
+    staleTime: 1000 * 60 * 5,
   });
 
   const { data: balances, refetch: refetchBalances } = useQuery({
@@ -46,6 +47,7 @@ function Page() {
         .limit(500);
       return data ?? [];
     },
+    staleTime: 1000 * 60 * 1, // 1 minute
   });
 
   const filtered = useMemo(() => {
