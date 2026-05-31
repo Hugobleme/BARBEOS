@@ -64,27 +64,33 @@ function Portfolio() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold">Portfólio</h1>
-          <p className="text-sm text-muted-foreground">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-1">
+          <h1 className="font-display text-4xl font-bold tracking-tight">Portfólio</h1>
+          <p className="text-sm font-medium text-muted-foreground">
             Fotos de cortes e atendimentos exibidas na página pública da barbearia.
           </p>
         </div>
         <UploadCard shopId={shopId} pros={pros} onUploaded={refetch} />
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center gap-2 text-sm">
-          <Label className="text-muted-foreground">Filtrar por profissional:</Label>
-          <Select value={filterPro} onValueChange={setFilterPro}>
-            <SelectTrigger className="h-9 w-[220px]"><SelectValue/></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-          <span className="ml-auto text-xs text-muted-foreground">{filtered.length} foto(s)</span>
+      <Card className="overflow-hidden border-none bg-card/50 p-4 shadow-xl shadow-black/5 backdrop-blur-md">
+        <div className="flex flex-wrap items-center gap-4 text-sm">
+          <div className="flex items-center gap-3">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Filtrar:</Label>
+            <Select value={filterPro} onValueChange={setFilterPro}>
+              <SelectTrigger className="h-10 w-[240px] rounded-xl border-border/40 bg-background/40 font-bold">
+                <SelectValue/>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl border-border/40">
+                <SelectItem value="all">Todos os trabalhos</SelectItem>
+                {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <Badge variant="outline" className="ml-auto bg-accent/10 border-accent/20 text-accent font-bold">
+            {filtered.length} {filtered.length === 1 ? 'foto' : 'fotos'}
+          </Badge>
         </div>
       </Card>
 
