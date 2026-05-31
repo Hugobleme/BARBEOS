@@ -50,7 +50,7 @@ function Agenda() {
         if (appt?.customer_id) {
           const nextCount = await customerService.incrementNoShow(appt.customer_id);
           
-          const settings = await barbershopService.getSettings(shopId!);
+          const settings = await barbershopService.getSettings(shopId!) as any;
           const policy = settings?.policy ?? {};
           const fee = Number(policy.no_show_fee ?? 0);
           const maxNs = Number(policy.max_no_shows ?? 0);
