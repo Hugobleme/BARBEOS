@@ -81,8 +81,8 @@ function Page() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <KPI icon={Package} label="Produtos ativos" value={totals.count} />
-        <KPI icon={Boxes} label="Valor em estoque" value={brl(totals.value)} hint="Quantidade × custo" />
-        <KPI icon={AlertTriangle} label="Itens em alerta" value={totals.low} hint="Abaixo do mínimo" tone={totals.low > 0 ? "warn" : undefined} />
+        <KPI icon={Boxes} label="Valor em estoque" value={brl(totals.value)} hint="Custo Total" />
+        <KPI icon={AlertTriangle} label="Itens em alerta" value={totals.low} hint="Abaixo do mín." tone={totals.low > 0 ? "warn" : undefined} />
       </div>
 
       <Tabs defaultValue="catalogo">
