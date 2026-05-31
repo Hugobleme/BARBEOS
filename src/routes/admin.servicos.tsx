@@ -77,22 +77,33 @@ function Page() {
           action={<Button onClick={openNew}><Plus className="mr-1 h-4 w-4"/>Novo serviço</Button>}
         />
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {data.map(s => (
-            <Card key={s.id} className="flex flex-col gap-3 p-5">
+            <Card key={s.id} className="group relative flex flex-col gap-4 border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md transition-all hover:bg-card/80">
               <div className="flex items-start justify-between">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5"/></div>
-                {!s.active && <Badge variant="secondary">Inativo</Badge>}
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-accent/10 text-accent transition-transform group-hover:scale-110">
+                  <Scissors className="h-6 w-6"/>
+                </div>
+                {!s.active && <Badge variant="secondary" className="bg-muted/50 text-[10px] font-bold uppercase">Inativo</Badge>}
               </div>
-              <div>
-                <div className="font-display text-lg font-semibold">{s.name}</div>
-                <p className="text-sm text-muted-foreground line-clamp-2">{s.description}</p>
+              <div className="flex-1 space-y-1">
+                <div className="font-display text-xl font-bold tracking-tight text-foreground">{s.name}</div>
+                {s.description && <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">{s.description}</p>}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">{minutes(s.duration_min)}</span>
-                <span className="text-lg font-semibold">{brl(Number(s.price))}</span>
+              <div className="flex items-center justify-between border-t border-border/20 pt-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Duração</span>
+                  <span className="text-sm font-bold text-foreground">{minutes(s.duration_min)}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40">Preço</span>
+                  <div className="font-display text-lg font-black text-accent">{brl(Number(s.price))}</div>
+                </div>
               </div>
-              <Button size="sm" variant="outline" onClick={()=>openEdit(s)}><Pencil className="mr-1 h-3.5 w-3.5"/>Editar</Button>
+              <Button size="sm" variant="outline" onClick={()=>openEdit(s)} className="h-10 rounded-xl font-bold border-border/40 bg-background/40 hover:bg-accent/10 hover:text-accent">
+                <Pencil className="mr-2 h-4 w-4"/>
+                Editar serviço
+              </Button>
             </Card>
           ))}
         </div>
