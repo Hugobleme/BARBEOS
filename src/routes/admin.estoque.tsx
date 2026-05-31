@@ -383,29 +383,31 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
   }
 
   return (
-    <Card className="divide-y divide-border">
+    <Card className="divide-y divide-border/20 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
       {data.map((m) => {
         const iconCfg = m.kind === "in"
-          ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada" }
-          : m.kind === "out"
-          ? { Icon: ArrowUpCircle, color: "text-destructive", label: "Saída" }
-          : m.kind === "sale"
-          ? { Icon: ArrowUpCircle, color: "text-destructive", label: "Venda" }
-          : { Icon: Settings2, color: "text-accent", label: "Ajuste" };
+          ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada", bg: "bg-emerald-500/10" }
+          : m.kind === "out" || m.kind === "sale"
+          ? { Icon: ArrowUpCircle, color: "text-destructive", label: m.kind === "out" ? "Saída" : "Venda", bg: "bg-destructive/10" }
+          : { Icon: Settings2, color: "text-accent", label: "Ajuste", bg: "bg-accent/10" };
         return (
-          <div key={m.id} className="flex items-center gap-4 p-4">
-            <iconCfg.Icon className={`h-5 w-5 ${iconCfg.color}`} />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 text-sm">
-                <span className="font-semibold">{nameById.get(m.product_id) ?? "—"}</span>
-                <Badge variant="outline" className="text-xs">{iconCfg.label}</Badge>
-              </div>
-              {m.notes && <div className="text-xs text-muted-foreground">{m.notes}</div>}
-              <div className="text-xs text-muted-foreground">{format(new Date(m.created_at), "dd/MM/yyyy HH:mm")}</div>
+          <div key={m.id} className="flex items-center gap-4 p-5 transition-colors hover:bg-black/5">
+            <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconCfg.bg} ${iconCfg.color}`}>
+              <iconCfg.Icon className="h-5 w-5" />
             </div>
-            <div className="text-right text-sm">
-              <div className="font-semibold">{Number(m.quantity)}</div>
-              {m.unit_cost != null && <div className="text-xs text-muted-foreground">{brl(Number(m.unit_cost))}</div>}
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-foreground">{nameById.get(m.product_id) ?? "—"}</span>
+                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${iconCfg.bg} ${iconCfg.color} border-transparent`}>{iconCfg.label}</Badge>
+              </div>
+              <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                {m.notes && <span className="line-clamp-1">{m.notes}</span>}
+                <span>{format(new Date(m.created_at), "dd/MM/yyyy · HH:mm")}</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-display text-lg font-bold text-foreground">{m.kind === "in" ? "+" : "-"}{Number(m.quantity)}</div>
+              {m.unit_cost != null && <div className="text-[10px] font-bold text-muted-foreground/40">{brl(Number(m.unit_cost))} un.</div>}
             </div>
           </div>
         );
