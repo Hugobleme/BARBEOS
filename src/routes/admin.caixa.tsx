@@ -15,6 +15,7 @@ import { CashShortcuts } from "@/components/admin/caixa/CashShortcuts";
 import { TransactionDialog } from "@/components/admin/caixa/TransactionDialog";
 import { CloseSessionButton } from "@/components/admin/caixa/CloseSessionButton";
 import { PaymentMethod } from "@/services/cash.service";
+import { motion } from "framer-motion";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "Dinheiro", debit: "Débito", credit: "Crédito", pix: "Pix", transfer: "Transferência", other: "Outro"
@@ -62,66 +63,104 @@ function Caixa() {
   const proRows = Array.from(byPro.values()).sort((a, b) => b.total - a.total);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="font-display text-3xl font-bold">Caixa</h1>
-          <p className="text-muted-foreground">{format(today, "EEEE, d 'de' MMMM", { locale: ptBR })}</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight">Caixa</h1>
+          <div className="mt-1 flex items-center gap-2 text-muted-foreground">
+            <span className="text-sm font-medium">{format(today, "EEEE, d 'de' MMMM yyyy", { locale: ptBR })}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {session ? (
             <>
-              <Badge className="bg-success/15 text-success" variant="outline"><Unlock className="mr-1 h-3 w-3"/>Caixa aberto</Badge>
+              <div className="hidden items-center gap-2 rounded-xl bg-success/10 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-success sm:flex">
+                <Unlock className="h-3 w-3"/>
+                Caixa aberto
+              </div>
               <CloseSessionButton session={session} onDone={refetchSession} />
-              <Button onClick={() => openNewTx()}><Plus className="mr-1 h-4 w-4"/>Lançamento</Button>
+              <Button onClick={() => openNewTx()} variant="premium" className="shadow-lg shadow-accent/20">
+                <Plus className="mr-2 h-4 w-4"/>
+                Novo Lançamento
+              </Button>
             </>
           ) : (
-            <Button onClick={() => setOpenDlg(true)}><Unlock className="mr-1 h-4 w-4"/>Abrir caixa</Button>
+            <Button onClick={() => setOpenDlg(true)} variant="premium" className="shadow-lg shadow-accent/20">
+              <Unlock className="mr-2 h-4 w-4"/>
+              Abrir Caixa
+            </Button>
           )}
         </div>
       </div>
 
-      {session && <CashShortcuts onOpenTx={openNewTx} />}
+      {session && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl bg-muted/20 p-1"
+        >
+          <CashShortcuts onOpenTx={openNewTx} />
+        </motion.div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KPI label="Vendas (dia)" value={brl(totals.sales)} accent />
         <KPI label="Despesas" value={brl(totals.expenses)} />
-        <KPI label="Resultado" value={brl(net)} />
-        <KPI label="Em dinheiro" value={brl(totals.byMethod.cash ?? 0)} />
+        <KPI label="Resultado Líquido" value={brl(net)} />
+        <KPI label="Saldo em Dinheiro" value={brl(totals.byMethod.cash ?? 0)} />
       </div>
 
-      <Card className="p-5">
-        <h2 className="mb-3 font-display text-lg font-semibold">Por método de pagamento</h2>
-        <div className="grid gap-2 sm:grid-cols-3">
-          {(Object.keys(METHOD_LABEL) as PaymentMethod[]).map(m => (
-            <div key={m} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
-              <span className="text-muted-foreground">{METHOD_LABEL[m]}</span>
-              <span className="font-medium">{brl(totals.byMethod[m] ?? 0)}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card className="p-5">
-        <h2 className="mb-3 flex items-center gap-2 font-display text-lg font-semibold">
-          <Users className="h-4 w-4 text-accent"/> Por profissional (vendas do dia)
-        </h2>
-        {proRows.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Sem vendas registradas a profissionais.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {proRows.map((p, i) => (
-              <li key={i} className="flex items-center justify-between py-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium">{p.name}</span>
-                  <Badge variant="outline" className="text-xs">{p.count} atend.</Badge>
-                </div>
-                <span className="font-mono font-medium">{brl(p.total)}</span>
-              </li>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="border-b border-border/40 p-6">
+            <h2 className="font-display text-xl font-bold tracking-tight text-foreground">Por método de pagamento</h2>
+          </div>
+          <div className="grid gap-3 p-6 sm:grid-cols-2">
+            {(Object.keys(METHOD_LABEL) as PaymentMethod[]).map(m => (
+              <motion.div 
+                key={m} 
+                whileHover={{ scale: 1.02 }}
+                className="flex items-center justify-between rounded-xl border border-border/40 bg-background/40 p-4 transition-all hover:border-accent/40"
+              >
+                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60">{METHOD_LABEL[m]}</span>
+                <span className="font-display font-bold text-foreground">{brl(totals.byMethod[m] ?? 0)}</span>
+              </motion.div>
             ))}
-          </ul>
-        )}
-      </Card>
+          </div>
+        </Card>
+
+        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="border-b border-border/40 p-6">
+            <h2 className="flex items-center gap-2 font-display text-xl font-bold tracking-tight text-foreground">
+              <Users className="h-5 w-5 text-accent"/> Produtividade (Vendas)
+            </h2>
+          </div>
+          <div className="p-0">
+            {proRows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <p className="text-sm font-medium text-muted-foreground">Sem vendas registradas para profissionais hoje.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/30">
+                {proRows.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between p-4 px-6 transition-colors hover:bg-black/5">
+                    <div className="flex items-center gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 font-bold text-accent">
+                        {p.name.charAt(0)}
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-foreground">{p.name}</span>
+                        <span className="text-xs text-muted-foreground">{p.count} {p.count === 1 ? 'atendimento' : 'atendimentos'}</span>
+                      </div>
+                    </div>
+                    <span className="font-display font-bold text-foreground">{brl(p.total)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       <TransactionDialog 
         open={txDlg} 

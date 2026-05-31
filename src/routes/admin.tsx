@@ -14,6 +14,7 @@ import { barbershopService } from "@/services/barbershop.service";
 import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminHeader } from "@/components/admin/layout/AdminHeader";
 import { NewShopDialog } from "@/components/admin/layout/NewShopDialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -116,15 +117,32 @@ function AdminShell() {
   const [openSidebar, setOpenSidebar] = useState(false);
 
   return (
-    <div className="relative min-h-screen bg-background">
-      <div className="pointer-events-none fixed inset-0 z-0 opacity-[0.35] dark:opacity-60">
-        <div className="absolute -left-32 top-0 h-[480px] w-[480px] rounded-full bg-accent/10 blur-[140px]" />
-        <div className="absolute right-0 bottom-0 h-[420px] w-[420px] rounded-full bg-accent/5 blur-[160px]" />
+    <div className="relative min-h-screen bg-background selection:bg-accent/30 selection:text-accent-foreground">
+      {/* Dynamic background accents */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-[0.4] dark:opacity-60">
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.1, 1],
+            x: [0, 20, 0],
+            y: [0, -20, 0]
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+          className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-accent/10 blur-[120px]" 
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            x: [0, -30, 0],
+            y: [0, 30, 0]
+          }}
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+          className="absolute -right-32 bottom-0 h-[500px] w-[500px] rounded-full bg-accent/5 blur-[140px]" 
+        />
       </div>
 
       <AdminSidebar navItems={NAV} open={openSidebar} setOpen={setOpenSidebar} />
 
-      <div className="relative z-10 md:pl-64">
+      <div className="relative z-10 flex flex-col md:pl-64">
         <AdminHeader 
           shopId={shopId} 
           shops={shops} 
@@ -135,37 +153,60 @@ function AdminShell() {
           toggleTheme={toggle} 
           userEmail={user?.email} 
         />
-        <main className="p-4 pb-24 md:p-8 md:pb-8"><Outlet /></main>
+        
+        <main className="flex-1 p-4 pb-28 md:p-8 md:pb-8">
+          <motion.div
+            key={loc.pathname}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+            className="mx-auto max-w-7xl"
+          >
+            <Outlet />
+          </motion.div>
+        </main>
 
-        <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-background/95 backdrop-blur md:hidden">
+        {/* Mobile Navigation */}
+        <nav className="fixed inset-x-4 bottom-4 z-40 flex h-16 items-center justify-around rounded-2xl border border-border/40 bg-background/80 px-2 shadow-2xl backdrop-blur-xl md:hidden">
           {NAV.slice(0, 4).map((n) => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to} className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] ${active ? "text-accent" : "text-muted-foreground"}`}>
-                <n.icon className="h-5 w-5" />
-                <span className="truncate">{n.label}</span>
+              <Link 
+                key={n.to} 
+                to={n.to} 
+                className={`group relative flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 transition-all active:scale-90 ${active ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {active && (
+                  <motion.div 
+                    layoutId="mobile-nav-pill"
+                    className="absolute inset-0 z-[-1] rounded-xl bg-accent/10"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <n.icon className={`h-5 w-5 transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`} />
+                <span className="text-[10px] font-bold tracking-tight">{n.label}</span>
               </Link>
             );
           })}
           <Sheet>
             <SheetTrigger asChild>
-              <button className={`flex flex-col items-center justify-center gap-0.5 py-2 text-[11px] ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : "text-muted-foreground"}`}>
+              <button className={`flex flex-col items-center justify-center gap-1 px-4 py-2 text-muted-foreground transition-all active:scale-90 ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : ""}`}>
                 <MoreHorizontal className="h-5 w-5" />
-                <span>Mais</span>
+                <span className="text-[10px] font-bold tracking-tight">Mais</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl border-border bg-background pb-8">
-              <SheetHeader className="text-left">
-                <SheetTitle className="font-serif text-xl">Mais opções</SheetTitle>
+            <SheetContent side="bottom" className="rounded-t-[32px] border-border/40 bg-background/95 pb-12 backdrop-blur-xl">
+              <SheetHeader className="mb-6 border-b border-border/40 pb-4 text-left">
+                <SheetTitle className="font-display text-2xl font-bold tracking-tight">Todas as Opções</SheetTitle>
               </SheetHeader>
-              <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-3">
                 {NAV.slice(4).map((n) => {
                   const active = loc.pathname.startsWith(n.to);
                   return (
                     <Link key={n.to} to={n.to}
-                      className={`flex flex-col items-center justify-center gap-1.5 rounded-lg border p-4 text-xs transition ${active ? "border-accent bg-accent/10 text-accent" : "border-border text-foreground hover:bg-muted/40"}`}>
-                      <n.icon className="h-5 w-5" />
-                      <span className="text-center">{n.label}</span>
+                      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 transition-all active:scale-95 ${active ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-muted/20 text-foreground hover:bg-muted/40"}`}>
+                      <n.icon className="h-6 w-6" />
+                      <span className="text-[10px] font-bold tracking-tight text-center uppercase">{n.label}</span>
                     </Link>
                   );
                 })}
