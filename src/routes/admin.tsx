@@ -14,6 +14,7 @@ import { barbershopService } from "@/services/barbershop.service";
 import { AdminSidebar } from "@/components/admin/layout/AdminSidebar";
 import { AdminHeader } from "@/components/admin/layout/AdminHeader";
 import { NewShopDialog } from "@/components/admin/layout/NewShopDialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
