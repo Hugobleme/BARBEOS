@@ -167,19 +167,19 @@ function AdminShell() {
         </main>
 
         {/* Mobile Navigation */}
-        <nav className="fixed inset-x-4 bottom-4 z-40 flex h-16 items-center justify-around rounded-2xl border border-border/40 bg-background/80 px-2 shadow-2xl backdrop-blur-xl md:hidden">
+        <nav className="fixed inset-x-4 bottom-4 z-40 flex h-16 items-center justify-around rounded-2xl border border-border/40 bg-background/80 px-1 shadow-2xl backdrop-blur-xl md:hidden">
           {NAV.slice(0, 4).map((n) => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
               <Link 
                 key={n.to} 
                 to={n.to} 
-                className={`group relative flex flex-col items-center justify-center gap-1 rounded-xl px-4 py-2 transition-all active:scale-90 ${active ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
+                className={`group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 transition-all active:scale-90 ${active ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {active && (
                   <motion.div 
                     layoutId="mobile-nav-pill"
-                    className="absolute inset-0 z-[-1] rounded-xl bg-accent/10"
+                    className="absolute inset-x-1 inset-y-1 z-[-1] rounded-xl bg-accent/10"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
@@ -190,12 +190,12 @@ function AdminShell() {
           })}
           <Sheet>
             <SheetTrigger asChild>
-              <button className={`flex flex-col items-center justify-center gap-1 px-4 py-2 text-muted-foreground transition-all active:scale-90 ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : ""}`}>
+              <button className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-muted-foreground transition-all active:scale-90 ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : ""}`}>
                 <MoreHorizontal className="h-5 w-5" />
                 <span className="text-[10px] font-bold tracking-tight">Mais</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-[32px] border-border/40 bg-background/95 pb-12 backdrop-blur-xl">
+            <SheetContent side="bottom" className="rounded-t-[32px] border-border/40 bg-background/95 pb-12 backdrop-blur-xl max-h-[85vh] overflow-y-auto">
               <SheetHeader className="mb-6 border-b border-border/40 pb-4 text-left">
                 <SheetTitle className="font-display text-2xl font-bold tracking-tight">Todas as Opções</SheetTitle>
               </SheetHeader>
