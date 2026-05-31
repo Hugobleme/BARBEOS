@@ -101,18 +101,18 @@ function Portfolio() {
           Nenhuma foto ainda. Use o botão acima para adicionar.
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map(it => (
-            <Card key={it.id} className="group relative overflow-hidden p-0">
+            <Card key={it.id} className="group relative overflow-hidden border-none bg-card/50 shadow-lg shadow-black/5 backdrop-blur-md aspect-square rounded-2xl transition-all hover:scale-[1.02] hover:shadow-xl">
               <img src={it.image_url} alt={it.caption ?? ""} loading="lazy"
-                className="aspect-square w-full object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 text-[11px] text-white">
-                <div className="truncate">{nameOf(it.professional_id)}</div>
-                {it.caption && <div className="truncate opacity-80">{it.caption}</div>}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                <div className="font-bold text-white text-xs">{nameOf(it.professional_id)}</div>
+                {it.caption && <div className="mt-1 text-[10px] text-white/80 line-clamp-1">{it.caption}</div>}
               </div>
               <button
                 onClick={() => remove(it)}
-                className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
+                className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl bg-black/40 text-white backdrop-blur-md opacity-0 transition-all duration-300 hover:bg-destructive group-hover:opacity-100"
                 aria-label="Remover">
                 <Trash2 className="h-4 w-4" />
               </button>
