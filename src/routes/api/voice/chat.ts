@@ -128,7 +128,7 @@ export const Route = createFileRoute("/api/voice/chat")({
             try {
               const stt = await geminiGenerate({
                 systemInstruction:
-                  "Transcreva fielmente o áudio em português do Brasil. Responda APENAS com a transcrição literal, sem comentários, sem aspas, sem prefixos.",
+                  "Você é um transcritor especializado em áudios de barbearia. Transcreva fielmente o áudio em português do Brasil. Ignore ruídos de fundo (secadores, tesouras). Se o áudio estiver vazio ou incompreensível, responda APENAS com [incompreensível]. Responda APENAS com a transcrição literal, sem comentários, sem aspas, sem prefixos.",
                 contents: [{
                   role: "user",
                   parts: [
@@ -141,11 +141,13 @@ export const Route = createFileRoute("/api/voice/chat")({
                 (p): p is { text: string } => "text" in p && typeof p.text === "string",
               )?.text?.trim();
               userTranscript = t || "";
+              if (userTranscript.includes("[incompreensível]")) userTranscript = "";
             } catch (err) {
               sttErr = err instanceof Error ? err.message : String(err);
               console.error("[voice/chat] STT error:", sttErr, "mime:", sttMime);
               userTranscript = "";
             }
+
             if (!userTranscript) {
               return Response.json(
                 { error: sttErr ? `STT: ${sttErr}` : "Não entendi o áudio, pode repetir?" },

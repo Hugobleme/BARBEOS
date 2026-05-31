@@ -84,7 +84,19 @@ function AdminLayout() {
     refetch();
   }
 
-  if (loading || !user || isLoading) return null;
+  if (loading || isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+          <p className="animate-pulse text-sm font-medium text-muted-foreground">Carregando painel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null; // Handled by useEffect redirect
+
 
   if (!memberships || memberships.length === 0) {
     return (

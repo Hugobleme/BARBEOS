@@ -47,8 +47,20 @@ function PDV() {
   const [tab, setTab] = useState<"services" | "products">("services");
   const [busy, setBusy] = useState(false);
   const [couponInput, setCouponInput] = useState("");
-  const [coupon, setCoupon] = useState<any>(null);
+  const [coupon, setCoupon] = useState<{
+    id: string;
+    code: string;
+    active: boolean;
+    kind: string;
+    value: number;
+    min_amount?: number;
+    valid_from?: string;
+    valid_until?: string;
+    used_count: number;
+    usage_limit?: number;
+  } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+
 
   const { data: session } = useQuery({
     queryKey: ["pdv-session", shopId], enabled: !!shopId,
@@ -110,8 +122,9 @@ function PDV() {
     const { data, error } = await supabase.from("coupons" as any)
       .select("*").eq("barbershop_id", shopId).eq("code", code).maybeSingle();
     setCouponBusy(false);
-    if (error || !data) return toast.error("Cupom inválido");
-    const c: any = data;
+    if (!data || !("active" in data)) return toast.error("Cupom inválido");
+    const c = data as any; // Cast as any because of complex union types in generated types
+
     if (!c.active) return toast.error("Cupom inativo");
     const now = Date.now();
     if (c.valid_from && now < new Date(c.valid_from).getTime()) return toast.error("Cupom ainda não está válido");

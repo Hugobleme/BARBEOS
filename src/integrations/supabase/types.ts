@@ -1441,15 +1441,26 @@ export type Database = {
         }
         Returns: number
       }
-      credit_wallet_manual: {
-        Args: {
-          _amount: number
-          _barbershop_id: string
-          _customer_id: string
-          _description?: string
-        }
-        Returns: number
-      }
+      credit_wallet_manual:
+        | {
+            Args: {
+              _amount: number
+              _barbershop_id: string
+              _customer_id: string
+              _description?: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_barbershop_id: string
+              p_created_by: string
+              p_customer_id: string
+              p_description: string
+            }
+            Returns: Json
+          }
       has_barbershop_role: {
         Args: {
           _barbershop_id: string
@@ -1466,26 +1477,46 @@ export type Database = {
         Args: { _barbershop_id: string; _user_id: string }
         Returns: boolean
       }
-      redeem_loyalty_points: {
-        Args: {
-          _barbershop_id: string
-          _customer_id: string
-          _description?: string
-          _points: number
-        }
-        Returns: number
-      }
-      redeem_wallet: {
-        Args: {
-          _amount: number
-          _appointment_id?: string
-          _barbershop_id: string
-          _customer_id: string
-          _description?: string
-          _transaction_id?: string
-        }
-        Returns: number
-      }
+      redeem_loyalty_points:
+        | {
+            Args: {
+              _barbershop_id: string
+              _customer_id: string
+              _description?: string
+              _points: number
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_barbershop_id: string
+              p_created_by: string
+              p_customer_id: string
+              p_points_to_redeem: number
+            }
+            Returns: Json
+          }
+      redeem_wallet:
+        | {
+            Args: {
+              _amount: number
+              _appointment_id?: string
+              _barbershop_id: string
+              _customer_id: string
+              _description?: string
+              _transaction_id?: string
+            }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_amount_to_redeem: number
+              p_barbershop_id: string
+              p_created_by: string
+              p_customer_id: string
+            }
+            Returns: Json
+          }
     }
     Enums: {
       app_role: "owner" | "professional" | "receptionist" | "customer"
