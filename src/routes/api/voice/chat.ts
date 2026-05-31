@@ -143,12 +143,11 @@ export const Route = createFileRoute("/api/voice/chat")({
               userTranscript = t || "";
               if (userTranscript.includes("[incompreensível]")) userTranscript = "";
             } catch (err) {
-
-            } catch (err) {
               sttErr = err instanceof Error ? err.message : String(err);
               console.error("[voice/chat] STT error:", sttErr, "mime:", sttMime);
               userTranscript = "";
             }
+
             if (!userTranscript) {
               return Response.json(
                 { error: sttErr ? `STT: ${sttErr}` : "Não entendi o áudio, pode repetir?" },
