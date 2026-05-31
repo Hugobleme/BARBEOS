@@ -67,49 +67,51 @@ function Page() {
         <h1 className="font-display text-3xl font-bold">Configurações</h1>
         <p className="text-muted-foreground">Dados da sua barbearia e regras de atendimento.</p>
       </div>
-      <Card className="space-y-4 p-6">
-        <h2 className="font-display text-lg font-semibold">Identidade</h2>
-        <div><Label>Nome</Label><Input value={f.name} onChange={e=>setF({...f,name:e.target.value})}/></div>
-        <div><Label>Descrição</Label><Textarea value={f.description} onChange={e=>setF({...f,description:e.target.value})}/></div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div><Label>Telefone</Label><Input value={f.phone} onChange={e=>setF({...f,phone:e.target.value})}/></div>
-          <div><Label>WhatsApp</Label><Input value={f.whatsapp} onChange={e=>setF({...f,whatsapp:e.target.value})}/></div>
+      <Card className="space-y-6 p-6 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md rounded-2xl">
+        <h2 className="font-display text-xl font-bold tracking-tight text-foreground">Identidade</h2>
+        <div className="grid gap-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Nome da barbearia</Label><Input value={f.name} onChange={e=>setF({...f,name:e.target.value})} className="h-11 rounded-xl border-border/40 bg-background/40 font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Descrição</Label><Textarea value={f.description} onChange={e=>setF({...f,description:e.target.value})} className="rounded-xl border-border/40 bg-background/40" /></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Telefone fixo</Label><Input value={f.phone} onChange={e=>setF({...f,phone:e.target.value})} className="h-11 rounded-xl border-border/40 bg-background/40" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">WhatsApp</Label><Input value={f.whatsapp} onChange={e=>setF({...f,whatsapp:e.target.value})} className="h-11 rounded-xl border-border/40 bg-background/40" /></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Endereço</Label><Input value={f.street} onChange={e=>setF({...f,street:e.target.value})} className="h-11 rounded-xl border-border/40 bg-background/40" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Cidade</Label><Input value={f.city} onChange={e=>setF({...f,city:e.target.value})} className="h-11 rounded-xl border-border/40 bg-background/40" /></div>
+          </div>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="sm:col-span-2"><Label>Endereço</Label><Input value={f.street} onChange={e=>setF({...f,street:e.target.value})}/></div>
-          <div><Label>Cidade</Label><Input value={f.city} onChange={e=>setF({...f,city:e.target.value})}/></div>
-        </div>
-        <Button onClick={save}>Salvar</Button>
+        <Button onClick={save} className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20">Salvar identidade</Button>
       </Card>
 
-      <Card className="space-y-4 p-6">
+      <Card className="space-y-6 p-6 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md rounded-2xl">
         <div>
-          <h2 className="font-display text-lg font-semibold">Política anti no-show</h2>
-          <p className="text-sm text-muted-foreground">Defina regras para reduzir faltas e cancelamentos de última hora. Use 0 para desativar.</p>
+          <h2 className="font-display text-xl font-bold tracking-tight text-foreground">Política anti no-show</h2>
+          <p className="mt-1 text-sm font-medium text-muted-foreground">Defina regras para reduzir faltas e cancelamentos de última hora.</p>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <Label>Antecedência mínima para agendar (h)</Label>
-            <Input type="number" min={0} value={policy.min_lead_hours} onChange={e=>setPolicy({...policy, min_lead_hours: e.target.value})} placeholder="Ex.: 2"/>
-            <p className="mt-1 text-xs text-muted-foreground">Bloqueia agendamentos abaixo desse limite.</p>
+        <div className="grid gap-6 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Antecedência p/ agendar (h)</Label>
+            <Input type="number" min={0} value={policy.min_lead_hours} onChange={e=>setPolicy({...policy, min_lead_hours: e.target.value})} placeholder="Ex.: 2" className="h-11 rounded-xl border-border/40 bg-background/40" />
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase">Bloqueia reservas de última hora</p>
           </div>
-          <div>
-            <Label>Antecedência mínima para cancelar (h)</Label>
-            <Input type="number" min={0} value={policy.cancel_lead_hours} onChange={e=>setPolicy({...policy, cancel_lead_hours: e.target.value})} placeholder="Ex.: 4"/>
-            <p className="mt-1 text-xs text-muted-foreground">Cancelamentos abaixo disso contam como falta.</p>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Antecedência p/ cancelar (h)</Label>
+            <Input type="number" min={0} value={policy.cancel_lead_hours} onChange={e=>setPolicy({...policy, cancel_lead_hours: e.target.value})} placeholder="Ex.: 4" className="h-11 rounded-xl border-border/40 bg-background/40" />
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase">Cancelamento fora do prazo gera falta</p>
           </div>
-          <div>
-            <Label>Faltas para bloquear cliente</Label>
-            <Input type="number" min={0} value={policy.max_no_shows} onChange={e=>setPolicy({...policy, max_no_shows: e.target.value})} placeholder="Ex.: 3"/>
-            <p className="mt-1 text-xs text-muted-foreground">Bloqueia novos agendamentos ao atingir esse total.</p>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Limite de faltas p/ bloqueio</Label>
+            <Input type="number" min={0} value={policy.max_no_shows} onChange={e=>setPolicy({...policy, max_no_shows: e.target.value})} placeholder="Ex.: 3" className="h-11 rounded-xl border-border/40 bg-background/40" />
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase">Bloqueia cliente automaticamente</p>
           </div>
-          <div>
-            <Label>Taxa por falta (R$)</Label>
-            <Input type="number" min={0} step="0.01" value={policy.no_show_fee} onChange={e=>setPolicy({...policy, no_show_fee: e.target.value})} placeholder="Ex.: 20"/>
-            <p className="mt-1 text-xs text-muted-foreground">Lançada no caixa quando a falta é registrada.</p>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60">Taxa por falta (R$)</Label>
+            <Input type="number" min={0} step="0.01" value={policy.no_show_fee} onChange={e=>setPolicy({...policy, no_show_fee: e.target.value})} placeholder="Ex.: 20" className="h-11 rounded-xl border-border/40 bg-background/40" />
+            <p className="text-[10px] font-bold text-muted-foreground/40 uppercase">Lançamento automático no caixa</p>
           </div>
         </div>
-        <Button onClick={savePolicy}>Salvar política</Button>
+        <Button onClick={savePolicy} variant="premium" className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-accent/20">Salvar política</Button>
       </Card>
     </div>
   );
