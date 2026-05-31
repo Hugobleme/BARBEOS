@@ -36,17 +36,31 @@ function Agenda() {
   const shopId = useCurrentShopId();
   const { user } = useAuth();
   const [date, setDate] = useState(new Date());
-  const [payAppt, setPayAppt] = useState<any>(null);
+  const [payAppt, setPayAppt] = useState<{
+    id: string;
+    barbershop_id: string;
+    customer_id: string;
+    total_amount: number;
+    professional_id: string;
+    professional?: { id: string; display_name: string; commission_rule?: any };
+    customer?: { full_name: string; phone?: string | null };
+  } | null>(null);
 
   const { data, refetch } = useQuery({
-    queryKey: ["agenda", date.toISOString().slice(0,10), shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("appointments")
-      .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
-      .eq("barbershop_id", shopId)
-      .gte("scheduled_start", startOfDay(date).toISOString())
-      .lte("scheduled_start", endOfDay(date).toISOString())
-      .order("scheduled_start")).data ?? [],
+    queryKey: ["agenda", date.toISOString().slice(0, 10), shopId],
+    enabled: !!shopId,
+    queryFn: async () => {
+      const { data: appts } = await supabase
+        .from("appointments")
+        .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
+        .eq("barbershop_id", shopId)
+        .gte("scheduled_start", startOfDay(date).toISOString())
+        .lte("scheduled_start", endOfDay(date).toISOString())
+        .order("scheduled_start");
+      return appts ?? [];
+    },
   });
+
 
   // Realtime: atualiza a agenda quando appointments mudam para esta barbearia
   useEffect(() => {
