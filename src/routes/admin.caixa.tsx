@@ -15,6 +15,7 @@ import { CashShortcuts } from "@/components/admin/caixa/CashShortcuts";
 import { TransactionDialog } from "@/components/admin/caixa/TransactionDialog";
 import { CloseSessionButton } from "@/components/admin/caixa/CloseSessionButton";
 import { PaymentMethod } from "@/services/cash.service";
+import { motion } from "framer-motion";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
   cash: "Dinheiro", debit: "Débito", credit: "Crédito", pix: "Pix", transfer: "Transferência", other: "Outro"
