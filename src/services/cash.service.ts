@@ -3,9 +3,11 @@ import { Database } from "@/integrations/supabase/types";
 
 export type CashSession = Database["public"]["Tables"]["cash_sessions"]["Row"];
 export type CashTransaction = Database["public"]["Tables"]["cash_transactions"]["Row"] & {
-  professional?: { display_name: string };
-  customer?: { full_name: string };
+  professional?: { display_name: string } | null;
+  customer?: { full_name: string } | null;
 };
+
+export type PaymentMethod = Database["public"]["Enums"]["payment_method"];
 
 export const cashService = {
   async getOpenSession(shopId: string) {
@@ -63,8 +65,8 @@ export const cashService = {
   async createTransaction(params: {
     barbershop_id: string;
     session_id: string;
-    kind: "sale" | "expense" | "adjustment" | "fee";
-    method: string;
+    kind: string;
+    method: PaymentMethod;
     amount: number;
     description: string;
     created_by: string;

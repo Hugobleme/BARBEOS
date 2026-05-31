@@ -82,7 +82,9 @@ export const appointmentService = {
           appointment_id: params.appointmentId,
           transaction_id: tx.id,
           amount: commissionAmount,
-          description: `Comissão (${(rate * 100).toFixed(0)}%) sobre ${params.amount}`,
+          base_amount: params.amount,
+          rate: rate,
+          status: "pending"
         });
       }
     }

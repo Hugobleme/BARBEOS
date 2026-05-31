@@ -13,8 +13,8 @@ export const customerService = {
   },
 
   async incrementNoShow(id: string) {
-    const { data: cur } = await this.getById(id);
-    const next = Number((cur as any)?.no_show_count ?? 0) + 1;
+    const cur = await this.getById(id);
+    const next = Number(cur?.no_show_count ?? 0) + 1;
     const { error } = await supabase
       .from("customers")
       .update({ no_show_count: next })
