@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
-import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus, TicketPercent, X, Search } from "lucide-react";
+import { Banknote, CreditCard, QrCode, ArrowLeftRight, Wallet, Check, ShoppingCart, Trash2, Lock, Package, Scissors, Plus, Minus, TicketPercent, X, Search, Users } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
