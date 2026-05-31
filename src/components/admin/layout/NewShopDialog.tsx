@@ -6,10 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-
-function slugify(v: string) {
-  return v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-}
+import { slugify } from "@/lib/utils";
 
 export function NewShopDialog({ onCreated, trigger }: { onCreated: () => void; trigger: React.ReactNode }) {
   const { user } = useAuth();
