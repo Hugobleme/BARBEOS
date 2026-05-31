@@ -145,32 +145,58 @@ function ProductsList({ products, shopId, onChange }: { products: Product[]; sho
 
   return (
     <div className="space-y-4">
-      <Input placeholder="Buscar por nome ou SKU…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
-      <div className="grid gap-3">
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60" />
+        <Input placeholder="Buscar por nome ou SKU…" value={q} onChange={(e) => setQ(e.target.value)} className="pl-9 h-11 rounded-xl border-border/40 bg-card/50" />
+      </div>
+      <div className="grid gap-4">
         {filtered.map((p) => {
           const low = Number(p.stock_qty) <= Number(p.min_stock);
           return (
-            <Card key={p.id} className="flex flex-wrap items-center gap-4 p-4">
-              <div className="grid h-11 w-11 place-items-center rounded-lg bg-accent/15 text-accent"><Package className="h-5 w-5"/></div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-display text-base font-semibold">{p.name}</span>
-                  {p.sku && <Badge variant="outline" className="text-xs">{p.sku}</Badge>}
-                  {!p.active && <Badge variant="secondary">Inativo</Badge>}
-                  {low && p.active && <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/>Mínimo</Badge>}
+            <Card key={p.id} className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+                  <Package className="h-6 w-6"/>
                 </div>
-                {p.description && <p className="mt-0.5 truncate text-xs text-muted-foreground">{p.description}</p>}
-              </div>
-              <div className="grid grid-cols-3 gap-4 text-right text-sm">
-                <Mini label="Preço" value={brl(Number(p.price))} />
-                <Mini label="Custo" value={brl(Number(p.cost))} />
-                <Mini label="Estoque" value={`${Number(p.stock_qty)} ${p.unit}`} highlight={low && p.active} />
-              </div>
-              <div className="flex items-center gap-2">
-                <MovementDialog product={p} shopId={shopId} onSaved={onChange} trigger={<Button size="sm" variant="outline"><Settings2 className="mr-1 h-4 w-4"/>Movimentar</Button>} />
-                <ProductDialog product={p} shopId={shopId} onSaved={onChange} trigger={<Button size="icon" variant="ghost"><Pencil className="h-4 w-4"/></Button>} />
-                <Switch checked={p.active} onCheckedChange={() => toggleActive(p)} />
-                <Button size="icon" variant="ghost" onClick={() => remove(p)}><Trash2 className="h-4 w-4 text-destructive"/></Button>
+                
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-display text-lg font-bold tracking-tight text-foreground">{p.name}</span>
+                    {p.sku && <Badge variant="outline" className="bg-muted/30 text-[10px] font-bold uppercase tracking-tight">{p.sku}</Badge>}
+                    {!p.active && <Badge variant="secondary" className="text-[10px] font-bold uppercase">Inativo</Badge>}
+                    {low && p.active && (
+                      <Badge variant="destructive" className="gap-1 bg-destructive/10 text-destructive border-destructive/20 text-[10px] font-bold uppercase">
+                        <AlertTriangle className="h-3 w-3"/> Crítico
+                      </Badge>
+                    )}
+                  </div>
+                  {p.description && <p className="line-clamp-1 text-xs text-muted-foreground">{p.description}</p>}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-6 border-y border-border/20 py-3 sm:border-none sm:py-0">
+                  <Mini label="Venda" value={brl(Number(p.price))} />
+                  <Mini label="Custo" value={brl(Number(p.cost))} />
+                  <Mini label="Estoque" value={`${Number(p.stock_qty)} ${p.unit}`} highlight={low && p.active} />
+                </div>
+
+                <div className="flex items-center gap-2 self-end sm:self-center">
+                  <MovementDialog product={p} shopId={shopId} onSaved={onChange} trigger={
+                    <Button size="sm" variant="outline" className="rounded-xl font-bold h-9">
+                      <Settings2 className="mr-2 h-4 w-4"/>
+                      Ajustar
+                    </Button>
+                  } />
+                  <div className="flex items-center gap-1 border-l border-border/40 pl-2 ml-1">
+                    <ProductDialog product={p} shopId={shopId} onSaved={onChange} trigger={
+                      <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl text-muted-foreground/60 hover:text-foreground">
+                        <Pencil className="h-4 w-4"/>
+                      </Button>
+                    } />
+                    <Button size="icon" variant="ghost" onClick={() => remove(p)} className="h-9 w-9 rounded-xl text-muted-foreground/40 hover:bg-destructive/10 hover:text-destructive">
+                      <Trash2 className="h-4 w-4"/>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </Card>
           );
