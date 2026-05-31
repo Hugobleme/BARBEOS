@@ -138,7 +138,7 @@ function AdminShell() {
           {NAV.map(n => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
-              <Link key={n.to} to={n.to} onClick={()=>setOpen(false)}
+              <Link key={n.to} to={n.to} onClick={()=>setOpen(false)} preload="intent"
                 className={`group relative mb-0.5 flex items-center gap-3 rounded-md px-3 py-2 text-sm transition ${active?"bg-sidebar-accent text-sidebar-accent-foreground":"text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"}`}>
                 <span className={`absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-full bg-accent transition-opacity ${active?"opacity-100":"opacity-0"}`} />
                 <n.icon className={`h-4 w-4 ${active?"text-accent":""}`}/>{n.label}

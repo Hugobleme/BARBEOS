@@ -102,15 +102,18 @@ function Booking() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["svc", shopId],
-    queryFn: async () => ((await supabase.from("services").select("*").eq("barbershop_id", shopId).eq("active", true).order("sort")).data ?? []) as Service[],
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    queryFn: async () => ((await supabase.from("services").select("id, name, duration_min, price, description").eq("barbershop_id", shopId).eq("active", true).order("sort")).data ?? []) as Service[],
   });
   const { data: pros = [] } = useQuery({
     queryKey: ["pros-all", shopId],
-    queryFn: async () => ((await supabase.from("professionals").select("*").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    queryFn: async () => ((await supabase.from("professionals").select("id, display_name, specialties").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
   });
   const { data: workingHours = [] } = useQuery({
-    queryKey: ["wh"],
-    queryFn: async () => ((await supabase.from("working_hours").select("*")).data ?? []) as WH[],
+    queryKey: ["wh", shopId],
+    staleTime: 1000 * 60 * 30, // 30 minutes
+    queryFn: async () => ((await supabase.from("working_hours").select("professional_id, weekday, start_time, end_time, break_start, break_end").eq("barbershop_id", shopId)).data ?? []) as WH[],
   });
 
   const totalDuration = pickedServices.reduce((a, s) => a + s.duration_min, 0);
