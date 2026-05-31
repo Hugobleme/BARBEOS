@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { Mic } from "lucide-react";
-import { AuroraDrawer } from "./AuroraDrawer";
 import { cn } from "@/lib/utils";
+
+const AuroraDrawer = lazy(() => import("./AuroraDrawer").then(m => ({ default: m.AuroraDrawer })));
 
 interface Props {
   barbershopId: string;
@@ -31,7 +32,11 @@ export function AuroraFab({ barbershopId, barbershopName, className }: Props) {
         </span>
         <span className="text-sm hidden sm:inline">Falar com Aurora</span>
       </button>
-      <AuroraDrawer open={open} onOpenChange={setOpen} barbershopId={barbershopId} barbershopName={barbershopName} />
+      {open && (
+        <Suspense fallback={null}>
+          <AuroraDrawer open={open} onOpenChange={setOpen} barbershopId={barbershopId} barbershopName={barbershopName} />
+        </Suspense>
+      )}
     </>
   );
 }
