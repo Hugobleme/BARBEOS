@@ -165,24 +165,26 @@ function UploadCard({
   }
 
   return (
-    <Card className="flex flex-wrap items-end gap-3 p-3">
-      <div className="grid gap-1">
-        <Label className="text-xs">Profissional</Label>
+    <Card className="flex flex-wrap items-end gap-4 p-5 border-none bg-accent shadow-xl shadow-accent/20 text-accent-foreground rounded-2xl">
+      <div className="grid gap-2">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-foreground/60">Profissional</Label>
         <Select value={proId} onValueChange={setProId}>
-          <SelectTrigger className="h-9 w-[180px]"><SelectValue/></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Geral (sem profissional)</SelectItem>
+          <SelectTrigger className="h-10 w-[200px] border-none bg-white/20 text-white placeholder:text-white/40 focus:ring-0 rounded-xl">
+            <SelectValue/>
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-border/40">
+            <SelectItem value="none">Geral (Loja)</SelectItem>
             {pros.map(p => <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
-      <div className="grid gap-1">
-        <Label className="text-xs">Legenda (opcional)</Label>
+      <div className="grid gap-2 flex-1 min-w-[200px]">
+        <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-accent-foreground/60">Legenda da foto</Label>
         <Input
           value={caption}
           onChange={e => setCaption(e.target.value)}
-          className="h-9 w-[220px]"
-          placeholder="Ex: fade clássico"
+          className="h-10 border-none bg-white/20 text-white placeholder:text-white/40 rounded-xl"
+          placeholder="Ex: Corte degrade navalhado"
         />
       </div>
       <input
@@ -192,9 +194,13 @@ function UploadCard({
         hidden
         onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
       />
-      <Button onClick={() => inputRef.current?.click()} disabled={busy}>
-        <Upload className="mr-2 h-4 w-4" />
-        {busy ? "Enviando…" : "Enviar foto"}
+      <Button 
+        onClick={() => inputRef.current?.click()} 
+        disabled={busy}
+        className="h-10 px-6 rounded-xl bg-white font-bold text-accent hover:bg-white/90 active:scale-95 transition-all shadow-lg shadow-black/10"
+      >
+        {busy ? <Upload className="mr-2 h-4 w-4 animate-bounce" /> : <ImagePlus className="mr-2 h-4 w-4" />}
+        {busy ? "Enviando…" : "Adicionar Foto"}
       </Button>
     </Card>
   );
