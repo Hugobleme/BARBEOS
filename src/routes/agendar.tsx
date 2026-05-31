@@ -111,9 +111,16 @@ function Booking() {
     queryFn: async () => ((await supabase.from("professionals").select("id, display_name, specialties").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
   });
   const { data: workingHours = [] } = useQuery({
-    queryKey: ["wh", shopId],
+    queryKey: ["wh", shopId, pros.map(p => p.id).join(",")],
+    enabled: !!shopId && pros.length > 0,
     staleTime: 1000 * 60 * 30, // 30 minutes
-    queryFn: async () => ((await supabase.from("working_hours").select("professional_id, weekday, start_time, end_time, break_start, break_end").eq("barbershop_id", shopId)).data ?? []) as WH[],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("working_hours")
+        .select("professional_id, weekday, start_time, end_time, break_start, break_end")
+        .in("professional_id", pros.map(p => p.id));
+      return (data ?? []) as WH[];
+    },
   });
 
   const totalDuration = pickedServices.reduce((a, s) => a + s.duration_min, 0);

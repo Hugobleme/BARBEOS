@@ -118,16 +118,21 @@ function ShopPage() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["shop-services", shop.id],
-    queryFn: async () => (await supabase.from("services").select("*")
+    staleTime: 1000 * 60 * 60, // 1 hour
+    queryFn: async () => (await supabase.from("services")
+      .select("id, name, description, price, duration_min, sort")
       .eq("barbershop_id", shop.id).eq("active", true).order("sort")).data ?? [],
   });
   const { data: pros = [] } = useQuery({
     queryKey: ["shop-pros", shop.id],
-    queryFn: async () => (await supabase.from("professionals").select("*")
+    staleTime: 1000 * 60 * 60, // 1 hour
+    queryFn: async () => (await supabase.from("professionals")
+      .select("id, display_name, specialties, slug")
       .eq("barbershop_id", shop.id).eq("active", true)).data ?? [],
   });
   const { data: portfolio = [] } = useQuery({
     queryKey: ["shop-portfolio", shop.id],
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => (await supabase.from("portfolio_items")
       .select("id, image_url, caption, professional_id")
       .eq("barbershop_id", shop.id)
@@ -136,6 +141,7 @@ function ShopPage() {
   });
   const { data: reviews = [] } = useQuery({
     queryKey: ["shop-reviews", shop.id],
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => (await supabase.from("satisfaction_surveys")
       .select("id, shop_rating, professional_rating, comment, answered_at, professional:professionals(display_name)")
       .eq("barbershop_id", shop.id)
@@ -222,7 +228,7 @@ function ShopPage() {
           </div>
           <div className="relative">
             {shop.banner_url ? (
-              <img src={shop.banner_url} alt={shop.name} loading="lazy" className="aspect-[4/5] w-full rounded-3xl border border-border object-cover shadow-xl" />
+              <img src={shop.banner_url} alt={shop.name} loading="eager" fetchPriority="high" className="aspect-[4/5] w-full rounded-3xl border border-border object-cover shadow-xl" />
             ) : (
               <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary to-primary/70 p-8 shadow-xl">
                 <div className="flex h-full flex-col justify-between text-primary-foreground">
