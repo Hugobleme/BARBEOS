@@ -32,57 +32,57 @@ export function AgendaCard({ appointment, onSetStatus, onPay }: AgendaCardProps)
       whileHover={{ y: -2 }}
       transition={{ duration: 0.2 }}
     >
-      <Card className="group relative overflow-hidden p-0">
+      <Card className="group relative overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md transition-all hover:bg-card/80">
         <div className={`absolute left-0 top-0 h-full w-1.5 ${st.className.split(' ')[1].replace('text-', 'bg-')}`} />
         
-        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 items-start gap-5">
-            <div className="flex flex-col items-center justify-center rounded-xl bg-muted/30 px-3 py-2 text-center min-w-[70px]">
-              <span className="font-display text-xl font-bold tracking-tight text-foreground">
+        <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="flex flex-1 items-start gap-3 sm:gap-5">
+            <div className="flex flex-col items-center justify-center rounded-xl bg-accent/10 px-3 py-2 text-center min-w-[65px] sm:min-w-[70px]">
+              <span className="font-mono text-lg font-bold tracking-tight text-accent sm:text-xl">
                 {format(new Date(appointment.scheduled_start), "HH:mm")}
               </span>
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+              <span className="text-[9px] font-bold uppercase tracking-widest text-accent/60">
                 {format(new Date(appointment.scheduled_end), "HH:mm")}
               </span>
             </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-display text-lg font-bold leading-none tracking-tight">
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="truncate font-display text-base font-bold tracking-tight text-foreground sm:text-lg">
                   {appointment.customer?.full_name}
                 </h3>
-                <Badge variant="outline" className={`px-2 py-0 text-[10px] font-bold uppercase ${st.className}`}>
+                <Badge variant="outline" className={`h-5 px-2 py-0 text-[9px] font-black uppercase tracking-tight border-transparent ${st.className}`}>
                   {st.label}
                 </Badge>
               </div>
               
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
                 <div className="flex items-center gap-1.5">
-                  <User className="h-3.5 w-3.5 text-accent" />
-                  <span className="font-medium text-foreground/80">{appointment.professional?.display_name}</span>
+                  <User className="h-3.5 w-3.5 text-accent/60" />
+                  <span className="font-bold text-foreground/70">{appointment.professional?.display_name}</span>
                 </div>
-                <div className="flex items-center gap-1.5 font-bold text-foreground">
+                <div className="flex items-center gap-1.5 font-bold text-accent">
                   {brl(Number(appointment.total_amount))}
                 </div>
               </div>
 
               {appointment.customer?.phone && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
-                  <Phone className="h-3 w-3" />
+                <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground/40">
+                  <Phone className="h-2.5 w-2.5" />
                   {appointment.customer.phone}
                 </div>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-end sm:self-center">
+          <div className="flex items-center justify-end gap-2 border-t border-border/20 pt-3 sm:border-none sm:pt-0">
             {appointment.status === "scheduled" && (
               <Button 
                 size="sm" 
-                className="rounded-xl font-bold transition-all hover:scale-105 active:scale-95" 
+                className="h-9 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 sm:h-10 sm:px-4" 
                 onClick={() => onSetStatus(appointment.id, "in_progress")}
               >
-                <Clock className="mr-1.5 h-3.5 w-3.5" />
+                <Clock className="mr-2 h-4 w-4" />
                 Iniciar
               </Button>
             )}
@@ -91,24 +91,24 @@ export function AgendaCard({ appointment, onSetStatus, onPay }: AgendaCardProps)
               <Button 
                 size="sm" 
                 variant="premium"
-                className="rounded-xl transition-all hover:scale-105 active:scale-95" 
+                className="h-9 rounded-xl font-bold transition-all hover:scale-105 active:scale-95 sm:h-10 sm:px-4" 
                 onClick={() => onPay(appointment)}
               >
-                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
+                <CheckCircle2 className="mr-2 h-4 w-4" />
                 Concluir
               </Button>
             )}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-muted/50">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl text-muted-foreground/40 hover:bg-muted/50 hover:text-foreground">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="rounded-xl border-border/40">
+              <DropdownMenuContent align="end" className="w-48 rounded-2xl border-border/40 bg-background/95 backdrop-blur-xl">
                 {(appointment.status === "scheduled" || appointment.status === "in_progress") && (
                   <DropdownMenuItem 
-                    className="flex items-center gap-2 rounded-lg text-destructive focus:bg-destructive/10 focus:text-destructive"
+                    className="flex items-center gap-3 rounded-xl p-3 text-sm font-medium text-destructive focus:bg-destructive/10 focus:text-destructive"
                     onClick={() => onSetStatus(appointment.id, "no_show")}
                   >
                     <XCircle className="h-4 w-4" />
@@ -117,10 +117,10 @@ export function AgendaCard({ appointment, onSetStatus, onPay }: AgendaCardProps)
                 )}
                 {appointment.status !== "cancelled" && appointment.status !== "completed" && (
                   <DropdownMenuItem 
-                    className="flex items-center gap-2 rounded-lg"
+                    className="flex items-center gap-3 rounded-xl p-3 text-sm font-medium"
                     onClick={() => onSetStatus(appointment.id, "cancelled")}
                   >
-                    <XCircle className="h-4 w-4" />
+                    <XCircle className="h-4 w-4 text-muted-foreground" />
                     Cancelar Horário
                   </DropdownMenuItem>
                 )}
