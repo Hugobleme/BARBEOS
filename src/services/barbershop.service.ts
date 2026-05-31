@@ -1,7 +1,15 @@
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
+
+export type BarbershopMembership = {
+  id: string;
+  role: Database["public"]["Enums"]["app_role"];
+  name: string;
+  settings: any;
+};
 
 export const barbershopService = {
-  async getMemberships(userId: string) {
+  async getMemberships(userId: string): Promise<BarbershopMembership[]> {
     const { data: ms, error } = await supabase
       .from("barbershop_members")
       .select("barbershop_id, role, barbershops(id, name, settings)")
@@ -26,7 +34,7 @@ export const barbershopService = {
       .maybeSingle();
     
     if (error) throw error;
-    return data?.settings as any;
+    return data?.settings;
   },
 
   async claimDemo(userId: string, demoId: string) {
