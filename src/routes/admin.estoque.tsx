@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -17,7 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search } from "lucide-react";
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search, Loader2, RefreshCcw } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+
 
 export const Route = createFileRoute("/admin/estoque")({
   head: () => ({ meta: [{ title: "Estoque — BarberOS" }] }),
