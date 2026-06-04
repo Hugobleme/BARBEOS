@@ -4,10 +4,11 @@ import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppointments } from "@/hooks/queries/useAppointments";
@@ -37,6 +38,8 @@ function Agenda() {
   const [payAppt, setPayAppt] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [proFilter, setProFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const parentRef = useRef<HTMLDivElement>(null);
 
   const { data: professionals } = useQuery({
@@ -51,6 +54,8 @@ function Agenda() {
   const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date, {
     status: statusFilter,
     professionalId: proFilter,
+    source: sourceFilter,
+    q: search,
   });
 
   const rowVirtualizer = useVirtualizer({
@@ -146,11 +151,20 @@ function Agenda() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-card/50 p-4 rounded-xl border border-border/40 backdrop-blur-md">
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Status</label>
+        <div className="relative flex-[2] min-w-[250px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
+          <Input 
+            className="pl-9 h-11 bg-background/50 border-border/40 rounded-xl" 
+            placeholder="Buscar por nome ou telefone..." 
+            value={search} 
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)} 
+          />
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-10 bg-background/50 border-border/40">
-              <SelectValue placeholder="Filtrar por status" />
+            <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
@@ -163,17 +177,30 @@ function Agenda() {
           </Select>
         </div>
 
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Profissional</label>
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
           <Select value={proFilter} onValueChange={setProFilter}>
-            <SelectTrigger className="h-10 bg-background/50 border-border/40">
-              <SelectValue placeholder="Filtrar por profissional" />
+            <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Profissional" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos os profissionais</SelectItem>
+              <SelectItem value="all">Todos profissionais</SelectItem>
               {professionals?.map((p) => (
                 <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[150px]">
+          <Select value={sourceFilter} onValueChange={setSourceFilter}>
+            <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas origens</SelectItem>
+              <SelectItem value="app">Aplicativo</SelectItem>
+              <SelectItem value="admin">Painel Admin</SelectItem>
+              <SelectItem value="link">Link Direto</SelectItem>
             </SelectContent>
           </Select>
         </div>

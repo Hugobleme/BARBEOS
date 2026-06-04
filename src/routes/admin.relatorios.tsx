@@ -28,10 +28,20 @@ export const Route = createFileRoute("/admin/relatorios")({
 
 function Relatorios() {
   const shopId = useCurrentShopId();
-  const [range, setRange] = useState<"7" | "30" | "90">("30");
-  const days = parseInt(range);
-  const start = useMemo(() => startOfDay(subDays(new Date(), days - 1)), [days]);
-  const end = useMemo(() => endOfDay(new Date()), [days]);
+  const [range, setRange] = useState<"7" | "30" | "90" | "custom">("30");
+  const [customStart, setCustomStart] = useState<Date>(subDays(new Date(), 29));
+  const [customEnd, setCustomEnd] = useState<Date>(new Date());
+  
+  const days = range === "custom" ? 0 : parseInt(range);
+  const start = useMemo(() => {
+    if (range === "custom") return startOfDay(customStart);
+    return startOfDay(subDays(new Date(), days - 1));
+  }, [range, days, customStart]);
+  
+  const end = useMemo(() => {
+    if (range === "custom") return endOfDay(customEnd);
+    return endOfDay(new Date());
+  }, [range, days, customEnd]);
 
   const { data } = useQuery({
     enabled: !!shopId,
@@ -137,13 +147,32 @@ function Relatorios() {
             <Download className="mr-1 h-4 w-4" /> Exportar CSV
           </Button>
           <Select value={range} onValueChange={(v) => setRange(v as any)}>
-            <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-[180px] bg-background/50 border-border/40 rounded-xl"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
+              <SelectItem value="custom">Período personalizado</SelectItem>
             </SelectContent>
           </Select>
+
+          {range === "custom" && (
+            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Input 
+                type="date" 
+                className="h-9 bg-background/50 border-border/40 rounded-lg text-xs" 
+                value={format(customStart, "yyyy-MM-dd")}
+                onChange={(e) => setCustomStart(new Date(e.target.value))}
+              />
+              <span className="text-muted-foreground text-xs">até</span>
+              <Input 
+                type="date" 
+                className="h-9 bg-background/50 border-border/40 rounded-lg text-xs" 
+                value={format(customEnd, "yyyy-MM-dd")}
+                onChange={(e) => setCustomEnd(new Date(e.target.value))}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -227,6 +256,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [pro, setPro] = useState("all");
+  const [source, setSource] = useState("all");
   const [sortBy, setSortBy] = useState("scheduled_start");
 
   const { data: pros } = useQuery({
@@ -245,7 +275,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ["history", shopId, start.toISOString(), end.toISOString(), q, status, pro, sortBy],
+    queryKey: ["history", shopId, start.toISOString(), end.toISOString(), q, status, pro, source, sortBy],
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
@@ -257,7 +287,8 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
           status, 
           total_amount, 
           scheduled_start,
-          customer:customers!inner(full_name),
+          source,
+          customer:customers!inner(full_name, phone),
           professional:professionals(display_name)
         `)
         .eq("barbershop_id", shopId)
@@ -266,13 +297,16 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
 
       if (q) {
-        query = query.ilike("customer.full_name", `%${q}%`);
+        query = query.or(`customer.full_name.ilike.%${q}%,customer.phone.ilike.%${q}%`);
       }
       if (status !== "all") {
         query = query.eq("status", status as any);
       }
       if (pro !== "all") {
         query = query.eq("professional_id", pro);
+      }
+      if (source !== "all") {
+        query = query.eq("source", source);
       }
 
       if (sortBy === "scheduled_start") {
@@ -320,7 +354,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
       <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-3 rounded-lg border border-border/40">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
-          <Input className="pl-9 h-10 bg-background/50 border-border/40 rounded-lg" placeholder="Buscar cliente..." value={q} onChange={e=>setQ(e.target.value)} />
+          <Input className="pl-9 h-10 bg-background/50 border-border/40 rounded-lg" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
         </div>
 
         <Select value={status} onValueChange={setStatus}>
@@ -345,6 +379,18 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
             {pros?.map(p => (
               <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={source} onValueChange={setSource}>
+          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
+            <SelectValue placeholder="Origem" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Origem: Todas</SelectItem>
+            <SelectItem value="app">Aplicativo</SelectItem>
+            <SelectItem value="admin">Painel Admin</SelectItem>
+            <SelectItem value="link">Link Direto</SelectItem>
           </SelectContent>
         </Select>
 
