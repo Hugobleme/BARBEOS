@@ -281,10 +281,14 @@ function Relatorios() {
 
 const PAGE_SIZE = 15;
 
-function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; start: Date; end: Date }) {
+function DetailedHistoryTable({ shopId, start, end, initialStatus = "all" }: { shopId: string | null; start: Date; end: Date; initialStatus?: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(initialStatus);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
   const [pro, setPro] = useState("all");
   const [source, setSource] = useState("all");
   const [sortBy, setSortBy] = useState("scheduled_start");
