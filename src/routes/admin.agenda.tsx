@@ -100,19 +100,28 @@ function Agenda() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-3xl font-bold">Agenda</h1>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Agenda</h1>
           <p className="text-muted-foreground">{format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR })}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={() => setDate(d => addDays(d, -1))}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" onClick={() => setDate(new Date())}>Hoje</Button>
-          <Button variant="outline" size="icon" onClick={() => setDate(d => addDays(d, 1))}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Tabs defaultValue="day" className="mr-2">
+            <TabsList>
+              <TabsTrigger value="day"><LayoutGrid className="mr-2 h-4 w-4" />Dia</TabsTrigger>
+              <TabsTrigger value="list" onClick={() => toast.info("Em breve: Visão geral de todos agendamentos")}><List className="mr-2 h-4 w-4" />Lista</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => setDate(d => addDays(d, -1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" onClick={() => setDate(new Date())}>Hoje</Button>
+            <Button variant="outline" size="icon" onClick={() => setDate(d => addDays(d, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
+
 
       {isLoading ? (
         <div className="grid gap-3">
