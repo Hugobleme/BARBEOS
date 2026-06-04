@@ -20,6 +20,8 @@ const PAGE_SIZE = 20;
 function Page() {
   const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
+  const [sortBy, setSortBy] = useState("created_at");
+  const [filterBlocked, setFilterBlocked] = useState("all");
   const parentRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -30,7 +32,7 @@ function Page() {
     isLoading,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["customers", shopId, q],
+    queryKey: ["customers", shopId, q, sortBy, filterBlocked],
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
@@ -38,11 +40,24 @@ function Page() {
         .from("customers")
         .select("*", { count: "exact" })
         .eq("barbershop_id", shopId)
-        .order("created_at", { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
 
       if (q) {
         query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+      }
+
+      if (filterBlocked === "blocked") {
+        query = query.eq("blocked", true);
+      } else if (filterBlocked === "active") {
+        query = query.eq("blocked", false);
+      }
+
+      if (sortBy === "created_at") {
+        query = query.order("created_at", { ascending: false });
+      } else if (sortBy === "full_name") {
+        query = query.order("full_name", { ascending: true });
+      } else if (sortBy === "no_show_count") {
+        query = query.order("no_show_count", { ascending: false });
       }
 
       const { data, count } = await query;
