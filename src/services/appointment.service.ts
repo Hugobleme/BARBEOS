@@ -9,19 +9,27 @@ export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & 
 export type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
 export const appointmentService = {
-  async getByDate(shopId: string, date: Date) {
+  async getByDate(shopId: string, date: Date, filters?: { status?: string; professionalId?: string }) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("appointments")
       .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
       .eq("barbershop_id", shopId)
       .gte("scheduled_start", startOfDay.toISOString())
-      .lte("scheduled_start", endOfDay.toISOString())
-      .order("scheduled_start");
+      .lte("scheduled_start", endOfDay.toISOString());
+
+    if (filters?.status && filters.status !== "all") {
+      query = query.eq("status", filters.status);
+    }
+    if (filters?.professionalId && filters.professionalId !== "all") {
+      query = query.eq("professional_id", filters.professionalId);
+    }
+
+    const { data, error } = await query.order("scheduled_start");
 
     if (error) throw error;
     return (data as Appointment[]) ?? [];
