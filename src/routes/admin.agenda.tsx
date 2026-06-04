@@ -4,10 +4,11 @@ import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppointments } from "@/hooks/queries/useAppointments";
@@ -156,7 +157,7 @@ function Agenda() {
             className="pl-9 h-11 bg-background/50 border-border/40 rounded-xl" 
             placeholder="Buscar por nome ou telefone..." 
             value={search} 
-            onChange={e => setSearch(e.target.value)} 
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)} 
           />
         </div>
 
