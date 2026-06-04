@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, lazy, Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, lazy, Suspense, useRef, useEffect } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
@@ -9,9 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
+import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/admin/layout/EmptyState";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { Badge } from "@/components/ui/badge";
+
 
 const RevenueChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.RevenueChart })));
 const ServicesChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.ServicesChart })));
@@ -206,9 +209,166 @@ function Relatorios() {
           </div>
         )}
       </Card>
+
+      <Card className="p-5">
+        <h2 className="mb-4 font-display text-lg font-semibold tracking-tight">Histórico detalhado</h2>
+        <DetailedHistoryTable shopId={shopId} start={start} end={end} />
+      </Card>
     </div>
   );
 }
+
+const PAGE_SIZE = 15;
+
+function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; start: Date; end: Date }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery({
+    queryKey: ["history", shopId, start.toISOString(), end.toISOString()],
+    enabled: !!shopId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      if (!shopId) return { data: [], nextPage: undefined };
+      const { data } = await supabase
+        .from("appointments")
+        .select(`
+          id, 
+          status, 
+          total_amount, 
+          scheduled_start,
+          customer:customers(full_name),
+          professional:professionals(display_name)
+        `)
+        .eq("barbershop_id", shopId)
+
+        .gte("scheduled_start", start.toISOString())
+        .lte("scheduled_start", end.toISOString())
+        .order("scheduled_start", { ascending: false })
+        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
+
+      return {
+        data: data ?? [],
+        nextPage: (data?.length ?? 0) === PAGE_SIZE ? pageParam + 1 : undefined,
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
+  });
+
+  const allRows = data?.pages.flatMap((page) => page.data) ?? [];
+
+  const rowVirtualizer = useVirtualizer({
+    count: hasNextPage ? allRows.length + 1 : allRows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60,
+    overscan: 5,
+  });
+
+  useEffect(() => {
+    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    if (
+      lastItem &&
+      lastItem.index >= allRows.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, fetchNextPage, allRows.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);
+
+  if (isLoading) return <Skeleton className="h-[400px] w-full rounded-lg" />;
+  if (allRows.length === 0) return <p className="py-8 text-center text-sm text-muted-foreground">Nenhum registro encontrado.</p>;
+
+  return (
+    <div 
+      ref={parentRef}
+      className="h-[400px] overflow-auto scrollbar-thin"
+    >
+      <div
+        style={{
+          height: `${rowVirtualizer.getTotalSize()}px`,
+          width: "100%",
+          position: "relative",
+        }}
+      >
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 z-10 border-b border-border/40 bg-background/80 backdrop-blur-md text-left text-xs uppercase tracking-widest text-muted-foreground/60">
+            <tr>
+              <th className="px-6 py-4 font-bold">Data/Hora</th>
+              <th className="px-6 py-4 font-bold">Cliente</th>
+              <th className="px-6 py-4 font-bold">Profissional</th>
+              <th className="px-6 py-4 font-bold">Valor</th>
+              <th className="px-6 py-4 font-bold text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const isLoaderRow = virtualRow.index > allRows.length - 1;
+              const a = allRows[virtualRow.index] as any;
+
+              if (isLoaderRow) {
+                return (
+                  <tr 
+                    key="loader"
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <td colSpan={5} className="py-4 text-center">
+                      <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+                    </td>
+                  </tr>
+                );
+              }
+
+              return (
+                <tr 
+                  key={a.id} 
+                  className="transition-colors hover:bg-black/5"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <td className="px-6 py-4 font-medium text-muted-foreground">
+                    {format(new Date(a.scheduled_start), "dd/MM HH:mm")}
+                  </td>
+                  <td className="px-6 py-4 font-bold text-foreground">{a.customer?.full_name ?? "—"}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{a.professional?.display_name ?? "—"}</td>
+                  <td className="px-6 py-4 font-bold">{brl(Number(a.total_amount || 0))}</td>
+                  <td className="px-6 py-4 text-right">
+                    <Badge variant="outline" className={`
+                      ${a.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 
+                        a.status === 'cancelled' || a.status === 'no_show' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
+                        'bg-warning/10 text-warning border-warning/20'} font-bold
+                    `}>
+                      {a.status}
+                    </Badge>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 
 function exportCSV(daily: any[], ranking: any[], topServices: any[]) {
   const lines: string[] = [];

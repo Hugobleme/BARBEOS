@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, useRef, useEffect } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -17,7 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search } from "lucide-react";
+import { AlertTriangle, ArrowDownCircle, ArrowUpCircle, Boxes, Package, Pencil, Plus, Settings2, Trash2, Search, Loader2, RefreshCcw } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+
 
 export const Route = createFileRoute("/admin/estoque")({
   head: () => ({ meta: [{ title: "Estoque — BarberOS" }] }),
@@ -362,56 +364,135 @@ function MovementDialog({ product, shopId, onSaved, trigger }: { product: Produc
 }
 
 function MovementsList({ shopId, products }: { shopId: string; products: Product[] }) {
-  const { data } = useQuery({
-    enabled: !!shopId,
+  const parentRef = useRef<HTMLDivElement>(null);
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading
+  } = useInfiniteQuery({
     queryKey: ["stock-movements", shopId],
-    queryFn: async () => {
+    enabled: !!shopId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
       const { data } = await supabase
         .from("stock_movements")
         .select("*")
         .eq("barbershop_id", shopId)
         .order("created_at", { ascending: false })
-        .limit(200);
-      return (data ?? []) as Movement[];
+        .range(pageParam * 20, (pageParam + 1) * 20 - 1);
+      return {
+        data: (data ?? []) as Movement[],
+        nextPage: (data?.length ?? 0) === 20 ? pageParam + 1 : undefined,
+      };
     },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
 
+  const allRows = data?.pages.flatMap((page) => page.data) ?? [];
   const nameById = new Map(products.map((p) => [p.id, p.name]));
 
-  if (!data?.length) {
-    return <Card className="p-12 text-center text-sm text-muted-foreground">Sem movimentações registradas.</Card>;
-  }
+  const rowVirtualizer = useVirtualizer({
+    count: hasNextPage ? allRows.length + 1 : allRows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+  });
+
+  useEffect(() => {
+    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    if (
+      lastItem &&
+      lastItem.index >= allRows.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, fetchNextPage, allRows.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);
+
+  if (isLoading) return <div className="space-y-4">{[1, 2, 3].map(i => <Card key={i} className="h-20 animate-pulse bg-muted/30" />)}</div>;
+  if (allRows.length === 0) return <Card className="p-12 text-center text-sm text-muted-foreground">Sem movimentações registradas.</Card>;
 
   return (
-    <Card className="divide-y divide-border/20 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
-      {data.map((m) => {
-        const iconCfg = m.kind === "in"
-          ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada", bg: "bg-emerald-500/10" }
-          : m.kind === "out" || m.kind === "sale"
-          ? { Icon: ArrowUpCircle, color: "text-destructive", label: m.kind === "out" ? "Saída" : "Venda", bg: "bg-destructive/10" }
-          : { Icon: Settings2, color: "text-accent", label: "Ajuste", bg: "bg-accent/10" };
-        return (
-          <div key={m.id} className="flex items-center gap-4 p-5 transition-colors hover:bg-black/5">
-            <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconCfg.bg} ${iconCfg.color}`}>
-              <iconCfg.Icon className="h-5 w-5" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-bold text-foreground">{nameById.get(m.product_id) ?? "—"}</span>
-                <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${iconCfg.bg} ${iconCfg.color} border-transparent`}>{iconCfg.label}</Badge>
+    <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
+      <div 
+        ref={parentRef}
+        className="h-[500px] overflow-auto scrollbar-thin"
+      >
+        <div
+          style={{
+            height: `${rowVirtualizer.getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const isLoaderRow = virtualRow.index > allRows.length - 1;
+            const m = allRows[virtualRow.index];
+
+            if (isLoaderRow) {
+              return (
+                <div 
+                  key="loader"
+                  className="flex items-center justify-center py-4"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              );
+            }
+
+            const iconCfg = m.kind === "in"
+              ? { Icon: ArrowDownCircle, color: "text-emerald-500", label: "Entrada", bg: "bg-emerald-500/10" }
+              : m.kind === "out" || m.kind === "sale"
+              ? { Icon: ArrowUpCircle, color: "text-destructive", label: m.kind === "out" ? "Saída" : "Venda", bg: "bg-destructive/10" }
+              : { Icon: Settings2, color: "text-accent", label: "Ajuste", bg: "bg-accent/10" };
+
+            return (
+              <div 
+                key={m.id} 
+                className="flex items-center gap-4 p-5 transition-colors hover:bg-black/5 border-b border-border/20 last:border-0"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${iconCfg.bg} ${iconCfg.color}`}>
+                  <iconCfg.Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-bold text-foreground">{nameById.get(m.product_id) ?? "—"}</span>
+                    <Badge variant="outline" className={`text-[9px] font-black uppercase tracking-widest ${iconCfg.bg} ${iconCfg.color} border-transparent`}>{iconCfg.label}</Badge>
+                  </div>
+                  <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
+                    {m.notes && <span className="line-clamp-1">{m.notes}</span>}
+                    <span>{format(new Date(m.created_at), "dd/MM/yyyy · HH:mm")}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-display text-lg font-bold text-foreground">{m.kind === "in" ? "+" : "-"}{Number(m.quantity)}</div>
+                  {m.unit_cost != null && <div className="text-[10px] font-bold text-muted-foreground/40">{brl(Number(m.unit_cost))} un.</div>}
+                </div>
               </div>
-              <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/60">
-                {m.notes && <span className="line-clamp-1">{m.notes}</span>}
-                <span>{format(new Date(m.created_at), "dd/MM/yyyy · HH:mm")}</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="font-display text-lg font-bold text-foreground">{m.kind === "in" ? "+" : "-"}{Number(m.quantity)}</div>
-              {m.unit_cost != null && <div className="text-[10px] font-bold text-muted-foreground/40">{brl(Number(m.unit_cost))} un.</div>}
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      </div>
     </Card>
   );
 }
+
