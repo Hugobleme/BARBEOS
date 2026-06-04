@@ -23,7 +23,7 @@ export const appointmentService = {
       .lte("scheduled_start", endOfDay.toISOString());
 
     if (filters?.status && filters.status !== "all") {
-      query = query.eq("status", filters.status);
+      query = query.eq("status", filters.status as AppointmentStatus);
     }
     if (filters?.professionalId && filters.professionalId !== "all") {
       query = query.eq("professional_id", filters.professionalId);
