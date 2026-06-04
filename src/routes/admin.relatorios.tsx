@@ -11,11 +11,10 @@ import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-f
 import { ptBR } from "date-fns/locale";
 import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/admin/layout/EmptyState";
 
 const RevenueChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.RevenueChart })));
 const ServicesChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.ServicesChart })));
-import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
-import { EmptyState } from "@/components/admin/layout/EmptyState";
 
 export const Route = createFileRoute("/admin/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — BarberOS" }] }),
