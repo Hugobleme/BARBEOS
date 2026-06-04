@@ -273,7 +273,7 @@ function Relatorios() {
 
       <Card className="p-5">
         <h2 className="mb-4 font-display text-lg font-semibold tracking-tight">Histórico detalhado</h2>
-        <DetailedHistoryTable shopId={shopId} start={start} end={end} />
+        <DetailedHistoryTable shopId={shopId} start={start} end={end} initialStatus={statusFilter} />
       </Card>
     </div>
   );
