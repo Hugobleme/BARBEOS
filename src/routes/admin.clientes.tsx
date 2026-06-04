@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
@@ -7,27 +7,90 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
-import { useState } from "react";
-import { Search, Users, ShieldOff, ShieldCheck } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Search, Users, ShieldOff, ShieldCheck, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
+
+const PAGE_SIZE = 20;
 
 function Page() {
   const shopId = useCurrentShopId();
   const [q, setQ] = useState("");
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["customers", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("customers").select("*").eq("barbershop_id", shopId).order("created_at",{ascending:false})).data ?? [],
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["customers", shopId, q],
+    enabled: !!shopId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      let query = supabase
+        .from("customers")
+        .select("*", { count: "exact" })
+        .eq("barbershop_id", shopId)
+        .order("created_at", { ascending: false })
+        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
+
+      if (q) {
+        query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
+      }
+
+      const { data, count } = await query;
+      return {
+        data: data ?? [],
+        nextPage: (data?.length ?? 0) === PAGE_SIZE ? pageParam + 1 : undefined,
+        totalCount: count ?? 0,
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextPage,
   });
-  const filtered = (data ?? []).filter((c: any) => !q || c.full_name.toLowerCase().includes(q.toLowerCase()) || c.phone?.includes(q));
+
+  const allRows = data?.pages.flatMap((page) => page.data) ?? [];
+
+  const rowVirtualizer = useVirtualizer({
+    count: hasNextPage ? allRows.length + 1 : allRows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 72,
+    overscan: 5,
+  });
+
+  useEffect(() => {
+    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    if (
+      lastItem &&
+      lastItem.index >= allRows.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [
+    hasNextPage,
+    fetchNextPage,
+    allRows.length,
+    isFetchingNextPage,
+    rowVirtualizer.getVirtualItems(),
+  ]);
 
   async function toggleBlock(c: any) {
-    const { error } = await supabase.from("customers").update({ blocked: !c.blocked, ...(c.blocked ? { no_show_count: 0 } : {}) }).eq("id", c.id);
+    const { error } = await supabase
+      .from("customers")
+      .update({ blocked: !c.blocked, ...(c.blocked ? { no_show_count: 0 } : {}) })
+      .eq("id", c.id);
     if (error) return toast.error(error.message);
     toast.success(c.blocked ? "Cliente desbloqueado" : "Cliente bloqueado");
     refetch();
   }
+
 
   return (
     <div className="space-y-6">
