@@ -17,7 +17,13 @@ import { customerService } from "@/services/customer.service";
 import { AgendaCard } from "@/components/admin/agenda/AgendaCard";
 import { CompletePaymentDialog } from "@/components/admin/agenda/CompletePaymentDialog";
 
-export const Route = createFileRoute("/admin/agenda")({ component: Agenda });
+export const Route = createFileRoute("/admin/agenda")({
+  loader: async ({ context: { queryClient } }) => {
+    // Prefetch agenda data if we have a shopId in context or similar
+    // Since shopId is dynamic from hooks, we mainly rely on preloading when navigating
+  },
+  component: Agenda,
+});
 
 function Agenda() {
   const shopId = useCurrentShopId();

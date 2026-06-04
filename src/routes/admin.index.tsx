@@ -14,7 +14,13 @@ import { motion } from "framer-motion";
 
 import { Link } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/admin/")({ component: Dashboard });
+export const Route = createFileRoute("/admin/")({
+  loader: async ({ context: { queryClient } }) => {
+    // We can't use useCurrentShopId here, but we can try to resolve it from the queryClient or a similar mechanism if available in the future.
+    // For now, loaders are great for global data or data with known IDs.
+  },
+  component: Dashboard,
+});
 
 function Dashboard() {
   const shopId = useCurrentShopId();

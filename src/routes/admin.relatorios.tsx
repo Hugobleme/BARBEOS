@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, lazy, Suspense } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -9,9 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/admin/layout/EmptyState";
+
+const RevenueChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.RevenueChart })));
+const ServicesChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.ServicesChart })));
 
 export const Route = createFileRoute("/admin/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — BarberOS" }] }),
@@ -148,17 +151,9 @@ function Relatorios() {
 
       <Card className="p-5">
         <h2 className="mb-4 font-display text-lg font-semibold">Faturamento por dia</h2>
-        <div className="h-[260px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={daily}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-              <Tooltip formatter={(v: any) => brl(Number(v))} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
-              <Line type="monotone" dataKey="revenue" stroke="hsl(var(--accent))" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <Suspense fallback={<Skeleton className="h-[260px] w-full rounded-lg" />}>
+          <RevenueChart data={daily} />
+        </Suspense>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -171,17 +166,9 @@ function Relatorios() {
               description="Nenhum serviço foi realizado no período selecionado." 
             />
           ) : (
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topServices} layout="vertical" margin={{ left: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `R$${v}`} />
-                  <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={12} width={120} />
-                  <Tooltip formatter={(v: any) => brl(Number(v))} contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))" }} />
-                  <Bar dataKey="revenue" fill="hsl(var(--accent))" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Suspense fallback={<Skeleton className="h-[260px] w-full rounded-lg" />}>
+              <ServicesChart data={topServices} />
+            </Suspense>
           )}
         </Card>
 

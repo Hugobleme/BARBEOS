@@ -23,6 +23,10 @@ export const Route = createFileRoute("/admin")({
       { name: "robots", content: "noindex,nofollow" },
     ],
   }),
+  loader: async ({ context: { queryClient } }) => {
+    // Prefetching memberships is useful as they are needed immediately
+    // Note: We need the user ID which is currently managed in useAuth
+  },
   component: AdminLayout,
 });
 
