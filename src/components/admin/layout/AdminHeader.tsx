@@ -1,8 +1,14 @@
+import * as React from "react";
 import { Building2, Menu, Moon, Plus, Sun, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { NewShopDialog } from "./NewShopDialog";
 import { motion } from "framer-motion";
+import { CommandMenu } from "./CommandMenu";
+import { NotificationCenter } from "./NotificationCenter";
+import { useLocation } from "@tanstack/react-router";
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+
 
 interface HeaderProps {
   shopId: string | null;
@@ -13,6 +19,7 @@ interface HeaderProps {
   theme: string | undefined;
   toggleTheme: () => void;
   userEmail?: string;
+  navItems: readonly { to: string; label: string; icon: any; exact: boolean }[];
 }
 
 export function AdminHeader({
@@ -24,10 +31,15 @@ export function AdminHeader({
   theme,
   toggleTheme,
   userEmail,
+  navItems,
 }: HeaderProps) {
+  const loc = useLocation();
+  const pathSegments = loc.pathname.split("/").filter(Boolean);
+
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:px-8">
-      <div className="flex items-center gap-4">
+    <header className="sticky top-0 z-30 flex h-20 md:h-16 flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-4 border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:px-8 py-2 md:py-0">
+      <div className="flex items-center justify-between md:justify-start gap-4">
+
         <button 
           className="rounded-lg p-2 transition-colors hover:bg-accent/10 active:scale-90 md:hidden" 
           onClick={() => setOpenSidebar(true)}
@@ -59,23 +71,49 @@ export function AdminHeader({
             </Button>
           } />
         </div>
+
+        <div className="hidden lg:block">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
+              </BreadcrumbItem>
+              {pathSegments.slice(1).map((seg, i) => (
+                <React.Fragment key={seg}>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage className="capitalize font-bold text-accent">
+                      {seg.replace(/-/g, " ")}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </React.Fragment>
+              ))}
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <motion.div 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleTheme}
-            aria-label="Alternar tema"
-            className="rounded-xl text-muted-foreground hover:bg-accent/10 hover:text-accent"
+      <div className="flex items-center justify-between md:justify-end gap-2 md:gap-3">
+        <CommandMenu navItems={navItems} />
+        
+        <div className="flex items-center gap-1 md:gap-2">
+          <NotificationCenter />
+
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-          </Button>
-        </motion.div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleTheme}
+              aria-label="Alternar tema"
+              className="rounded-xl text-muted-foreground hover:bg-accent/10 hover:text-accent"
+            >
+              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </Button>
+          </motion.div>
+        </div>
 
         <div className="hidden h-9 items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-4 md:flex">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20">

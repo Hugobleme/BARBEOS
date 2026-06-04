@@ -7,10 +7,12 @@ import { Card } from "@/components/ui/card";
 import { brl } from "@/lib/format";
 import { KPISkeleton } from "@/components/site/LoadingState";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, DollarSign, TrendingUp, Users, Clock, ChevronRight, ArrowUpRight } from "lucide-react";
+import { Calendar, DollarSign, TrendingUp, Users, Clock, ChevronRight, ArrowUpRight, Plus, UserPlus, ShoppingBag, Receipt } from "lucide-react";
 import { startOfDay, endOfDay, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
+
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/")({ component: Dashboard });
 
@@ -101,8 +103,18 @@ function Dashboard() {
         </motion.div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="col-span-2 overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+      <div className="grid gap-6 lg:grid-cols-4">
+        <Card className="flex flex-col gap-4 border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+          <h2 className="font-display text-lg font-bold tracking-tight">Ações rápidas</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <QuickAction icon={Plus} label="Agendar" color="bg-accent" to="/admin/agenda" />
+            <QuickAction icon={UserPlus} label="Cliente" color="bg-blue-500" to="/admin/clientes" />
+            <QuickAction icon={ShoppingBag} label="Venda" color="bg-green-500" to="/admin/pdv" />
+            <QuickAction icon={Receipt} label="Caixa" color="bg-amber-500" to="/admin/caixa" />
+          </div>
+        </Card>
+
+        <Card className="col-span-1 lg:col-span-3 overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-border/40 p-6">
             <h2 className="font-display text-xl font-bold tracking-tight">Próximos agendamentos</h2>
             <button className="text-xs font-bold uppercase tracking-widest text-accent transition-colors hover:text-accent/80">Ver agenda completa</button>
@@ -160,6 +172,21 @@ function Dashboard() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function QuickAction({ icon: Icon, label, color, to }: any) {
+  const navigate = (Route as any).useNavigate();
+  return (
+    <button
+      onClick={() => navigate({ to })}
+      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-border/40 bg-background/50 p-4 transition-all hover:border-accent/40 hover:bg-accent/5 active:scale-95"
+    >
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color} text-white shadow-lg shadow-black/10 transition-transform group-hover:scale-110`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</span>
+    </button>
   );
 }
 
