@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appointmentService, AppointmentStatus } from "@/services/appointment.service";
 import { toast } from "sonner";
 
-export function useAppointments(shopId: string | null, date: Date, filters?: { status?: string; professionalId?: string }) {
+export function useAppointments(shopId: string | null, date: Date, filters?: { status?: string; professionalId?: string; source?: string; q?: string }) {
   const queryClient = useQueryClient();
   const dateKey = date.toISOString().slice(0, 10);
 

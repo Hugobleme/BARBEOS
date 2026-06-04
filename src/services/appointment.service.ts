@@ -9,7 +9,7 @@ export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & 
 export type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
 export const appointmentService = {
-  async getByDate(shopId: string, date: Date, filters?: { status?: string; professionalId?: string }) {
+  async getByDate(shopId: string, date: Date, filters?: { status?: string; professionalId?: string; source?: string; q?: string }) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -27,6 +27,13 @@ export const appointmentService = {
     }
     if (filters?.professionalId && filters.professionalId !== "all") {
       query = query.eq("professional_id", filters.professionalId);
+    }
+    if (filters?.source && filters.source !== "all") {
+      query = query.eq("source", filters.source);
+    }
+    if (filters?.q) {
+      // Search in customer name or phone
+      query = query.or(`customer.full_name.ilike.%${filters.q}%,customer.phone.ilike.%${filters.q}%`);
     }
 
     const { data, error } = await query.order("scheduled_start");
