@@ -29,6 +29,7 @@ export const Route = createFileRoute("/admin/relatorios")({
 function Relatorios() {
   const shopId = useCurrentShopId();
   const [range, setRange] = useState<"7" | "30" | "90" | "custom">("30");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [customStart, setCustomStart] = useState<Date>(subDays(new Date(), 29));
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
   
@@ -68,15 +69,21 @@ function Relatorios() {
     },
   });
 
-  const kpis = useMemo(() => {
+  const filteredAppts = useMemo(() => {
     const a = data?.appts ?? [];
+    if (statusFilter === "all") return a;
+    return a.filter((x: any) => x.status === statusFilter);
+  }, [data, statusFilter]);
+
+  const kpis = useMemo(() => {
+    const a = filteredAppts;
     const completed = a.filter((x: any) => x.status === "completed");
     const cancelled = a.filter((x: any) => x.status === "cancelled" || x.status === "no_show");
     const revenue = completed.reduce((s: number, x: any) => s + Number(x.total_amount || 0), 0);
     const ticket = completed.length ? revenue / completed.length : 0;
     const uniq = new Set(completed.map((x: any) => x.customer_id)).size;
     return { total: a.length, completed: completed.length, cancelled: cancelled.length, revenue, ticket, uniq };
-  }, [data]);
+  }, [filteredAppts]);
 
   const daily = useMemo(() => {
     const buckets = new Map<string, { day: string; revenue: number; count: number }>();
@@ -84,18 +91,28 @@ function Relatorios() {
       const k = format(d, "yyyy-MM-dd");
       buckets.set(k, { day: format(d, "dd/MM"), revenue: 0, count: 0 });
     }
-    for (const a of data?.appts ?? []) {
-      if (a.status !== "completed") continue;
+    for (const a of filteredAppts) {
+      if (statusFilter === "all" && a.status !== "completed") continue;
+      // If statusFilter is active, we show the metric for that status
       const k = format(new Date(a.scheduled_start), "yyyy-MM-dd");
       const b = buckets.get(k);
-      if (b) { b.revenue += Number(a.total_amount || 0); b.count += 1; }
+      if (b) { 
+        b.revenue += Number(a.total_amount || 0); 
+        b.count += 1; 
+      }
     }
     return Array.from(buckets.values());
-  }, [data, start, end]);
+  }, [filteredAppts, start, end, statusFilter]);
 
   const topServices = useMemo(() => {
     const m = new Map<string, { name: string; count: number; revenue: number }>();
-    for (const r of data?.svcRows ?? []) {
+    // We need to filter svcRows as well if statusFilter is active
+    const filteredSvcRows = (data?.svcRows ?? []).filter((r: any) => {
+        if (statusFilter === "all") return r.appointment?.status === "completed";
+        return r.appointment?.status === statusFilter;
+    });
+
+    for (const r of filteredSvcRows) {
       const name = (r as any).service?.name ?? "—";
       const cur = m.get(name) ?? { name, count: 0, revenue: 0 };
       cur.count += 1;
@@ -103,13 +120,13 @@ function Relatorios() {
       m.set(name, cur);
     }
     return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
-  }, [data]);
+  }, [data, statusFilter]);
 
   const ranking = useMemo(() => {
     const m = new Map<string, { name: string; count: number; revenue: number }>();
     const proName = new Map((data?.pros ?? []).map((p: any) => [p.id, p.display_name]));
-    for (const a of data?.appts ?? []) {
-      if (a.status !== "completed") continue;
+    for (const a of filteredAppts) {
+      if (statusFilter === "all" && a.status !== "completed") continue;
       const id = a.professional_id;
       const cur = m.get(id) ?? { name: proName.get(id) ?? "—", count: 0, revenue: 0 };
       cur.count += 1;
@@ -117,7 +134,7 @@ function Relatorios() {
       m.set(id, cur);
     }
     return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [data]);
+  }, [filteredAppts, data?.pros, statusFilter]);
 
   const satisfaction = useMemo(() => {
     const s = data?.surveys ?? [];
@@ -153,6 +170,19 @@ function Relatorios() {
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
               <SelectItem value="custom">Período personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="completed">Concluídos</SelectItem>
+              <SelectItem value="scheduled">Pendentes</SelectItem>
+              <SelectItem value="cancelled">Cancelados</SelectItem>
+              <SelectItem value="no_show">Faltas</SelectItem>
             </SelectContent>
           </Select>
 
@@ -243,7 +273,7 @@ function Relatorios() {
 
       <Card className="p-5">
         <h2 className="mb-4 font-display text-lg font-semibold tracking-tight">Histórico detalhado</h2>
-        <DetailedHistoryTable shopId={shopId} start={start} end={end} />
+        <DetailedHistoryTable shopId={shopId} start={start} end={end} initialStatus={statusFilter} />
       </Card>
     </div>
   );
@@ -251,10 +281,14 @@ function Relatorios() {
 
 const PAGE_SIZE = 15;
 
-function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; start: Date; end: Date }) {
+function DetailedHistoryTable({ shopId, start, end, initialStatus = "all" }: { shopId: string | null; start: Date; end: Date; initialStatus?: string }) {
   const parentRef = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(initialStatus);
+
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
   const [pro, setPro] = useState("all");
   const [source, setSource] = useState("all");
   const [sortBy, setSortBy] = useState("scheduled_start");

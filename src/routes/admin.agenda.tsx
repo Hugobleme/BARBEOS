@@ -168,11 +168,11 @@ function Agenda() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="scheduled">Agendados</SelectItem>
+              <SelectItem value="scheduled">Pendentes (Agendados)</SelectItem>
               <SelectItem value="in_progress">Em atendimento</SelectItem>
               <SelectItem value="completed">Concluídos</SelectItem>
               <SelectItem value="cancelled">Cancelados</SelectItem>
-              <SelectItem value="no_show">Não compareceu</SelectItem>
+              <SelectItem value="no_show">Faltas (No-show)</SelectItem>
             </SelectContent>
           </Select>
         </div>
