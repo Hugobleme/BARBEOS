@@ -6,6 +6,7 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
@@ -139,9 +140,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const isLoading = useRouterState({ select: (s) => s.status === "pending" });
 
   return (
     <QueryClientProvider client={queryClient}>
+      {isLoading && (
+        <div className="fixed inset-x-0 top-0 z-[100] h-1 origin-left animate-in fade-in fill-mode-both">
+          <div className="h-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] transition-all duration-500" style={{ width: "100%", animation: "progress 2s ease-in-out infinite" }} />
+          <style>{`
+            @keyframes progress {
+              0% { transform: scaleX(0); transform-origin: left; }
+              50% { transform: scaleX(0.5); transform-origin: left; }
+              100% { transform: scaleX(1); transform-origin: right; }
+            }
+          `}</style>
+        </div>
+      )}
       <Outlet />
       <Toaster richColors position="top-right" />
       <InstallAppButton />
