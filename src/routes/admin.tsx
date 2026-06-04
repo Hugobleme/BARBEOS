@@ -152,6 +152,7 @@ function AdminShell() {
           theme={theme} 
           toggleTheme={toggle} 
           userEmail={user?.email} 
+          navItems={NAV}
         />
         
         <main className="flex-1 p-3 pb-28 md:p-8 md:pb-8">
