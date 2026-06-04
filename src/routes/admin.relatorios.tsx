@@ -69,15 +69,21 @@ function Relatorios() {
     },
   });
 
-  const kpis = useMemo(() => {
+  const filteredAppts = useMemo(() => {
     const a = data?.appts ?? [];
+    if (statusFilter === "all") return a;
+    return a.filter((x: any) => x.status === statusFilter);
+  }, [data, statusFilter]);
+
+  const kpis = useMemo(() => {
+    const a = filteredAppts;
     const completed = a.filter((x: any) => x.status === "completed");
     const cancelled = a.filter((x: any) => x.status === "cancelled" || x.status === "no_show");
     const revenue = completed.reduce((s: number, x: any) => s + Number(x.total_amount || 0), 0);
     const ticket = completed.length ? revenue / completed.length : 0;
     const uniq = new Set(completed.map((x: any) => x.customer_id)).size;
     return { total: a.length, completed: completed.length, cancelled: cancelled.length, revenue, ticket, uniq };
-  }, [data]);
+  }, [filteredAppts]);
 
   const daily = useMemo(() => {
     const buckets = new Map<string, { day: string; revenue: number; count: number }>();
@@ -85,18 +91,28 @@ function Relatorios() {
       const k = format(d, "yyyy-MM-dd");
       buckets.set(k, { day: format(d, "dd/MM"), revenue: 0, count: 0 });
     }
-    for (const a of data?.appts ?? []) {
-      if (a.status !== "completed") continue;
+    for (const a of filteredAppts) {
+      if (statusFilter === "all" && a.status !== "completed") continue;
+      // If statusFilter is active, we show the metric for that status
       const k = format(new Date(a.scheduled_start), "yyyy-MM-dd");
       const b = buckets.get(k);
-      if (b) { b.revenue += Number(a.total_amount || 0); b.count += 1; }
+      if (b) { 
+        b.revenue += Number(a.total_amount || 0); 
+        b.count += 1; 
+      }
     }
     return Array.from(buckets.values());
-  }, [data, start, end]);
+  }, [filteredAppts, start, end, statusFilter]);
 
   const topServices = useMemo(() => {
     const m = new Map<string, { name: string; count: number; revenue: number }>();
-    for (const r of data?.svcRows ?? []) {
+    // We need to filter svcRows as well if statusFilter is active
+    const filteredSvcRows = (data?.svcRows ?? []).filter((r: any) => {
+        if (statusFilter === "all") return r.appointment?.status === "completed";
+        return r.appointment?.status === statusFilter;
+    });
+
+    for (const r of filteredSvcRows) {
       const name = (r as any).service?.name ?? "—";
       const cur = m.get(name) ?? { name, count: 0, revenue: 0 };
       cur.count += 1;
@@ -104,13 +120,13 @@ function Relatorios() {
       m.set(name, cur);
     }
     return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
-  }, [data]);
+  }, [data, statusFilter]);
 
   const ranking = useMemo(() => {
     const m = new Map<string, { name: string; count: number; revenue: number }>();
     const proName = new Map((data?.pros ?? []).map((p: any) => [p.id, p.display_name]));
-    for (const a of data?.appts ?? []) {
-      if (a.status !== "completed") continue;
+    for (const a of filteredAppts) {
+      if (statusFilter === "all" && a.status !== "completed") continue;
       const id = a.professional_id;
       const cur = m.get(id) ?? { name: proName.get(id) ?? "—", count: 0, revenue: 0 };
       cur.count += 1;
@@ -118,7 +134,7 @@ function Relatorios() {
       m.set(id, cur);
     }
     return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [data]);
+  }, [filteredAppts, data?.pros, statusFilter]);
 
   const satisfaction = useMemo(() => {
     const s = data?.surveys ?? [];
