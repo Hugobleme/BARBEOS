@@ -440,7 +440,8 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
         </table>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 
