@@ -147,29 +147,34 @@ function Agenda() {
         >
           <div
             style={{
-              height: `${appointments.length * 110}px`, // Estimate size per card
+              height: `${rowVirtualizer.getTotalSize()}px`,
               width: "100%",
               position: "relative",
             }}
           >
-            {appointments.map((a, index) => (
-              <div
-                key={a.id}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100px",
-                  transform: `translateY(${index * 110}px)`,
-                }}
-              >
-                <AgendaCard appointment={a} onSetStatus={setStatus} onPay={setPayAppt} />
-              </div>
-            ))}
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const a = appointments[virtualRow.index];
+              return (
+                <div
+                  key={a.id}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="pb-3"
+                >
+                  <AgendaCard appointment={a} onSetStatus={setStatus} onPay={setPayAppt} />
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
+
 
 
       <CompletePaymentDialog appt={payAppt} onClose={() => setPayAppt(null)} userId={user?.id} onDone={refetch} />
