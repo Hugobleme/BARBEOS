@@ -99,16 +99,21 @@ export function AdminHeader({
         <div className="flex items-center gap-1 md:gap-2">
           <NotificationCenter />
 
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={toggleTheme}
-            aria-label="Alternar tema"
-            className="rounded-xl text-muted-foreground hover:bg-accent/10 hover:text-accent"
+          <motion.div 
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
-          </Button>
-        </motion.div>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={toggleTheme}
+              aria-label="Alternar tema"
+              className="rounded-xl text-muted-foreground hover:bg-accent/10 hover:text-accent"
+            >
+              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+            </Button>
+          </motion.div>
+        </div>
 
         <div className="hidden h-9 items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-4 md:flex">
           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20">
