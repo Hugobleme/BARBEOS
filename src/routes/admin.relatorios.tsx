@@ -233,7 +233,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
     queryKey: ["professionals", shopId],
     enabled: !!shopId,
     queryFn: async () => {
-      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId);
+      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId!);
       return data ?? [];
     },
   });
@@ -269,7 +269,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
         query = query.ilike("customer.full_name", `%${q}%`);
       }
       if (status !== "all") {
-        query = query.eq("status", status);
+        query = query.eq("status", status as any);
       }
       if (pro !== "all") {
         query = query.eq("professional_id", pro);
