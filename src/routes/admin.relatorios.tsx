@@ -234,6 +234,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
+      if (!shopId) return { data: [], nextPage: undefined };
       const { data } = await supabase
         .from("appointments")
         .select(`
@@ -245,6 +246,7 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
           professional:professionals(display_name)
         `)
         .eq("barbershop_id", shopId)
+
         .gte("scheduled_start", start.toISOString())
         .lte("scheduled_start", end.toISOString())
         .order("scheduled_start", { ascending: false })
