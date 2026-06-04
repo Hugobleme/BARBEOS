@@ -10,7 +10,8 @@ import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy } from "lucide-react";
+import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
+import { EmptyState } from "@/components/admin/layout/EmptyState";
 
 export const Route = createFileRoute("/admin/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — BarberOS" }] }),
@@ -164,7 +165,11 @@ function Relatorios() {
         <Card className="p-5">
           <h2 className="mb-4 font-display text-lg font-semibold">Top serviços</h2>
           {topServices.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Sem dados no período.</p>
+            <EmptyState 
+              icon={ChartBar} 
+              title="Sem dados de serviços" 
+              description="Nenhum serviço foi realizado no período selecionado." 
+            />
           ) : (
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
