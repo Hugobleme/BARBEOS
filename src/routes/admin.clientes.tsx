@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { useState, useRef, useEffect } from "react";
 import { Search, Users, ShieldOff, ShieldCheck, Loader2 } from "lucide-react";
@@ -98,9 +99,39 @@ function Page() {
         <h1 className="font-display text-3xl font-bold">Clientes</h1>
         <p className="text-muted-foreground">Sua base de clientes.</p>
       </div>
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"/>
-        <Input className="pl-9" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
+      <div className="flex flex-wrap items-center gap-4 bg-card/50 p-4 rounded-xl border border-border/40 backdrop-blur-md">
+        <div className="relative flex-1 min-w-[300px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
+          <Input className="pl-9 h-11 bg-background/50 border-border/40 rounded-xl" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-1.5 min-w-[150px]">
+            <Select value={filterBlocked} onValueChange={setFilterBlocked}>
+              <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os clientes</SelectItem>
+                <SelectItem value="active">Apenas ativos</SelectItem>
+                <SelectItem value="blocked">Apenas bloqueados</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex flex-col gap-1.5 min-w-[150px]">
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
+                <SelectValue placeholder="Ordenar por" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created_at">Mais recentes</SelectItem>
+                <SelectItem value="full_name">Nome (A-Z)</SelectItem>
+                <SelectItem value="no_show_count">Mais faltas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
       {isLoading ? (
         <TableSkeleton />
