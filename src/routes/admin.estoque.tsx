@@ -365,6 +365,9 @@ function MovementDialog({ product, shopId, onSaved, trigger }: { product: Produc
 
 function MovementsList({ shopId, products }: { shopId: string; products: Product[] }) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [kindFilter, setKindFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
+
   const {
     data,
     fetchNextPage,
@@ -372,16 +375,25 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ["stock-movements", shopId],
+    queryKey: ["stock-movements", shopId, kindFilter, productFilter],
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
-      const { data } = await supabase
+      let query = supabase
         .from("stock_movements")
         .select("*")
         .eq("barbershop_id", shopId)
         .order("created_at", { ascending: false })
         .range(pageParam * 20, (pageParam + 1) * 20 - 1);
+
+      if (kindFilter !== "all") {
+        query = query.eq("kind", kindFilter);
+      }
+      if (productFilter !== "all") {
+        query = query.eq("product_id", productFilter);
+      }
+
+      const { data } = await query;
       return {
         data: (data ?? []) as Movement[],
         nextPage: (data?.length ?? 0) === 20 ? pageParam + 1 : undefined,
