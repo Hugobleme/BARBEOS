@@ -29,6 +29,7 @@ export const Route = createFileRoute("/admin/relatorios")({
 function Relatorios() {
   const shopId = useCurrentShopId();
   const [range, setRange] = useState<"7" | "30" | "90" | "custom">("30");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [customStart, setCustomStart] = useState<Date>(subDays(new Date(), 29));
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
   
