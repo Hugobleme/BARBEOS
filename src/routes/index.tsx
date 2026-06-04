@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Star } from "lucide-react";
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { AuroraFab } from "@/components/aurora/AuroraFab";
+import { OptimizedImage } from "@/components/OptimizedImage";
 import heroImage from "@/assets/hero-barbershop.jpg";
 
 export const Route = createFileRoute("/")({
@@ -34,6 +35,36 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  loader: async ({ context: { queryClient } }) => {
+    // Prefetch critical landing data
+    const servicesPromise = queryClient.ensureQueryData({
+      queryKey: ["services-featured"],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("services")
+          .select("id, name, description, price, duration_min, sort")
+          .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+          .eq("active", true)
+          .order("sort")
+          .limit(6);
+        return data ?? [];
+      },
+    });
+
+    const prosPromise = queryClient.ensureQueryData({
+      queryKey: ["pros-featured"],
+      queryFn: async () => {
+        const { data } = await supabase
+          .from("professionals")
+          .select("id, display_name, specialties")
+          .eq("barbershop_id", DEMO_BARBERSHOP_ID)
+          .eq("active", true);
+        return data ?? [];
+      },
+    });
+
+    await Promise.all([servicesPromise, prosPromise]);
+  },
   component: Landing,
 });
 
@@ -134,14 +165,12 @@ function Landing() {
           <div className="relative">
             <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-accent/10 blur-[100px]" />
             <div className="group relative aspect-[3/4] overflow-hidden border border-border">
-              <img
+              <OptimizedImage
                 src={heroImage}
                 alt="Interior moderno da BarberOS"
-                width={1024}
-                height={1280}
-                loading="eager"
-                decoding="async"
+                aspectRatio="portrait"
                 fetchPriority="high"
+                loading="eager"
                 className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-90" />
