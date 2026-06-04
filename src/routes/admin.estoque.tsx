@@ -365,6 +365,9 @@ function MovementDialog({ product, shopId, onSaved, trigger }: { product: Produc
 
 function MovementsList({ shopId, products }: { shopId: string; products: Product[] }) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [kindFilter, setKindFilter] = useState("all");
+  const [productFilter, setProductFilter] = useState("all");
+
   const {
     data,
     fetchNextPage,
@@ -372,16 +375,25 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ["stock-movements", shopId],
+    queryKey: ["stock-movements", shopId, kindFilter, productFilter],
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
-      const { data } = await supabase
+      let query = supabase
         .from("stock_movements")
         .select("*")
         .eq("barbershop_id", shopId)
         .order("created_at", { ascending: false })
         .range(pageParam * 20, (pageParam + 1) * 20 - 1);
+
+      if (kindFilter !== "all") {
+        query = query.eq("kind", kindFilter);
+      }
+      if (productFilter !== "all") {
+        query = query.eq("product_id", productFilter);
+      }
+
+      const { data } = await query;
       return {
         data: (data ?? []) as Movement[],
         nextPage: (data?.length ?? 0) === 20 ? pageParam + 1 : undefined,
@@ -416,11 +428,45 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
   if (allRows.length === 0) return <Card className="p-12 text-center text-sm text-muted-foreground">Sem movimentações registradas.</Card>;
 
   return (
-    <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
-      <div 
-        ref={parentRef}
-        className="h-[500px] overflow-auto scrollbar-thin"
-      >
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 bg-card/50 p-4 rounded-xl border border-border/40 backdrop-blur-md">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 ml-1">Tipo de Movimento</label>
+          <Select value={kindFilter} onValueChange={setKindFilter}>
+            <SelectTrigger className="h-10 bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Filtrar por tipo" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              <SelectItem value="in">Entradas</SelectItem>
+              <SelectItem value="out">Saídas</SelectItem>
+              <SelectItem value="sale">Vendas</SelectItem>
+              <SelectItem value="adjust">Ajustes</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground/60 ml-1">Produto</label>
+          <Select value={productFilter} onValueChange={setProductFilter}>
+            <SelectTrigger className="h-10 bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Filtrar por produto" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os produtos</SelectItem>
+              {products.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Card className="border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md overflow-hidden">
+        <div 
+          ref={parentRef}
+          className="h-[500px] overflow-auto scrollbar-thin"
+        >
         <div
           style={{
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -490,9 +536,10 @@ function MovementsList({ shopId, products }: { shopId: string; products: Product
               </div>
             );
           })}
+          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { addDays, format } from "date-fns";
@@ -18,6 +19,7 @@ import { AgendaCard } from "@/components/admin/agenda/AgendaCard";
 import { CompletePaymentDialog } from "@/components/admin/agenda/CompletePaymentDialog";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 export const Route = createFileRoute("/admin/agenda")({
@@ -33,10 +35,23 @@ function Agenda() {
   const { user } = useAuth();
   const [date, setDate] = useState(new Date());
   const [payAppt, setPayAppt] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [proFilter, setProFilter] = useState("all");
   const parentRef = useRef<HTMLDivElement>(null);
 
+  const { data: professionals } = useQuery({
+    queryKey: ["professionals", shopId],
+    enabled: !!shopId,
+    queryFn: async () => {
+      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId);
+      return data ?? [];
+    },
+  });
 
-  const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date);
+  const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date, {
+    status: statusFilter,
+    professionalId: proFilter,
+  });
 
   const rowVirtualizer = useVirtualizer({
     count: appointments?.length ?? 0,
@@ -127,6 +142,40 @@ function Agenda() {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3 bg-card/50 p-4 rounded-xl border border-border/40 backdrop-blur-md">
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Status</label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-10 bg-background/50 border-border/40">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="scheduled">Agendados</SelectItem>
+              <SelectItem value="in_progress">Em atendimento</SelectItem>
+              <SelectItem value="completed">Concluídos</SelectItem>
+              <SelectItem value="cancelled">Cancelados</SelectItem>
+              <SelectItem value="no_show">Não compareceu</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+          <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground/60 ml-1">Profissional</label>
+          <Select value={proFilter} onValueChange={setProFilter}>
+            <SelectTrigger className="h-10 bg-background/50 border-border/40">
+              <SelectValue placeholder="Filtrar por profissional" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os profissionais</SelectItem>
+              {professionals?.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

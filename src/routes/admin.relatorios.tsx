@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, lazy, Suspense, useRef, useEffect } from "react";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
@@ -222,6 +224,19 @@ const PAGE_SIZE = 15;
 
 function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; start: Date; end: Date }) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState("all");
+  const [pro, setPro] = useState("all");
+  const [sortBy, setSortBy] = useState("scheduled_start");
+
+  const { data: pros } = useQuery({
+    queryKey: ["professionals", shopId],
+    enabled: !!shopId,
+    queryFn: async () => {
+      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId!);
+      return data ?? [];
+    },
+  });
 
   const {
     data,
@@ -230,27 +245,43 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
     isFetchingNextPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ["history", shopId, start.toISOString(), end.toISOString()],
+    queryKey: ["history", shopId, start.toISOString(), end.toISOString(), q, status, pro, sortBy],
     enabled: !!shopId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
       if (!shopId) return { data: [], nextPage: undefined };
-      const { data } = await supabase
+      let query = supabase
         .from("appointments")
         .select(`
           id, 
           status, 
           total_amount, 
           scheduled_start,
-          customer:customers(full_name),
+          customer:customers!inner(full_name),
           professional:professionals(display_name)
         `)
         .eq("barbershop_id", shopId)
-
         .gte("scheduled_start", start.toISOString())
         .lte("scheduled_start", end.toISOString())
-        .order("scheduled_start", { ascending: false })
         .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
+
+      if (q) {
+        query = query.ilike("customer.full_name", `%${q}%`);
+      }
+      if (status !== "all") {
+        query = query.eq("status", status as any);
+      }
+      if (pro !== "all") {
+        query = query.eq("professional_id", pro);
+      }
+
+      if (sortBy === "scheduled_start") {
+        query = query.order("scheduled_start", { ascending: false });
+      } else if (sortBy === "total_amount") {
+        query = query.order("total_amount", { ascending: false });
+      }
+
+      const { data } = await query;
 
       return {
         data: data ?? [],
@@ -285,10 +316,53 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
   if (allRows.length === 0) return <p className="py-8 text-center text-sm text-muted-foreground">Nenhum registro encontrado.</p>;
 
   return (
-    <div 
-      ref={parentRef}
-      className="h-[400px] overflow-auto scrollbar-thin"
-    >
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-3 rounded-lg border border-border/40">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
+          <Input className="pl-9 h-10 bg-background/50 border-border/40 rounded-lg" placeholder="Buscar cliente..." value={q} onChange={e=>setQ(e.target.value)} />
+        </div>
+
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Status: Todos</SelectItem>
+            <SelectItem value="completed">Concluídos</SelectItem>
+            <SelectItem value="cancelled">Cancelados</SelectItem>
+            <SelectItem value="no_show">Faltas</SelectItem>
+            <SelectItem value="scheduled">Agendados</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={pro} onValueChange={setPro}>
+          <SelectTrigger className="h-10 w-[160px] bg-background/50 border-border/40 rounded-lg text-xs">
+            <SelectValue placeholder="Profissional" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Profissional: Todos</SelectItem>
+            {pros?.map(p => (
+              <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
+            <SelectValue placeholder="Ordenar" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="scheduled_start">Data (Novo)</SelectItem>
+            <SelectItem value="total_amount">Valor (Maior)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div 
+        ref={parentRef}
+        className="h-[400px] overflow-auto scrollbar-thin rounded-lg border border-border/20"
+      >
       <div
         style={{
           height: `${rowVirtualizer.getTotalSize()}px`,
@@ -366,7 +440,8 @@ function DetailedHistoryTable({ shopId, start, end }: { shopId: string | null; s
         </table>
       </div>
     </div>
-  );
+  </div>
+);
 }
 
 
