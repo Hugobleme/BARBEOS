@@ -124,12 +124,36 @@ function Agenda() {
           <p className="mt-3 text-sm text-muted-foreground">Nenhum agendamento para este dia.</p>
         </Card>
       ) : (
-        <div className="grid gap-3">
-          {appointments.map((a) => (
-            <AgendaCard key={a.id} appointment={a} onSetStatus={setStatus} onPay={setPayAppt} />
-          ))}
+        <div 
+          ref={parentRef}
+          className="h-[calc(100vh-280px)] overflow-auto scrollbar-thin pr-2"
+        >
+          <div
+            style={{
+              height: `${appointments.length * 110}px`, // Estimate size per card
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {appointments.map((a, index) => (
+              <div
+                key={a.id}
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100px",
+                  transform: `translateY(${index * 110}px)`,
+                }}
+              >
+                <AgendaCard appointment={a} onSetStatus={setStatus} onPay={setPayAppt} />
+              </div>
+            ))}
+          </div>
         </div>
       )}
+
 
       <CompletePaymentDialog appt={payAppt} onClose={() => setPayAppt(null)} userId={user?.id} onDone={refetch} />
     </div>
