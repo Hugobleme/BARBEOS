@@ -38,6 +38,14 @@ function Agenda() {
 
   const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date);
 
+  const rowVirtualizer = useVirtualizer({
+    count: appointments?.length ?? 0,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 110,
+    overscan: 5,
+  });
+
+
   // Realtime: updates agenda when appointments change for this barbershop
   useEffect(() => {
     if (!shopId) return;
