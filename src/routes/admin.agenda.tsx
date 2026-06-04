@@ -33,6 +33,8 @@ function Agenda() {
   const { user } = useAuth();
   const [date, setDate] = useState(new Date());
   const [payAppt, setPayAppt] = useState<any>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
+
 
   const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date);
 
