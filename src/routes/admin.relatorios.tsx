@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, lazy, Suspense } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState, lazy, Suspense, useRef, useEffect } from "react";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShopId } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
@@ -9,9 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { brl } from "@/lib/format";
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar } from "lucide-react";
+import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar, Loader2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/admin/layout/EmptyState";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { Badge } from "@/components/ui/badge";
+
 
 const RevenueChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.RevenueChart })));
 const ServicesChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.ServicesChart })));
