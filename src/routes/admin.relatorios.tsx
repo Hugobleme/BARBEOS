@@ -157,6 +157,19 @@ function Relatorios() {
             </SelectContent>
           </Select>
 
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[150px] bg-background/50 border-border/40 rounded-xl">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos status</SelectItem>
+              <SelectItem value="completed">Concluídos</SelectItem>
+              <SelectItem value="scheduled">Pendentes</SelectItem>
+              <SelectItem value="cancelled">Cancelados</SelectItem>
+              <SelectItem value="no_show">Faltas</SelectItem>
+            </SelectContent>
+          </Select>
+
           {range === "custom" && (
             <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
               <Input 
