@@ -186,3 +186,14 @@
 .page-transition {
   @apply animate-in fade-in duration-500 slide-in-from-bottom-2;
 }
+
+/* Hide Lovable Badges, Watermarks and Edit Buttons */
+#lovable-badge,
+.lovable-badge,
+[id^="lovable-"],
+a[href*="lovable.dev"] {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
