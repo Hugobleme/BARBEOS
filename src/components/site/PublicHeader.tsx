@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_LINKS = [
   { to: "/barbearias", label: "Barbearias" },
@@ -75,6 +76,7 @@ export function PublicHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           {isAuthenticated ? (
             <Button asChild variant="ghost" size="sm" className="hidden text-xs uppercase tracking-widest sm:flex">
               <Link to="/minha-conta">Minha conta</Link>
