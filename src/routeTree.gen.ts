@@ -15,7 +15,9 @@ import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ClubeRouteImport } from './routes/clube'
 import { Route as CadastroRouteImport } from './routes/cadastro'
+import { Route as BioRouteImport } from './routes/bio'
 import { Route as BarbeariasRouteImport } from './routes/barbearias'
 import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -78,9 +80,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubeRoute = ClubeRouteImport.update({
+  id: '/clube',
+  path: '/clube',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CadastroRoute = CadastroRouteImport.update({
   id: '/cadastro',
   path: '/cadastro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BioRoute = BioRouteImport.update({
+  id: '/bio',
+  path: '/bio',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BarbeariasRoute = BarbeariasRouteImport.update({
@@ -244,7 +256,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
   '/barbearias': typeof BarbeariasRoute
+  '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
+  '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
@@ -283,7 +297,9 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
   '/barbearias': typeof BarbeariasRoute
+  '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
+  '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
@@ -324,7 +340,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
   '/barbearias': typeof BarbeariasRoute
+  '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
+  '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
   '/profissionais': typeof ProfissionaisRoute
@@ -366,7 +384,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agendar'
     | '/barbearias'
+    | '/bio'
     | '/cadastro'
+    | '/clube'
     | '/login'
     | '/minha-conta'
     | '/profissionais'
@@ -405,7 +425,9 @@ export interface FileRouteTypes {
     | '/'
     | '/agendar'
     | '/barbearias'
+    | '/bio'
     | '/cadastro'
+    | '/clube'
     | '/login'
     | '/minha-conta'
     | '/profissionais'
@@ -445,7 +467,9 @@ export interface FileRouteTypes {
     | '/admin'
     | '/agendar'
     | '/barbearias'
+    | '/bio'
     | '/cadastro'
+    | '/clube'
     | '/login'
     | '/minha-conta'
     | '/profissionais'
@@ -486,7 +510,9 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AgendarRoute: typeof AgendarRoute
   BarbeariasRoute: typeof BarbeariasRoute
+  BioRoute: typeof BioRoute
   CadastroRoute: typeof CadastroRoute
+  ClubeRoute: typeof ClubeRoute
   LoginRoute: typeof LoginRoute
   MinhaContaRoute: typeof MinhaContaRoute
   ProfissionaisRoute: typeof ProfissionaisRoute
@@ -545,11 +571,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clube': {
+      id: '/clube'
+      path: '/clube'
+      fullPath: '/clube'
+      preLoaderRoute: typeof ClubeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cadastro': {
       id: '/cadastro'
       path: '/cadastro'
       fullPath: '/cadastro'
       preLoaderRoute: typeof CadastroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bio': {
+      id: '/bio'
+      path: '/bio'
+      fullPath: '/bio'
+      preLoaderRoute: typeof BioRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/barbearias': {
@@ -835,7 +875,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AgendarRoute: AgendarRoute,
   BarbeariasRoute: BarbeariasRoute,
+  BioRoute: BioRoute,
   CadastroRoute: CadastroRoute,
+  ClubeRoute: ClubeRoute,
   LoginRoute: LoginRoute,
   MinhaContaRoute: MinhaContaRoute,
   ProfissionaisRoute: ProfissionaisRoute,
@@ -852,3 +894,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
