@@ -106,11 +106,33 @@ function Page() {
           {done ? (
             <div className="grid place-items-center border border-border/60 bg-card/40 p-12 text-center">
               <CheckCircle2 className="h-14 w-14 text-accent" />
-              <h1 className="mt-5 font-serif text-3xl font-bold">Avaliação registrada</h1>
-              <p className="mt-2 text-sm text-muted-foreground">Sua opinião nos ajuda a melhorar.</p>
-              <Button className="mt-8 rounded-none uppercase tracking-[0.2em]" onClick={() => nav({ to: "/minha-conta" })}>
-                Voltar
-              </Button>
+              <h1 className="mt-5 font-serif text-3xl font-bold">
+                {shop === 5 ? "Uau, ficamos muito felizes! 🎉" : "Avaliação registrada"}
+              </h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {shop === 5 
+                  ? "Sua nota 5 é muito importante para nós! Se possível, avalie a barbearia também no Google para nos ajudar a crescer." 
+                  : "Sua opinião nos ajuda a melhorar nosso padrão de qualidade."}
+              </p>
+              
+              {shop === 5 ? (
+                <div className="mt-8 flex flex-col gap-3 w-full sm:w-auto">
+                  <Button asChild size="lg" className="rounded-none uppercase tracking-[0.15em] bg-[#4285F4] text-white hover:bg-[#4285F4]/90 w-full">
+                    {/* TO DO: Colar o link real de avaliações do Google Meu Negócio aqui */}
+                    <a href="https://maps.google.com/" target="_blank" rel="noopener noreferrer">
+                      <Star className="mr-2 h-5 w-5 fill-white" />
+                      Avaliar no Google
+                    </a>
+                  </Button>
+                  <Button variant="ghost" className="rounded-none uppercase tracking-[0.2em]" onClick={() => nav({ to: "/minha-conta" })}>
+                    Voltar para conta
+                  </Button>
+                </div>
+              ) : (
+                <Button className="mt-8 rounded-none uppercase tracking-[0.2em]" onClick={() => nav({ to: "/minha-conta" })}>
+                  Voltar
+                </Button>
+              )}
             </div>
           ) : (
             <div>
