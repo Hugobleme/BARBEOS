@@ -81,6 +81,24 @@ function Page() {
     },
   });
 
+  const { data: subs } = useQuery({
+    enabled: !!user,
+    queryKey: ["my-subs", user?.id],
+    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
+      const ids = (customers ?? []).map((c) => c.id);
+      if (ids.length === 0) return [];
+      const { data } = await supabase
+        .from("customer_subscriptions")
+        .select("*, package:packages(name, sessions_total)")
+        .in("customer_id", ids)
+        .eq("status", "active")
+        .order("purchased_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
   if (loading || !user) return null;
   const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
   const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
@@ -184,6 +202,28 @@ function Page() {
             </>
           )}
 
+          {(subs?.length ?? 0) > 0 && (
+            <>
+              <SectionTitle eyebrow="VIP" title="Seus pacotes ativos" />
+              <div className="grid gap-3 sm:grid-cols-2">
+                {subs!.map((s: any) => (
+                  <article key={s.id} className="flex flex-col gap-2 border border-accent/30 bg-accent/5 p-5">
+                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
+                      <Gift className="h-4 w-4" /> {s.package?.name}
+                    </div>
+                    <div className="mt-1 font-serif text-3xl font-bold">
+                      {s.sessions_remaining} <span className="text-sm font-sans font-normal text-muted-foreground">/ {s.package?.sessions_total} sessões</span>
+                    </div>
+                    {s.expires_at && (
+                      <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Expira em: {format(new Date(s.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
 
           <SectionTitle eyebrow="01" title="Próximos atendimentos" />
           <div className="grid gap-3">

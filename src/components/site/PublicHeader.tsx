@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { to: "/barbearias", label: "Barbearias" },
   { to: "/servicos", label: "Serviços" },
   { to: "/profissionais", label: "Equipe" },
+  { to: "/clube", label: "Clube VIP" },
   { to: "/minha-conta", label: "Conta" },
 ];
 
