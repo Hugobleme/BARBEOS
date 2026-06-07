@@ -23,7 +23,7 @@ function BioPage() {
     },
   });
 
-  const phone = shop?.phone?.replace(/\D/g, '') || "";
+  const phone = ((shop?.contacts as any)?.phone as string | undefined)?.replace(/\D/g, '') || "";
   const waLink = phone ? `https://wa.me/55${phone}` : "#";
 
   return (
