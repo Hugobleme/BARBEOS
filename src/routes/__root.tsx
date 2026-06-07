@@ -13,24 +13,6 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallAppButton } from "@/components/site/InstallAppButton";
 
-const webManifest = encodeURIComponent(
-  JSON.stringify({
-    name: "BarberOS",
-    short_name: "BarberOS",
-    description: "Agenda online e gestão para barbearias modernas.",
-    start_url: "/",
-    scope: "/",
-    display: "standalone",
-    background_color: "#050505",
-    theme_color: "#050505",
-    lang: "pt-BR",
-    icons: [
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
-    ],
-  }),
-);
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -113,9 +95,20 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preload", as: "style", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: `data:application/manifest+json,${webManifest}` },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/icon-512.png" },
       { rel: "apple-touch-icon", href: "/icon-512.png" },
+    ],
+    scripts: [
+      {
+        children: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+              navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+            });
+          }
+        `,
+      }
     ],
   }),
   shellComponent: RootShell,
