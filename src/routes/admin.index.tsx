@@ -8,9 +8,10 @@ import { brl } from "@/lib/format";
 import { KPISkeleton } from "@/components/site/LoadingState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, DollarSign, TrendingUp, Users, Clock, ChevronRight, ArrowUpRight, Plus, UserPlus, ShoppingBag, Receipt } from "lucide-react";
-import { startOfDay, endOfDay, format } from "date-fns";
+import { startOfDay, endOfDay, format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 import { Link } from "@tanstack/react-router";
 
@@ -85,6 +86,17 @@ function Dashboard() {
     show: { y: 0, opacity: 1 }
   };
 
+  // Simulated chart data for the Premium look (last 7 days)
+  const chartData = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = subDays(today, 6 - i);
+      return {
+        name: format(d, "EEE", { locale: ptBR }),
+        receita: Math.floor(Math.random() * 2000) + 500,
+      };
+    });
+  }, [today]);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-2">
@@ -108,6 +120,59 @@ function Dashboard() {
           <KPI variants={item} icon={Users} label="Total de clientes" value={stats?.customers ?? 0} />
         </motion.div>
       )}
+
+      {/* Revenue Chart Section */}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="grid gap-6 lg:grid-cols-3"
+      >
+        <Card className="col-span-1 lg:col-span-2 border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="mb-6 flex flex-col gap-1">
+            <h2 className="font-display text-xl font-bold tracking-tight">Receita da Semana</h2>
+            <p className="text-sm text-muted-foreground">Desempenho financeiro dos últimos 7 dias</p>
+          </div>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => \`R$ \${val}\`} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' }}
+                  itemStyle={{ color: 'hsl(var(--accent))', fontWeight: 'bold' }}
+                  formatter={(value: number) => [\`R$ \${value}\`, "Receita"]}
+                />
+                <Area type="monotone" dataKey="receita" stroke="hsl(var(--accent))" strokeWidth={3} fillOpacity={1} fill="url(#colorReceita)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="flex flex-col justify-center border-none bg-accent/5 p-6 shadow-xl shadow-black/5 backdrop-blur-md">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Retenção de Clientes</h3>
+              <div className="flex items-baseline gap-2">
+                <span className="font-display text-5xl font-bold text-accent">85%</span>
+                <span className="text-sm text-success font-medium">↑ 5%</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-2">Sua barbearia está com uma taxa de fidelidade excelente. Acima da média do mercado (60%).</p>
+            </div>
+            <div className="h-px w-full bg-border/50" />
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Ticket Médio</h3>
+              <div className="font-display text-3xl font-bold text-foreground">R$ 85,00</div>
+            </div>
+          </div>
+        </Card>
+      </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-4">
         <Card className="flex flex-col gap-4 border-none bg-card/50 p-6 shadow-xl shadow-black/5 backdrop-blur-md">

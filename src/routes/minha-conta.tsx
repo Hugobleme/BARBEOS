@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Gift, LogOut, Wallet } from "lucide-react";
+import { Calendar, Clock, Gift, LogOut, Wallet, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minha-conta")({
@@ -135,6 +135,8 @@ function Page() {
               Sair
             </Button>
           </div>
+
+          <VIPStatus lifetimePoints={loyalty?.balances?.reduce((acc: number, b: any) => acc + Number(b.lifetime_points || 0), 0) || 0} />
 
           {(loyalty?.balances?.length ?? 0) > 0 && (
             <>
@@ -313,3 +315,58 @@ function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
     </div>
   );
 }
+
+function VIPStatus({ lifetimePoints }: { lifetimePoints: number }) {
+  const tiers = [
+    { name: "Bronze", min: 0, max: 499, color: "text-[#cd7f32]", bg: "bg-[#cd7f32]/20", fill: "bg-[#cd7f32]" },
+    { name: "Prata", min: 500, max: 1499, color: "text-slate-300", bg: "bg-slate-300/20", fill: "bg-slate-300" },
+    { name: "Ouro", min: 1500, max: 2999, color: "text-yellow-500", bg: "bg-yellow-500/20", fill: "bg-yellow-500" },
+    { name: "Diamante", min: 3000, max: Infinity, color: "text-cyan-400", bg: "bg-cyan-400/20", fill: "bg-cyan-400" },
+  ];
+  
+  const currentTierIndex = tiers.findIndex(t => lifetimePoints >= t.min && lifetimePoints <= t.max);
+  const currentTier = tiers[currentTierIndex] || tiers[0];
+  const nextTier = tiers[currentTierIndex + 1];
+  
+  const progress = nextTier ? ((lifetimePoints - currentTier.min) / (nextTier.min - currentTier.min)) * 100 : 100;
+
+  return (
+    <div className="mt-8 border border-border/60 bg-card/40 p-6 md:p-8 relative overflow-hidden group">
+      <div className={`absolute top-0 right-0 w-48 h-48 blur-[80px] opacity-20 transition-opacity duration-1000 group-hover:opacity-40 ${currentTier.bg}`} />
+      
+      <div className="relative flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Status de Fidelidade</p>
+          <div className="flex items-center gap-2 mt-1">
+            <Crown className={`h-6 w-6 ${currentTier.color} drop-shadow-[0_0_8px_currentColor]`} />
+            <h2 className={`font-serif text-3xl font-bold tracking-tight ${currentTier.color}`}>Membro {currentTier.name}</h2>
+          </div>
+        </div>
+        {nextTier && (
+          <div className="text-left md:text-right">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Próximo Nível</p>
+            <p className="text-sm font-medium mt-1">{nextTier.name} ({nextTier.min} pts)</p>
+          </div>
+        )}
+      </div>
+
+      <div className="relative h-2 w-full bg-border/50 rounded-full overflow-hidden">
+        <div 
+          className={`absolute left-0 top-0 h-full ${currentTier.fill} transition-all duration-1000 ease-out shadow-[0_0_10px_currentColor]`} 
+          style={{ width: `${progress}%` }} 
+        />
+      </div>
+      
+      {nextTier ? (
+        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground mt-4 text-center">
+          Faltam <span className="text-foreground font-bold">{nextTier.min - lifetimePoints} pontos</span> para você alcançar o prestigiado nível {nextTier.name}.
+        </p>
+      ) : (
+        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground mt-4 text-center">
+          Você atingiu o nível máximo de fidelidade. Você é uma lenda! 👑
+        </p>
+      )}
+    </div>
+  );
+}
+
