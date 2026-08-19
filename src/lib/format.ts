@@ -1,3 +1,12 @@
+// Always pass price in cents, not decimals.
+export function formatCurrency(priceCents: number): string {
+  // Expects price in cents (e.g., 5000 = R$ 50,00)
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format((priceCents ?? 0) / 100);
+}
+
 export const brl = (n: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(n ?? 0);
 
