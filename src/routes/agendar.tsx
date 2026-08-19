@@ -17,6 +17,12 @@ import { Check, ChevronLeft, ChevronRight, Scissors, User as UserIcon, Calendar 
 import { addDays, addMinutes, format, isBefore, parse, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { appointmentService } from "@/services/appointment.service";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  shop: z.string().optional(),
+});
 
 export const Route = createFileRoute("/agendar")({
   head: () => ({
@@ -29,7 +35,7 @@ export const Route = createFileRoute("/agendar")({
     ],
     links: [{ rel: "canonical", href: "/agendar" }],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({ shop: typeof s.shop === "string" ? s.shop : undefined }),
+  validateSearch: (search) => searchSchema.parse(search),
   component: Booking,
 });
 
@@ -215,7 +221,6 @@ function Booking() {
       const slot = slots.find(s => s.time === time);
       if (!slot) throw new Error("Horário indisponível");
       const start = parse(time, "HH:mm", date);
-      const end = addMinutes(start, totalDuration);
 
       // Política anti no-show: antecedência mínima
       const { data: shopCfg } = await supabase.from("barbershops").select("settings").eq("id", shopId).maybeSingle();
@@ -226,64 +231,33 @@ function Booking() {
         if (diffHours < minLead) throw new Error(`Esta barbearia exige no mínimo ${minLead}h de antecedência.`);
       }
 
-
-      // create account?
+      // create account if requested and not logged in
       let userId: string | null = user?.id ?? null;
       if (!user && form.createAccount) {
         const redirectUrl = `${window.location.origin}/minha-conta`;
         const { data: signUp, error } = await supabase.auth.signUp({
-          email: form.email, password: form.password,
+          email: form.email,
+          password: form.password,
           options: { emailRedirectTo: redirectUrl, data: { full_name: form.name, phone: form.phone } },
         });
         if (error) throw error;
         userId = signUp.user?.id ?? null;
       }
 
-      // create or get customer
-      let customerId: string | null = null;
-      if (userId) {
-        const { data: existing } = await supabase.from("customers")
-          .select("id, blocked, no_show_count").eq("barbershop_id", shopId).eq("profile_id", userId).maybeSingle();
-        if (existing) {
-          if ((existing as any).blocked) throw new Error("Seu cadastro está bloqueado para agendamentos. Entre em contato com a barbearia.");
-          const maxNs = Number(policy.max_no_shows ?? 0);
-          if (maxNs > 0 && Number((existing as any).no_show_count ?? 0) >= maxNs) {
-            throw new Error("Limite de faltas atingido. Entre em contato com a barbearia para regularizar.");
-          }
-          customerId = existing.id;
-        } else {
-          const { data: c, error } = await supabase.from("customers").insert({
-            barbershop_id: shopId, profile_id: userId,
-            full_name: form.name, phone: form.phone, email: form.email || null,
-          }).select("id").single();
-          if (error) throw error;
-          customerId = c.id;
-        }
-      } else {
-        const { data: c, error } = await supabase.from("customers").insert({
-          barbershop_id: shopId,
-          full_name: form.name, phone: form.phone, email: form.email || null,
-        }).select("id").single();
-        if (error) throw error;
-        customerId = c.id;
-      }
-
-
-      const { data: appt, error: aerr } = await supabase.from("appointments").insert({
-        barbershop_id: shopId,
-        customer_id: customerId!,
-        professional_id: slot.proId,
-        scheduled_start: start.toISOString(),
-        scheduled_end: end.toISOString(),
-        total_amount: totalPrice,
+      // Chama o serviço centralizado de agendamentos com validação de double-booking e persistência
+      const appt = await appointmentService.createAppointment({
+        barbershopId: shopId,
+        professionalId: slot.proId,
+        services: pickedServices,
+        scheduledStart: start,
+        customerData: {
+          name: form.name,
+          phone: form.phone,
+          email: form.email || undefined,
+        },
+        userId,
         source: "web",
-      }).select("id").single();
-      if (aerr) throw aerr;
-
-      const { error: serr } = await supabase.from("appointment_services").insert(
-        pickedServices.map(s => ({ appointment_id: appt.id, service_id: s.id, price_snapshot: s.price, duration_snapshot: s.duration_min }))
-      );
-      if (serr) throw serr;
+      });
 
       setDoneId(appt.id);
       toast.success("Agendamento confirmado!");

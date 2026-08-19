@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { addMinutes, isBefore } from "date-fns";
 
 export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
   professional?: { id: string; display_name: string; commission_rule?: any };
@@ -8,7 +9,182 @@ export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & 
 
 export type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
+export interface CreateAppointmentInput {
+  barbershopId: string;
+  professionalId: string;
+  services: { id: string; name: string; price: number; duration_min: number }[];
+  scheduledStart: Date;
+  customerData: {
+    name: string;
+    phone: string;
+    email?: string;
+  };
+  userId?: string | null;
+  notes?: string;
+  source?: string;
+}
+
 export const appointmentService = {
+  /**
+   * Verifica se o profissional possui disponibilidade no horário solicitado
+   */
+  async checkSlotAvailable(params: {
+    barbershopId: string;
+    professionalId: string;
+    start: Date;
+    end: Date;
+    excludeAppointmentId?: string;
+  }): Promise<boolean> {
+    const { barbershopId, professionalId, start, end, excludeAppointmentId } = params;
+
+    // 1. Não permitir agendamento no passado
+    if (isBefore(start, new Date())) {
+      throw new Error("Não é possível agendar horários que já passaram.");
+    }
+
+    // 2. Verificar sobreposição de agendamentos
+    let query = supabase
+      .from("appointments")
+      .select("id")
+      .eq("barbershop_id", barbershopId)
+      .eq("professional_id", professionalId)
+      .neq("status", "cancelled")
+      .lt("scheduled_start", end.toISOString())
+      .gt("scheduled_end", start.toISOString());
+
+    if (excludeAppointmentId) {
+      query = query.neq("id", excludeAppointmentId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    return (data?.length ?? 0) === 0;
+  },
+
+  /**
+   * Cria um novo agendamento com validação completa de disponibilidade
+   */
+  async createAppointment(input: CreateAppointmentInput) {
+    const {
+      barbershopId,
+      professionalId,
+      services,
+      scheduledStart,
+      customerData,
+      userId,
+      notes,
+      source = "web",
+    } = input;
+
+    if (!services || services.length === 0) {
+      throw new Error("Selecione pelo menos um serviço.");
+    }
+
+    const totalDuration = services.reduce((acc, s) => acc + (s.duration_min || 30), 0);
+    const totalPrice = services.reduce((acc, s) => acc + Number(s.price || 0), 0);
+    const scheduledEnd = addMinutes(scheduledStart, totalDuration);
+
+    // 1. Validar disponibilidade do horário
+    const isAvailable = await this.checkSlotAvailable({
+      barbershopId,
+      professionalId,
+      start: scheduledStart,
+      end: scheduledEnd,
+    });
+
+    if (!isAvailable) {
+      throw new Error("Este horário acabou de ser preenchido. Por favor, selecione outro horário.");
+    }
+
+    // 2. Obter ou criar o cliente
+    let customerId: string | null = null;
+    if (userId) {
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("id, blocked")
+        .eq("barbershop_id", barbershopId)
+        .eq("profile_id", userId)
+        .maybeSingle();
+
+      if (existingCustomer) {
+        if (existingCustomer.blocked) {
+          throw new Error("Seu cadastro está temporariamente bloqueado. Entre em contato com a barbearia.");
+        }
+        customerId = existingCustomer.id;
+      } else {
+        const { data: newCust, error: custErr } = await supabase
+          .from("customers")
+          .insert({
+            barbershop_id: barbershopId,
+            profile_id: userId,
+            full_name: customerData.name,
+            phone: customerData.phone,
+            email: customerData.email || null,
+          })
+          .select("id")
+          .single();
+
+        if (custErr) throw custErr;
+        customerId = newCust.id;
+      }
+    } else {
+      const { data: newCust, error: custErr } = await supabase
+        .from("customers")
+        .insert({
+          barbershop_id: barbershopId,
+          full_name: customerData.name,
+          phone: customerData.phone,
+          email: customerData.email || null,
+        })
+        .select("id")
+        .single();
+
+      if (custErr) throw custErr;
+      customerId = newCust.id;
+    }
+
+    if (!customerId) {
+      throw new Error("Falha ao registrar cliente para o agendamento.");
+    }
+
+    // 3. Criar registro do agendamento
+    const { data: appt, error: apptErr } = await supabase
+      .from("appointments")
+      .insert({
+        barbershop_id: barbershopId,
+        customer_id: customerId,
+        professional_id: professionalId,
+        scheduled_start: scheduledStart.toISOString(),
+        scheduled_end: scheduledEnd.toISOString(),
+        total_amount: totalPrice,
+        status: "scheduled",
+        source,
+        notes: notes || null,
+        created_by: userId || null,
+      })
+      .select("id, scheduled_start, scheduled_end, total_amount, status")
+      .single();
+
+    if (apptErr) throw apptErr;
+
+    // 4. Vincular serviços ao agendamento
+    const apptServices = services.map((s) => ({
+      appointment_id: appt.id,
+      service_id: s.id,
+      price_snapshot: s.price,
+      duration_snapshot: s.duration_min,
+    }));
+
+    const { error: servErr } = await supabase
+      .from("appointment_services")
+      .insert(apptServices);
+
+    if (servErr) throw servErr;
+
+    return appt;
+  },
+
   async getByDate(shopId: string, date: Date, filters?: { status?: string; professionalId?: string; source?: string; q?: string }) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
@@ -32,7 +208,6 @@ export const appointmentService = {
       query = query.eq("source", filters.source);
     }
     if (filters?.q) {
-      // Search in customer name or phone
       query = query.or(`customer.full_name.ilike.%${filters.q}%,customer.phone.ilike.%${filters.q}%`);
     }
 

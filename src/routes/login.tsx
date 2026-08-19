@@ -1,8 +1,8 @@
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,18 +25,73 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const nav = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Redireciona usuário se já estiver logado
+  useEffect(() => {
+    if (!authLoading && user) {
+      redirectAfterAuth(user.id);
+    }
+  }, [user, authLoading]);
+
+  async function redirectAfterAuth(userId: string) {
+    try {
+      const { data: memberships } = await supabase
+        .from("barbershop_members")
+        .select("barbershop_id")
+        .eq("profile_id", userId)
+        .eq("active", true);
+
+      if (memberships && memberships.length > 0) {
+        nav({ to: "/admin" });
+      } else {
+        nav({ to: "/minha-conta" });
+      }
+    } catch {
+      nav({ to: "/minha-conta" });
+    }
+  }
+
+  function validateEmail(val: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !validateEmail(cleanEmail)) {
+      return toast.error("Por favor, informe um e-mail válido.");
+    }
+
+    if (!password || password.length < 6) {
+      return toast.error("A senha deve ter no mínimo 6 caracteres.");
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: cleanEmail,
+      password,
+    });
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Bem-vindo!");
-    nav({ to: "/minha-conta" });
+
+    if (error) {
+      if (error.message.includes("Invalid login credentials") || error.message.includes("invalid_grant")) {
+        return toast.error("E-mail ou senha incorretos.");
+      }
+      if (error.message.includes("Email not confirmed")) {
+        return toast.error("Por favor, confirme seu e-mail antes de acessar.");
+      }
+      return toast.error(error.message || "Erro ao efetuar login.");
+    }
+
+    toast.success("Bem-vindo de volta!");
+    if (data.user) {
+      await redirectAfterAuth(data.user.id);
+    }
   }
 
   return (
@@ -61,11 +116,26 @@ function LoginPage() {
             <form onSubmit={submit} className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">E-mail</Label>
-                <Input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0" />
+                <Input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
+                />
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Senha</Label>
-                <Input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0" />
+                <Input
+                  type="password"
+                  required
+                  autoComplete="current-password"
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
+                />
               </div>
               <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]" disabled={loading}>
                 {loading ? "Entrando..." : "Entrar"}
@@ -83,8 +153,11 @@ function LoginPage() {
               variant="outline"
               className="w-full rounded-none uppercase tracking-[0.2em]"
               onClick={async () => {
-                const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/minha-conta` });
-                if (r.error) toast.error(r.error.message ?? "Falha no login Google");
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: "google",
+                  options: { redirectTo: `${window.location.origin}/minha-conta` },
+                });
+                if (error) toast.error(error.message ?? "Falha no login com Google");
               }}
             >
               Continuar com Google

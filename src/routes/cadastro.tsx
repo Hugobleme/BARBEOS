@@ -1,8 +1,8 @@
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,20 +26,90 @@ export const Route = createFileRoute("/cadastro")({
 
 function SignupPage() {
   const nav = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [f, setF] = useState({ name: "", email: "", phone: "", password: "" });
   const [loading, setLoading] = useState(false);
+
+  // Redireciona se já estiver autenticado
+  useEffect(() => {
+    if (!authLoading && user) {
+      redirectAfterAuth(user.id);
+    }
+  }, [user, authLoading]);
+
+  async function redirectAfterAuth(userId: string) {
+    try {
+      const { data: memberships } = await supabase
+        .from("barbershop_members")
+        .select("barbershop_id")
+        .eq("profile_id", userId)
+        .eq("active", true);
+
+      if (memberships && memberships.length > 0) {
+        nav({ to: "/admin" });
+      } else {
+        nav({ to: "/minha-conta" });
+      }
+    } catch {
+      nav({ to: "/minha-conta" });
+    }
+  }
+
+  function validateEmail(val: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const cleanName = f.name.trim();
+    const cleanEmail = f.email.trim().toLowerCase();
+
+    if (!cleanName || cleanName.length < 3) {
+      return toast.error("Por favor, informe seu nome completo.");
+    }
+
+    if (!cleanEmail || !validateEmail(cleanEmail)) {
+      return toast.error("Por favor, informe um e-mail válido.");
+    }
+
+    if (!f.phone || f.phone.replace(/\D/g, "").length < 10) {
+      return toast.error("Por favor, informe um telefone válido com DDD.");
+    }
+
+    if (!f.password || f.password.length < 6) {
+      return toast.error("A senha deve ter no mínimo 6 caracteres.");
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: f.email,
+    const { data, error } = await supabase.auth.signUp({
+      email: cleanEmail,
       password: f.password,
-      options: { emailRedirectTo: `${window.location.origin}/minha-conta`, data: { full_name: f.name, phone: f.phone } },
+      options: {
+        emailRedirectTo: `${window.location.origin}/minha-conta`,
+        data: { full_name: cleanName, phone: f.phone },
+      },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Conta criada! Verifique seu e-mail se necessário.");
-    nav({ to: "/minha-conta" });
+
+    if (error) {
+      if (error.message.includes("User already registered") || error.message.includes("already exists")) {
+        return toast.error("Este e-mail já está cadastrado. Tente entrar.");
+      }
+      if (error.message.includes("Password should be at least")) {
+        return toast.error("A senha deve ter no mínimo 6 caracteres.");
+      }
+      return toast.error(error.message || "Erro ao criar conta.");
+    }
+
+    if (data.session) {
+      toast.success("Conta criada com sucesso!");
+      if (data.user) {
+        await redirectAfterAuth(data.user.id);
+      }
+    } else {
+      toast.success("Conta criada! Verifique seu e-mail para confirmar seu cadastro.");
+      nav({ to: "/login" });
+    }
   }
 
   return (
@@ -58,44 +128,61 @@ function SignupPage() {
 
           <div className="mt-10 border border-border/60 bg-card/40 p-8 backdrop-blur-sm">
             <form onSubmit={submit} className="space-y-5">
-              {[
-                { k: "name", l: "Nome completo", t: "text" },
-                { k: "email", l: "E-mail", t: "email" },
-              ].map((field) => (
-                <div key={field.k} className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{field.l}</Label>
-                  <Input
-                    required
-                    type={field.t}
-                    value={(f as any)[field.k]}
-                    onChange={(e) => setF({ ...f, [field.k]: e.target.value })}
-                    className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
-                  />
-                </div>
-              ))}
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Telefone</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Nome completo</Label>
                 <Input
                   required
+                  type="text"
+                  autoComplete="name"
+                  value={f.name}
+                  onChange={(e) => setF({ ...f, name: e.target.value })}
+                  placeholder="Ex: João da Silva"
+                  className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">E-mail</Label>
+                <Input
+                  required
+                  type="email"
+                  autoComplete="email"
+                  value={f.email}
+                  onChange={(e) => setF({ ...f, email: e.target.value })}
+                  placeholder="exemplo@email.com"
+                  className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Telefone celular</Label>
+                <Input
+                  required
+                  type="tel"
+                  autoComplete="tel"
                   value={f.phone}
                   onChange={(e) => setF({ ...f, phone: phoneMask(e.target.value) })}
                   placeholder="(11) 99999-0000"
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>
+
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Senha (mín. 6)</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Senha (mínimo 6 dígitos)</Label>
                 <Input
                   required
                   type="password"
+                  autoComplete="new-password"
                   minLength={6}
                   value={f.password}
                   onChange={(e) => setF({ ...f, password: e.target.value })}
+                  placeholder="••••••••"
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>
+
               <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]" disabled={loading}>
-                {loading ? "Criando..." : "Criar conta"}
+                {loading ? "Criando conta..." : "Criar conta"}
               </Button>
             </form>
 
@@ -110,8 +197,11 @@ function SignupPage() {
               variant="outline"
               className="w-full rounded-none uppercase tracking-[0.2em]"
               onClick={async () => {
-                const r = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/minha-conta` });
-                if (r.error) toast.error(r.error.message ?? "Falha no login Google");
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: "google",
+                  options: { redirectTo: `${window.location.origin}/minha-conta` },
+                });
+                if (error) toast.error(error.message ?? "Falha no cadastro com Google");
               }}
             >
               Continuar com Google

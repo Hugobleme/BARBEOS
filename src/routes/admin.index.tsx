@@ -143,11 +143,11 @@ function Dashboard() {
                   </linearGradient>
                 </defs>
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => \`R$ \${val}\`} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(val) => `R$ ${val}`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '8px', color: 'hsl(var(--foreground))' }}
                   itemStyle={{ color: 'hsl(var(--accent))', fontWeight: 'bold' }}
-                  formatter={(value: number) => [\`R$ \${value}\`, "Receita"]}
+                  formatter={(value: any) => [`R$ ${value}`, "Receita"]}
                 />
                 <Area type="monotone" dataKey="receita" stroke="hsl(var(--accent))" strokeWidth={3} fillOpacity={1} fill="url(#colorReceita)" />
               </AreaChart>
@@ -188,7 +188,7 @@ function Dashboard() {
         <Card className="col-span-1 lg:col-span-3 overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-border/40 p-6">
             <h2 className="font-display text-xl font-bold tracking-tight">Próximos agendamentos</h2>
-            <button className="text-xs font-bold uppercase tracking-widest text-accent transition-colors hover:text-accent/80">Ver agenda completa</button>
+            <Link to="/admin/agenda" className="text-xs font-bold uppercase tracking-widest text-accent transition-colors hover:text-accent/80">Ver agenda completa</Link>
           </div>
           <div className="p-0">
             {nextLoading ? (
