@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, useRef } from "react";
-import { useCurrentShopId } from "@/hooks/use-current-shop";
+import { useCurrentShop, useCurrentShopId } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as Cal, List, LayoutGrid, Search, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppointments } from "@/hooks/queries/useAppointments";
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/admin/agenda")({
 });
 
 function Agenda() {
-  const shopId = useCurrentShopId();
+  const { shopId, shops, setShopId } = useCurrentShop();
   const { user } = useAuth();
   const [date, setDate] = useState(new Date());
   const [payAppt, setPayAppt] = useState<any>(null);
@@ -46,7 +46,7 @@ function Agenda() {
     queryKey: ["professionals", shopId],
     enabled: !!shopId,
     queryFn: async () => {
-      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId);
+      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId!);
       return data ?? [];
     },
   });
@@ -127,9 +127,28 @@ function Agenda() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight">Agenda</h1>
-          <p className="text-muted-foreground">{format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR })}</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div>
+            <h1 className="font-display text-3xl font-bold tracking-tight">Agenda</h1>
+            <p className="text-muted-foreground">{format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR })}</p>
+          </div>
+          {shops.length > 1 && (
+            <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/30 px-3 py-1.5">
+              <Building2 className="h-4 w-4 text-accent" />
+              <Select value={shopId ?? undefined} onValueChange={setShopId}>
+                <SelectTrigger className="h-7 w-[160px] border-none bg-transparent p-0 text-sm font-semibold focus:ring-0">
+                  <SelectValue placeholder="Barbearia" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-border/40">
+                  {shops.map((s) => (
+                    <SelectItem key={s.id} value={s.id} className="rounded-lg">
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs defaultValue="day" className="mr-2">

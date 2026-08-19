@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -29,23 +29,21 @@ function SignupPage() {
   const { user, loading: authLoading } = useAuth();
   const [f, setF] = useState({ name: "", email: "", phone: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const redirectingRef = useRef(false);
 
-  // Redireciona se já estiver autenticado
-  useEffect(() => {
-    if (!authLoading && user) {
-      redirectAfterAuth(user.id);
-    }
-  }, [user, authLoading]);
-
-  async function redirectAfterAuth(userId: string) {
+  async function redirectBasedOnMembership(userId: string) {
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
     try {
-      const { data: memberships } = await supabase
+      const { data: membership } = await supabase
         .from("barbershop_members")
-        .select("barbershop_id")
+        .select("barbershop_id, role")
         .eq("profile_id", userId)
-        .eq("active", true);
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle();
 
-      if (memberships && memberships.length > 0) {
+      if (membership && ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)) {
         nav({ to: "/admin" });
       } else {
         nav({ to: "/minha-conta" });
@@ -54,6 +52,23 @@ function SignupPage() {
       nav({ to: "/minha-conta" });
     }
   }
+
+  // 1. Redirecionamento se já houver sessão
+  useEffect(() => {
+    if (!authLoading && user) {
+      redirectBasedOnMembership(user.id);
+    }
+  }, [user, authLoading]);
+
+  // 2. Auth State Listener para login em tempo real ou OAuth
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        redirectBasedOnMembership(session.user.id);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   function validateEmail(val: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
@@ -104,7 +119,7 @@ function SignupPage() {
     if (data.session) {
       toast.success("Conta criada com sucesso!");
       if (data.user) {
-        await redirectAfterAuth(data.user.id);
+        await redirectBasedOnMembership(data.user.id);
       }
     } else {
       toast.success("Conta criada! Verifique seu e-mail para confirmar seu cadastro.");

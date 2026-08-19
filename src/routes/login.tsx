@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -29,23 +29,21 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const redirectingRef = useRef(false);
 
-  // Redireciona usuário se já estiver logado
-  useEffect(() => {
-    if (!authLoading && user) {
-      redirectAfterAuth(user.id);
-    }
-  }, [user, authLoading]);
-
-  async function redirectAfterAuth(userId: string) {
+  async function redirectBasedOnMembership(userId: string) {
+    if (redirectingRef.current) return;
+    redirectingRef.current = true;
     try {
-      const { data: memberships } = await supabase
+      const { data: membership } = await supabase
         .from("barbershop_members")
-        .select("barbershop_id")
+        .select("barbershop_id, role")
         .eq("profile_id", userId)
-        .eq("active", true);
+        .eq("active", true)
+        .limit(1)
+        .maybeSingle();
 
-      if (memberships && memberships.length > 0) {
+      if (membership && ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)) {
         nav({ to: "/admin" });
       } else {
         nav({ to: "/minha-conta" });
@@ -54,6 +52,23 @@ function LoginPage() {
       nav({ to: "/minha-conta" });
     }
   }
+
+  // 1. Redirecionamento se já houver sessão
+  useEffect(() => {
+    if (!authLoading && user) {
+      redirectBasedOnMembership(user.id);
+    }
+  }, [user, authLoading]);
+
+  // 2. Auth State Listener para login em tempo real ou OAuth
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        redirectBasedOnMembership(session.user.id);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   function validateEmail(val: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
@@ -90,7 +105,7 @@ function LoginPage() {
 
     toast.success("Bem-vindo de volta!");
     if (data.user) {
-      await redirectAfterAuth(data.user.id);
+      await redirectBasedOnMembership(data.user.id);
     }
   }
 
@@ -122,6 +137,7 @@ function LoginPage() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>
@@ -134,6 +150,7 @@ function LoginPage() {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>

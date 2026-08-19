@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
-import { addMinutes, isBefore } from "date-fns";
 
 export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
   professional?: { id: string; display_name: string; commission_rule?: any };
@@ -9,11 +8,20 @@ export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & 
 
 export type AppointmentStatus = Database["public"]["Enums"]["appointment_status"];
 
+export interface ServiceItem {
+  id: string;
+  name?: string;
+  price?: number;
+  duration_min?: number;
+  durationMinutes?: number;
+}
+
 export interface CreateAppointmentInput {
   barbershopId: string;
-  professionalId: string;
-  services: { id: string; name: string; price: number; duration_min: number }[];
-  scheduledStart: Date;
+  professionalId?: string | null;
+  services: ServiceItem[];
+  scheduledStart?: Date;
+  startsAt?: Date;
   customerData: {
     name: string;
     phone: string;
@@ -22,15 +30,16 @@ export interface CreateAppointmentInput {
   userId?: string | null;
   notes?: string;
   source?: string;
+  status?: AppointmentStatus;
 }
 
 export const appointmentService = {
   /**
-   * Verifica se o profissional possui disponibilidade no horário solicitado
+   * Verifica se o horário possui conflito com outro agendamento existente
    */
   async checkSlotAvailable(params: {
     barbershopId: string;
-    professionalId: string;
+    professionalId?: string | null;
     start: Date;
     end: Date;
     excludeAppointmentId?: string;
@@ -38,19 +47,22 @@ export const appointmentService = {
     const { barbershopId, professionalId, start, end, excludeAppointmentId } = params;
 
     // 1. Não permitir agendamento no passado
-    if (isBefore(start, new Date())) {
-      throw new Error("Não é possível agendar horários que já passaram.");
+    if (start < new Date()) {
+      throw new Error("Não é possível agendar no passado");
     }
 
-    // 2. Verificar sobreposição de agendamentos
+    // 2. Verificar sobreposição com agendamentos existentes
     let query = supabase
       .from("appointments")
       .select("id")
       .eq("barbershop_id", barbershopId)
-      .eq("professional_id", professionalId)
       .neq("status", "cancelled")
       .lt("scheduled_start", end.toISOString())
       .gt("scheduled_end", start.toISOString());
+
+    if (professionalId) {
+      query = query.eq("professional_id", professionalId);
+    }
 
     if (excludeAppointmentId) {
       query = query.neq("id", excludeAppointmentId);
@@ -63,41 +75,55 @@ export const appointmentService = {
   },
 
   /**
-   * Cria um novo agendamento com validação completa de disponibilidade
+   * Cria um novo agendamento com validação completa de disponibilidade e cálculo de término
    */
   async createAppointment(input: CreateAppointmentInput) {
     const {
       barbershopId,
       professionalId,
       services,
-      scheduledStart,
       customerData,
       userId,
       notes,
       source = "web",
     } = input;
 
+    const startsAt = input.startsAt || input.scheduledStart;
+    if (!startsAt) {
+      throw new Error("Data e horário de início são obrigatórios.");
+    }
+
+    // 1. Validação de agendamento no passado
+    if (startsAt < new Date()) {
+      throw new Error("Não é possível agendar no passado");
+    }
+
     if (!services || services.length === 0) {
       throw new Error("Selecione pelo menos um serviço.");
     }
 
-    const totalDuration = services.reduce((acc, s) => acc + (s.duration_min || 30), 0);
-    const totalPrice = services.reduce((acc, s) => acc + Number(s.price || 0), 0);
-    const scheduledEnd = addMinutes(scheduledStart, totalDuration);
+    // 2. Cálculo do horário de término baseado na duração dos serviços
+    const totalDurationMinutes = services.reduce((acc, s) => {
+      const dur = s.duration_min ?? s.durationMinutes ?? 30;
+      return acc + dur;
+    }, 0);
 
-    // 1. Validar disponibilidade do horário
+    const endsAt = new Date(startsAt.getTime() + totalDurationMinutes * 60000);
+    const totalPrice = services.reduce((acc, s) => acc + Number(s.price ?? 0), 0);
+
+    // 3. Validação de conflito de horário (overlapping appointments)
     const isAvailable = await this.checkSlotAvailable({
       barbershopId,
-      professionalId,
-      start: scheduledStart,
-      end: scheduledEnd,
+      professionalId: professionalId || null,
+      start: startsAt,
+      end: endsAt,
     });
 
     if (!isAvailable) {
-      throw new Error("Este horário acabou de ser preenchido. Por favor, selecione outro horário.");
+      throw new Error("O horário selecionado já está reservado. Por favor, escolha outro horário.");
     }
 
-    // 2. Obter ou criar o cliente
+    // 4. Obter ou registrar o cliente
     let customerId: string | null = null;
     if (userId) {
       const { data: existingCustomer } = await supabase
@@ -148,17 +174,19 @@ export const appointmentService = {
       throw new Error("Falha ao registrar cliente para o agendamento.");
     }
 
-    // 3. Criar registro do agendamento
+    // 5. Inserir agendamento
+    const initialStatus: AppointmentStatus = input.status || "scheduled";
+
     const { data: appt, error: apptErr } = await supabase
       .from("appointments")
       .insert({
         barbershop_id: barbershopId,
         customer_id: customerId,
-        professional_id: professionalId,
-        scheduled_start: scheduledStart.toISOString(),
-        scheduled_end: scheduledEnd.toISOString(),
+        professional_id: professionalId || "",
+        scheduled_start: startsAt.toISOString(),
+        scheduled_end: endsAt.toISOString(),
         total_amount: totalPrice,
-        status: "scheduled",
+        status: initialStatus,
         source,
         notes: notes || null,
         created_by: userId || null,
@@ -168,12 +196,12 @@ export const appointmentService = {
 
     if (apptErr) throw apptErr;
 
-    // 4. Vincular serviços ao agendamento
+    // 6. Vincular serviços ao agendamento
     const apptServices = services.map((s) => ({
       appointment_id: appt.id,
       service_id: s.id,
-      price_snapshot: s.price,
-      duration_snapshot: s.duration_min,
+      price_snapshot: s.price ?? 0,
+      duration_snapshot: s.duration_min ?? s.durationMinutes ?? 30,
     }));
 
     const { error: servErr } = await supabase
@@ -193,7 +221,7 @@ export const appointmentService = {
 
     let query = supabase
       .from("appointments")
-      .select("*, professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
+      .select("*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
       .eq("barbershop_id", shopId)
       .gte("scheduled_start", startOfDay.toISOString())
       .lte("scheduled_start", endOfDay.toISOString());
@@ -211,7 +239,7 @@ export const appointmentService = {
       query = query.or(`customer.full_name.ilike.%${filters.q}%,customer.phone.ilike.%${filters.q}%`);
     }
 
-    const { data, error } = await query.order("scheduled_start");
+    const { data, error } = await query.order("scheduled_start", { ascending: true });
 
     if (error) throw error;
     return (data as Appointment[]) ?? [];
