@@ -1,21 +1,32 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { barbershopService, BarbershopWithStats } from "@/services/barbershop.service";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Search, Sparkles, Star } from "lucide-react";
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { AuroraFab } from "@/components/aurora/AuroraFab";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import heroImage from "@/assets/hero-barbershop.jpg";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  city: z.string().optional(),
+});
 
 export const Route = createFileRoute("/")({
+  validateSearch: (search) => searchSchema.parse(search),
   head: () => ({
     meta: [
-      { title: "BarberOS — Barbearia premium em São Paulo" },
-      { name: "description", content: "Atendimento exclusivo. Reserve sua experiência em 30 segundos, disponível 24/7." },
-      { property: "og:title", content: "BarberOS — Barbearia premium em São Paulo" },
+      { title: "BarberOS — Encontre e Agende nas Melhores Barbearias" },
+      { name: "description", content: "Atendimento exclusivo nas melhores barbearias do Brasil. Agende online em 30 segundos, disponível 24/7." },
+      { property: "og:title", content: "BarberOS — Barbearias Premium" },
       { property: "og:description", content: "Reserve sua experiência em 30 segundos, 24/7." },
       { property: "og:url", content: "/" },
       { property: "og:type", content: "website" },
@@ -29,46 +40,33 @@ export const Route = createFileRoute("/")({
           "@context": "https://schema.org",
           "@type": "HealthAndBeautyBusiness",
           name: "BarberOS",
-          description: "Barbearia premium com agendamento online 24/7.",
-          areaServed: "São Paulo",
+          description: "Rede de barbearias premium com agendamento online 24/7.",
+          areaServed: "Brasil",
         }),
       },
     ],
   }),
-  loader: async ({ context: { queryClient } }) => {
-    // Prefetch critical landing data
-    const servicesPromise = queryClient.ensureQueryData({
-      queryKey: ["services-featured"],
-      queryFn: async () => {
-        const { data } = await supabase
-          .from("services")
-          .select("id, name, description, price, duration_min, sort")
-          .eq("barbershop_id", DEMO_BARBERSHOP_ID)
-          .eq("active", true)
-          .order("sort")
-          .limit(6);
-        return data ?? [];
-      },
-    });
-
-    const prosPromise = queryClient.ensureQueryData({
-      queryKey: ["pros-featured"],
-      queryFn: async () => {
-        const { data } = await supabase
-          .from("professionals")
-          .select("id, display_name, specialties")
-          .eq("barbershop_id", DEMO_BARBERSHOP_ID)
-          .eq("active", true);
-        return data ?? [];
-      },
-    });
-
-    await Promise.all([servicesPromise, prosPromise]);
-  },
   component: Landing,
 });
 
 function Landing() {
+  const navigate = useNavigate();
+  const searchParams = Route.useSearch();
+  const [searchCity, setSearchCity] = useState(searchParams.city || "");
+  const [sortBy, setSortBy] = useState<string>("rating");
+
+  const { data: featuredShops, isLoading: loadingShops } = useQuery({
+    queryKey: ["featured-barbershops", searchCity, sortBy],
+    queryFn: async () => {
+      const res = await barbershopService.getBarbershops({
+        city: searchCity || undefined,
+        sort: sortBy,
+        limit: 6,
+      });
+      return res.data;
+    },
+  });
+
   const { data: services } = useQuery({
     queryKey: ["services-featured"],
     queryFn: async () => {
@@ -81,8 +79,9 @@ function Landing() {
         .limit(6);
       return data ?? [];
     },
-    staleTime: 1000 * 60 * 60, // Services rarely change, cache for 1 hour
+    staleTime: 1000 * 60 * 60,
   });
+
   const { data: pros } = useQuery({
     queryKey: ["pros-featured"],
     queryFn: async () => {
@@ -93,8 +92,19 @@ function Landing() {
         .eq("active", true);
       return data ?? [];
     },
-    staleTime: 1000 * 60 * 60, // Professionals rarely change, cache for 1 hour
+    staleTime: 1000 * 60 * 60,
   });
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    navigate({
+      to: "/barbearias",
+      search: {
+        city: searchCity ? searchCity.trim() : undefined,
+        sort: sortBy,
+      },
+    });
+  }
 
   return (
     <PublicLayout>
@@ -117,9 +127,28 @@ function Landing() {
             </h1>
 
             <p className="max-w-md text-lg font-light leading-relaxed text-muted-foreground md:text-xl">
-              Reserve seu horário em 30 segundos. Sem ligações, sem espera —
-              disponível 24 horas por dia.
+              Encontre as melhores barbearias e reserve seu horário em 30 segundos. Sem ligações, sem espera — 24 horas por dia.
             </p>
+
+            {/* Caixa de Busca Rápida por Cidade/Bairro */}
+            <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row max-w-lg">
+              <div className="relative flex-1">
+                <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
+                <Input
+                  value={searchCity}
+                  onChange={(e) => setSearchCity(e.target.value)}
+                  placeholder="Cidade ou bairro (ex: São Paulo, Jardins)..."
+                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur"
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="h-14 rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"
+              >
+                Buscar
+              </Button>
+            </form>
 
             <div className="flex flex-wrap gap-4 pt-2">
               <Button
@@ -135,7 +164,7 @@ function Landing() {
                 variant="outline"
                 className="h-auto rounded-none border-border bg-transparent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] backdrop-blur-sm hover:border-accent hover:bg-transparent hover:text-accent"
               >
-                <Link to="/servicos">Ver serviços</Link>
+                <Link to="/barbearias">Ver barbearias</Link>
               </Button>
             </div>
 
@@ -147,16 +176,16 @@ function Landing() {
                   ))}
                 </div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  4.9 em 230 avaliações
+                  4.9 em milhares de avaliações
                 </p>
               </div>
               <div className="h-10 w-px bg-border/60" />
               <div className="space-y-1.5">
                 <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent">
-                  Aberto agora
+                  Agendamento 24/7
                 </span>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Até as 20h
+                  Confirmação instantânea
                 </p>
               </div>
             </div>
@@ -178,20 +207,129 @@ function Landing() {
               <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
                 <div className="flex items-center justify-between border border-border bg-background/40 p-5 backdrop-blur-xl">
                   <div className="space-y-1">
-                    <h3 className="font-serif text-lg font-bold">BarberOS HQ</h3>
+                    <h3 className="font-serif text-lg font-bold">BarberOS Prestige</h3>
                     <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                      <MapPin className="h-3 w-3" /> Rua Augusta, 1500 · SP
+                      <MapPin className="h-3 w-3" /> Unidades selecionadas no Brasil
                     </p>
                   </div>
-                  <div className="grid h-12 w-12 place-items-center rounded-full border border-accent text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+                  <Link
+                    to="/barbearias"
+                    className="grid h-12 w-12 place-items-center rounded-full border border-accent text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
                     <ArrowRight className="h-5 w-5" />
-                  </div>
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Seção: Barbearias em Destaque */}
+      <section className="border-y border-border/60 bg-card/20 py-20 md:py-28">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
+                <Sparkles className="h-3.5 w-3.5" /> Unidades Recomendadas
+              </div>
+              <h2 className="font-serif text-3xl font-bold md:text-5xl">
+                Barbearias em <span className="italic font-normal">Destaque</span>
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                As unidades mais bem avaliadas para você agendar sua experiência.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">Ordenar:</span>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-[180px] rounded-none border-border bg-background/60 text-xs">
+                  <SelectValue placeholder="Ordenar" />
+                </SelectTrigger>
+                <SelectContent className="rounded-none border-border">
+                  <SelectItem value="rating">Mais bem avaliadas</SelectItem>
+                  <SelectItem value="popular">Mais populares</SelectItem>
+                  <SelectItem value="recent">Mais recentes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {loadingShops ? (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-72 animate-pulse border border-border bg-card/40" />
+              ))}
+            </div>
+          ) : !featuredShops || featuredShops.length === 0 ? (
+            <div className="border border-border p-12 text-center text-muted-foreground">
+              Nenhuma barbearia encontrada para esta localização.
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {featuredShops.map((shop) => {
+                const addr = (shop.address ?? {}) as any;
+                const cityState = [addr.neighborhood || addr.district, addr.city || "São Paulo", addr.state || "SP"]
+                  .filter(Boolean)
+                  .join(" · ");
+
+                return (
+                  <article
+                    key={shop.id}
+                    className="group relative flex flex-col border border-border bg-background/60 p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <h3 className="font-serif text-2xl font-bold transition-colors group-hover:text-accent">
+                          {shop.name}
+                        </h3>
+                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5 text-accent" />
+                          {cityState}
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent">
+                        Destaque
+                      </Badge>
+                    </div>
+
+                    <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                      {shop.description || "Atendimento premium com os melhores profissionais da região."}
+                    </p>
+
+                    <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex text-accent">
+                          <Star className="h-4 w-4 fill-current" />
+                        </div>
+                        <span className="font-mono text-sm font-bold">{shop.rating?.toFixed(1) ?? "5.0"}</span>
+                        <span className="text-[10px] text-muted-foreground">({shop.review_count || 12} avaliações)</span>
+                      </div>
+
+                      <Button
+                        asChild
+                        size="sm"
+                        className="rounded-none bg-accent text-[10px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"
+                      >
+                        <Link to="/b/$slug" params={{ slug: shop.slug }}>
+                          Ver detalhes
+                        </Link>
+                      </Button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="mt-12 text-center">
+            <Button asChild variant="outline" className="rounded-none border-border px-8 text-xs uppercase tracking-[0.2em]">
+              <Link to="/barbearias">Explorar todas as barbearias</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* Serviços — grade com hairline */}
       <section className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">

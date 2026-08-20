@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { supabase } from "@/integrations/supabase/client";
 
-// TODO: substituir pela URL final do projeto (custom domain) quando definida.
 const BASE_URL = "";
 
 interface SitemapEntry {
@@ -16,34 +15,35 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
+        const now = new Date().toISOString();
         const entries: SitemapEntry[] = [
-          { path: "/", changefreq: "weekly", priority: "1.0" },
-          { path: "/servicos", changefreq: "weekly", priority: "0.8" },
-          { path: "/profissionais", changefreq: "weekly", priority: "0.8" },
-          { path: "/agendar", changefreq: "weekly", priority: "0.9" },
-          { path: "/barbearias", changefreq: "weekly", priority: "0.7" },
+          { path: "/", lastmod: now, changefreq: "daily", priority: "1.0" },
+          { path: "/barbearias", lastmod: now, changefreq: "daily", priority: "0.9" },
+          { path: "/servicos", lastmod: now, changefreq: "weekly", priority: "0.8" },
+          { path: "/agendar", lastmod: now, changefreq: "weekly", priority: "0.9" },
+          { path: "/login", lastmod: now, changefreq: "monthly", priority: "0.5" },
+          { path: "/cadastro", lastmod: now, changefreq: "monthly", priority: "0.5" },
         ];
 
         try {
-          const { data: shops } = await supabaseAdmin
+          const { data: shops } = await supabase
             .from("barbershops")
-            .select("slug, updated_at")
+            .select("slug, updated_at, created_at")
             .eq("active", true)
             .not("slug", "is", null);
 
           for (const shop of shops ?? []) {
             if (!shop.slug) continue;
+            const lastmodDate = shop.updated_at || shop.created_at || now;
             entries.push({
               path: `/b/${shop.slug}`,
-              lastmod: shop.updated_at
-                ? new Date(shop.updated_at).toISOString()
-                : undefined,
+              lastmod: new Date(lastmodDate).toISOString(),
               changefreq: "weekly",
-              priority: "0.6",
+              priority: "0.8",
             });
           }
         } catch (err) {
-          console.error("[sitemap] failed to load barbershops", err);
+          console.error("[sitemap] failed to load dynamic barbershops", err);
         }
 
         const urls = entries.map((e) =>
@@ -68,8 +68,8 @@ export const Route = createFileRoute("/sitemap.xml")({
 
         return new Response(xml, {
           headers: {
-            "Content-Type": "application/xml",
-            "Cache-Control": "public, max-age=3600",
+            "Content-Type": "application/xml; charset=utf-8",
+            "Cache-Control": "public, max-age=3600, s-maxage=86400",
           },
         });
       },

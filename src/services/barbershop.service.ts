@@ -18,6 +18,24 @@ export type BarbershopMembership = {
   settings: any;
 };
 
+export interface BarbershopFilters {
+  city?: string;
+  neighborhood?: string;
+  minRating?: number;
+  sort?: "rating" | "recent" | "popular" | "nearest" | string;
+  page?: number;
+  limit?: number;
+  sponsored?: boolean;
+  q?: string;
+}
+
+export interface BarbershopWithStats extends Barbershop {
+  rating?: number;
+  review_count?: number;
+  distance_km?: number | null;
+  services_count?: number;
+}
+
 export const barbershopService = {
   async getMemberships(userId: string): Promise<BarbershopMembership[]> {
     const { data: ms, error } = await supabase
@@ -73,6 +91,162 @@ export const barbershopService = {
 
     if (mErr) throw mErr;
     return data;
+  },
+
+  /**
+   * Lista barbearias com filtros de busca, localização, avaliação e paginação
+   */
+  async getBarbershops(filters?: BarbershopFilters): Promise<{ data: BarbershopWithStats[]; count: number }> {
+    const page = filters?.page || 1;
+    const limit = filters?.limit || 20;
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from("barbershops")
+      .select("*, satisfaction_surveys(shop_rating), appointments(id)", { count: "exact" })
+      .eq("active", true);
+
+    // Filtro de busca textual
+    if (filters?.q) {
+      const term = `%${filters.q.trim()}%`;
+      query = query.or(`name.ilike.${term},slug.ilike.${term},description.ilike.${term}`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    let shops: BarbershopWithStats[] = (data ?? []).map((shop: any) => {
+      const surveys = shop.satisfaction_surveys ?? [];
+      const validRatings = surveys
+        .map((s: any) => Number(s.shop_rating))
+        .filter((r: number) => !isNaN(r) && r > 0);
+
+      const review_count = validRatings.length;
+      const rating = review_count > 0
+        ? Number((validRatings.reduce((a: number, b: number) => a + b, 0) / review_count).toFixed(1))
+        : 5.0; // Padrão 5.0 para novas barbearias
+
+      const address = (shop.address ?? {}) as any;
+      const city = address?.city ?? "";
+      const neighborhood = address?.neighborhood ?? address?.district ?? "";
+
+      return {
+        ...shop,
+        rating,
+        review_count,
+        _city: city.toLowerCase(),
+        _neighborhood: neighborhood.toLowerCase(),
+        _appointments_count: shop.appointments?.length ?? 0,
+      };
+    });
+
+    // Filtro por cidade
+    if (filters?.city) {
+      const c = filters.city.trim().toLowerCase();
+      shops = shops.filter((s: any) => s._city.includes(c) || JSON.stringify(s.address ?? {}).toLowerCase().includes(c));
+    }
+
+    // Filtro por bairro
+    if (filters?.neighborhood) {
+      const n = filters.neighborhood.trim().toLowerCase();
+      shops = shops.filter((s: any) => s._neighborhood.includes(n) || JSON.stringify(s.address ?? {}).toLowerCase().includes(n));
+    }
+
+    // Filtro por nota mínima
+    if (filters?.minRating) {
+      shops = shops.filter((s) => (s.rating ?? 0) >= filters.minRating!);
+    }
+
+    // Ordenação
+    const sort = filters?.sort || "rating";
+    if (sort === "rating") {
+      shops.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    } else if (sort === "recent") {
+      shops.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    } else if (sort === "popular") {
+      shops.sort((a: any, b: any) => (b._appointments_count ?? 0) - (a._appointments_count ?? 0));
+    }
+
+    const paginatedData = shops.slice(offset, offset + limit);
+
+    return {
+      data: paginatedData,
+      count: shops.length || (count ?? 0),
+    };
+  },
+
+  /**
+   * Obtém os detalhes completos de uma barbearia pelo slug para a página pública
+   */
+  async getBarbershopBySlug(slug: string) {
+    const { data: shop, error: sErr } = await supabase
+      .from("barbershops")
+      .select("*")
+      .eq("slug", slug)
+      .eq("active", true)
+      .maybeSingle();
+
+    if (sErr || !shop) throw sErr || new Error("Barbearia não encontrada.");
+
+    // Buscar serviços, profissionais, portfólio e avaliações em paralelo
+    const [servicesRes, prosRes, portfolioRes, reviewsRes] = await Promise.all([
+      supabase
+        .from("services")
+        .select("*")
+        .eq("barbershop_id", shop.id)
+        .eq("active", true)
+        .order("sort"),
+      supabase
+        .from("professionals")
+        .select("*")
+        .eq("barbershop_id", shop.id)
+        .eq("active", true),
+      supabase
+        .from("portfolio_items")
+        .select("*")
+        .eq("barbershop_id", shop.id)
+        .order("sort"),
+      supabase
+        .from("satisfaction_surveys")
+        .select(`
+          id,
+          shop_rating,
+          comment,
+          answered_at,
+          appointment:appointments(
+            customer:customers(full_name)
+          )
+        `)
+        .eq("barbershop_id", shop.id)
+        .eq("is_public", true)
+        .order("answered_at", { ascending: false })
+        .limit(5),
+    ]);
+
+    const reviews = (reviewsRes.data ?? []).map((r: any) => ({
+      id: r.id,
+      rating: r.shop_rating ?? 5,
+      comment: r.comment,
+      answered_at: r.answered_at,
+      customer_name: r.appointment?.customer?.full_name ?? "Cliente BarberOS",
+    }));
+
+    const validRatings = reviews.map((r: any) => Number(r.rating)).filter((n: number) => !isNaN(n) && n > 0);
+    const avgRating = validRatings.length > 0
+      ? Number((validRatings.reduce((a: number, b: number) => a + b, 0) / validRatings.length).toFixed(1))
+      : 5.0;
+
+    return {
+      shop: {
+        ...shop,
+        rating: avgRating,
+        review_count: validRatings.length,
+      },
+      services: servicesRes.data ?? [],
+      professionals: prosRes.data ?? [],
+      portfolio: portfolioRes.data ?? [],
+      reviews,
+    };
   },
 
   /**

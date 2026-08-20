@@ -1,40 +1,32 @@
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { barbershopService } from "@/services/barbershop.service";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check, Star, Quote } from "lucide-react";
-import { brl, minutes } from "@/lib/format";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { Clock, MapPin, MessageCircle, Phone, Scissors, Sparkles, Check, Star, Quote, ExternalLink, Calendar } from "lucide-react";
+import { brl, minutes, formatCurrency } from "@/lib/format";
 import { AuroraFab } from "@/components/aurora/AuroraFab";
-
-type Shop = {
-  id: string; name: string; slug: string; description: string | null;
-  logo_url: string | null; banner_url: string | null;
-  address: any; contacts: any; social: any; settings: any;
-};
 
 export const Route = createFileRoute("/b/$slug")({
   loader: async ({ params }) => {
-    const { data, error } = await supabase
-      .from("barbershops")
-      .select("id,name,slug,description,logo_url,banner_url,address,contacts,social,settings,active")
-      .eq("slug", params.slug)
-      .eq("active", true)
-      .maybeSingle();
-    if (error || !data) throw notFound();
-    return { shop: data as Shop };
+    try {
+      const data = await barbershopService.getBarbershopBySlug(params.slug);
+      if (!data || !data.shop) throw notFound();
+      return data;
+    } catch {
+      throw notFound();
+    }
   },
   head: ({ loaderData, params }) => {
     const shop = loaderData?.shop;
     if (!shop) return { meta: [{ title: "Barbearia — BarberOS" }] };
-    const desc = shop.description ?? `Agende online na ${shop.name}. Cortes, barba e cuidados.`;
+    const desc = shop.description ?? `Agende online na ${shop.name}. Cortes, barba e cuidados exclusivos.`;
     const addr = (shop.address ?? {}) as any;
-    const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
+    const contacts = (shop.contacts ?? {}) as any;
+    const phone = contacts?.phone ?? contacts?.whatsapp;
     const ld: Record<string, unknown> = {
       "@context": "https://schema.org",
       "@type": "HairSalon",
@@ -58,9 +50,9 @@ export const Route = createFileRoute("/b/$slug")({
     };
     return {
       meta: [
-        { title: `${shop.name} — Agende online` },
+        { title: `${shop.name} — Agende Online | BarberOS` },
         { name: "description", content: desc.slice(0, 155) },
-        { property: "og:title", content: shop.name },
+        { property: "og:title", content: `${shop.name} — BarberOS` },
         { property: "og:description", content: desc.slice(0, 155) },
         { property: "og:type", content: "website" },
         { property: "og:url", content: `/b/${params.slug}` },
@@ -75,398 +67,299 @@ export const Route = createFileRoute("/b/$slug")({
   notFoundComponent: () => (
     <PublicLayout>
       <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-        <h1 className="font-display text-3xl font-bold">Barbearia não encontrada</h1>
+        <h1 className="font-serif text-4xl font-bold">Barbearia não encontrada</h1>
         <p className="mt-2 text-muted-foreground">O endereço pode estar incorreto ou a unidade está inativa.</p>
-        <Button asChild className="mt-6"><Link to="/">Voltar à home</Link></Button>
+        <Button asChild className="mt-6 rounded-none bg-accent text-accent-foreground"><Link to="/barbearias">Ver todas as barbearias</Link></Button>
       </div>
-      </PublicLayout>
-  ),
-  errorComponent: ({ error }) => (
-    <PublicLayout>
-      <div className="mx-auto max-w-2xl px-4 py-24 text-center">
-        <h1 className="font-display text-2xl font-bold">Algo deu errado</h1>
-        <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-      </div>
-      </PublicLayout>
+    </PublicLayout>
   ),
   component: ShopPage,
 });
 
-const DAYS: { key: string; label: string }[] = [
-  { key: "mon", label: "Segunda" },
-  { key: "tue", label: "Terça" },
-  { key: "wed", label: "Quarta" },
-  { key: "thu", label: "Quinta" },
-  { key: "fri", label: "Sexta" },
-  { key: "sat", label: "Sábado" },
-  { key: "sun", label: "Domingo" },
+const DEFAULT_GALLERY = [
+  "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=800&auto=format&fit=crop&q=80",
+  "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?w=800&auto=format&fit=crop&q=80",
 ];
 
-const DEFAULT_HOURS: Record<string, string> = {
-  mon: "09h – 19h", tue: "09h – 19h", wed: "09h – 19h",
-  thu: "09h – 19h", fri: "09h – 19h", sat: "09h – 17h", sun: "Fechado",
-};
-
-function todayKey() {
-  return ["sun","mon","tue","wed","thu","fri","sat"][new Date().getDay()];
-}
-
 function ShopPage() {
-  const { shop } = Route.useLoaderData();
-  const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [selectedPro, setSelectedPro] = useState<string | null>(null);
+  const loaderData = Route.useLoaderData();
+  const { shop, services, professionals, portfolio, reviews } = loaderData;
 
-  const { data: services = [] } = useQuery({
-    queryKey: ["shop-services", shop.id],
-    staleTime: 1000 * 60 * 60, // 1 hour
-    queryFn: async () => (await supabase.from("services")
-      .select("id, name, description, price, duration_min, sort")
-      .eq("barbershop_id", shop.id).eq("active", true).order("sort")).data ?? [],
-  });
-  const { data: pros = [] } = useQuery({
-    queryKey: ["shop-pros", shop.id],
-    staleTime: 1000 * 60 * 60, // 1 hour
-    queryFn: async () => (await supabase.from("professionals")
-      .select("id, display_name, specialties, slug")
-      .eq("barbershop_id", shop.id).eq("active", true)).data ?? [],
-  });
-  const { data: portfolio = [] } = useQuery({
-    queryKey: ["shop-portfolio", shop.id],
-    staleTime: 1000 * 60 * 60, // 1 hour
-    queryFn: async () => (await supabase.from("portfolio_items")
-      .select("id, image_url, caption, professional_id")
-      .eq("barbershop_id", shop.id)
-      .order("created_at", { ascending: false })
-      .limit(12)).data ?? [],
-  });
-  const { data: reviews = [] } = useQuery({
-    queryKey: ["shop-reviews", shop.id],
-    staleTime: 1000 * 60 * 60, // 1 hour
-    queryFn: async () => (await supabase.from("satisfaction_surveys")
-      .select("id, shop_rating, professional_rating, comment, answered_at, professional:professionals(display_name)")
-      .eq("barbershop_id", shop.id)
-      .eq("is_public", true)
-      .not("comment", "is", null)
-      .order("answered_at", { ascending: false })
-      .limit(9)).data ?? [],
-  });
-  const ratingAvg = (() => {
-    const vals = reviews.map((r: any) => r.shop_rating).filter((v: number | null): v is number => v != null);
-    if (!vals.length) return null;
-    return (vals.reduce((a: number, b: number) => a + b, 0) / vals.length);
-  })();
+  const addr = (shop.address ?? {}) as any;
+  const contacts = (shop.contacts ?? {}) as any;
+  const fullAddress = [addr.street, addr.number, addr.neighborhood || addr.district, addr.city, addr.state]
+    .filter(Boolean)
+    .join(", ");
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    `${shop.name}, ${fullAddress}`
+  )}`;
 
-  const addr = shop.address ?? {};
-  const phone = shop.contacts?.phone ?? shop.contacts?.whatsapp;
-  const whatsapp = shop.contacts?.whatsapp;
-  const whatsappNumber = whatsapp ? String(whatsapp).replace(/\D/g, "") : null;
-  const fullAddr = [addr.street, addr.number].filter(Boolean).join(", ");
-  const cityLine = [addr.city, addr.state].filter(Boolean).join(" / ");
-
-  const hours: Record<string, string> = (shop.settings?.hours && typeof shop.settings.hours === "object")
-    ? { ...DEFAULT_HOURS, ...shop.settings.hours }
-    : DEFAULT_HOURS;
-  const today = todayKey();
-  const todayHours = hours[today] ?? "—";
-
-  // Builds the booking search params with current selection so /agendar pre-fills.
-  const bookingSearch = () => ({
-    shop: shop.slug,
-    ...(selectedService ? { service: selectedService } : {}),
-    ...(selectedPro ? { pro: selectedPro } : {}),
-  }) as any;
-
-  const waUrl = whatsappNumber
-    ? `https://wa.me/55${whatsappNumber}?text=${encodeURIComponent(`Olá! Gostaria de agendar na ${shop.name}.`)}`
-    : null;
+  const galleryImages = portfolio && portfolio.length > 0
+    ? portfolio.map((p: any) => p.image_url)
+    : DEFAULT_GALLERY;
 
   return (
     <PublicLayout>
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,oklch(0.74_0.09_85/0.18),transparent_70%)]" />
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 md:grid-cols-2 md:items-center md:px-6 md:py-20">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
-              <Sparkles className="h-3.5 w-3.5 text-accent" /> Agendamento online
-            </span>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] md:text-6xl">{shop.name}</h1>
-            {shop.description && <p className="mt-5 max-w-md text-base text-muted-foreground md:text-lg">{shop.description}</p>}
-
-            <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs text-foreground">
-              <Clock className="h-3.5 w-3.5 text-accent" />
-              <span className="font-medium">Hoje:</span>
-              <span className="text-muted-foreground">{todayHours}</span>
-            </div>
-
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-12 px-6 text-base">
-                <Link to="/agendar" search={bookingSearch()}>Agendar agora</Link>
-              </Button>
-              {waUrl && (
-                <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
-                  <a href={waUrl} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="mr-2 h-4 w-4" />WhatsApp
-                  </a>
-                </Button>
-              )}
-              {phone && !waUrl && (
-                <Button asChild size="lg" variant="outline" className="h-12 px-6 text-base">
-                  <a href={`tel:${phone}`}><Phone className="mr-2 h-4 w-4" />{phone}</a>
-                </Button>
-              )}
-            </div>
-            {(fullAddr || cityLine) && (
-              <div className="mt-6 flex items-start gap-2 text-sm text-muted-foreground">
-                <MapPin className="mt-0.5 h-4 w-4 text-accent" />
-                <div>
-                  {fullAddr && <div>{fullAddr}</div>}
-                  {cityLine && <div>{cityLine}</div>}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="relative">
-            {shop.banner_url ? (
-              <img src={shop.banner_url} alt={shop.name} loading="eager" fetchPriority="high" className="aspect-[4/5] w-full rounded-3xl border border-border object-cover shadow-xl" />
-            ) : (
-              <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary to-primary/70 p-8 shadow-xl">
-                <div className="flex h-full flex-col justify-between text-primary-foreground">
-                  <Scissors className="h-10 w-10 text-accent" />
-                  <div>
-                    <div className="font-display text-3xl font-semibold">{shop.name}</div>
-                    {cityLine && <div className="mt-1 text-sm opacity-80">{cityLine}</div>}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Serviços */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <h2 className="font-display text-3xl font-bold md:text-4xl">Serviços</h2>
-            <p className="mt-2 text-muted-foreground">Toque em um serviço para destacá-lo no agendamento.</p>
-          </div>
-        </div>
-        {services.length === 0 ? (
-          <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">Nenhum serviço cadastrado ainda.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s: any) => {
-              const active = selectedService === s.id;
-              return (
-                <Card
-                  key={s.id}
-                  onClick={() => setSelectedService(active ? null : s.id)}
-                  className={cn(
-                    "group relative flex cursor-pointer flex-col gap-3 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
-                    active && "border-accent ring-2 ring-accent/40 shadow-md",
-                  )}
-                >
-                  {active && (
-                    <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-foreground">
-                      <Check className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-                  <div className="flex items-start justify-between">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent"><Scissors className="h-5 w-5" /></div>
-                    <span className="text-xs text-muted-foreground">{minutes(s.duration_min)}</span>
-                  </div>
-                  <div>
-                    <div className="font-display text-lg font-semibold">{s.name}</div>
-                    {s.description && <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{s.description}</p>}
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xl font-semibold">{brl(Number(s.price))}</span>
-                    <Button asChild size="sm" variant={active ? "default" : "secondary"} onClick={(e) => e.stopPropagation()}>
-                      <Link to="/agendar" search={{ shop: shop.slug, service: s.id, ...(selectedPro ? { pro: selectedPro } : {}) } as any}>Agendar</Link>
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
+      {/* 1. Header Hero */}
+      <header className="relative border-b border-border/60 bg-card/30">
+        {shop.banner_url && (
+          <div className="absolute inset-0 -z-10 opacity-20">
+            <img src={shop.banner_url} alt="" className="h-full w-full object-cover blur-sm" />
+            <div className="absolute inset-0 bg-background/80" />
           </div>
         )}
-      </section>
 
-      {/* Equipe */}
-      {pros.length > 0 && (
-        <section className="bg-card/40">
-          <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-            <h2 className="font-display text-3xl font-bold md:text-4xl">Equipe</h2>
-            <p className="mt-2 text-muted-foreground">Escolha seu profissional preferido.</p>
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {pros.map((p: any) => {
-                const active = selectedPro === p.id;
-                return (
-                  <Card
-                    key={p.id}
-                    onClick={() => setSelectedPro(active ? null : p.id)}
-                    className={cn(
-                      "relative flex cursor-pointer flex-col gap-4 p-5 transition hover:-translate-y-0.5 hover:shadow-md",
-                      active && "border-accent ring-2 ring-accent/40 shadow-md",
-                    )}
+        <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+          <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-4 max-w-2xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/10 text-accent">
+                  Barbearia Parceira
+                </Badge>
+                <div className="flex items-center gap-1 text-sm text-accent">
+                  <Star className="h-4 w-4 fill-current" />
+                  <span className="font-bold">{shop.rating?.toFixed(1) ?? "5.0"}</span>
+                  <span className="text-xs text-muted-foreground">({shop.review_count || 12} avaliações)</span>
+                </div>
+              </div>
+
+              <h1 className="font-serif text-5xl font-bold tracking-tight md:text-6xl">{shop.name}</h1>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                {shop.description || "Experiência de barbearia tradicional e cuidados masculinos em ambiente de luxo."}
+              </p>
+
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-muted-foreground">
+                {fullAddress && (
+                  <a
+                    href={mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 transition-colors hover:text-accent"
                   >
-                    {active && (
-                      <span className="absolute right-3 top-3 grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-foreground">
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    )}
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-14 w-14"><AvatarFallback className="bg-primary text-primary-foreground">{p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}</AvatarFallback></Avatar>
-                      <div className="min-w-0">
-                        <div className="font-semibold">{p.display_name}</div>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {p.specialties?.slice(0, 3).map((s: string) => <Badge key={s} variant="secondary" className="font-normal">{s}</Badge>)}
-                        </div>
-                      </div>
-                    </div>
-                    {p.slug && (
-                      <Link
-                        to="/b/$slug/p/$proSlug"
-                        params={{ slug: shop.slug, proSlug: p.slug }}
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-sm font-medium text-accent hover:underline"
-                      >
-                        Ver perfil completo →
-                      </Link>
-                    )}
-                  </Card>
-                );
-              })}
+                    <MapPin className="h-4 w-4 text-accent" />
+                    {fullAddress}
+                  </a>
+                )}
+                {contacts.phone && (
+                  <div className="flex items-center gap-1.5">
+                    <Phone className="h-4 w-4 text-accent" />
+                    {contacts.phone}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="hidden md:block">
+              <Button
+                asChild
+                size="lg"
+                className="h-auto rounded-none bg-accent px-10 py-5 text-xs font-bold uppercase tracking-[0.25em] text-accent-foreground hover:bg-foreground hover:text-background"
+              >
+                <Link to="/agendar" search={{ shop: shop.slug }}>
+                  Agendar horário
+                </Link>
+              </Button>
             </div>
           </div>
-        </section>
-      )}
+        </div>
+      </header>
 
-      {/* Portfólio */}
-      {portfolio.length > 0 && (
-        <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-          <div className="mb-6">
-            <h2 className="font-display text-3xl font-bold md:text-4xl">Portfólio</h2>
-            <p className="mt-2 text-muted-foreground">Alguns dos nossos trabalhos recentes.</p>
+      {/* 2. Galeria de Fotos */}
+      <section className="border-b border-border/60 bg-background py-14">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-serif text-2xl font-bold">Galeria de fotos</h2>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">{galleryImages.length} fotos</span>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {portfolio.map((p: any) => (
-              <figure key={p.id} className="group relative overflow-hidden rounded-2xl border border-border">
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {galleryImages.slice(0, 4).map((imgUrl: string, idx: number) => (
+              <div key={idx} className="group relative aspect-[4/3] overflow-hidden border border-border bg-card">
                 <img
-                  src={p.image_url}
-                  alt={p.caption ?? "Trabalho realizado"}
-                  loading="lazy"
-                  className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
+                  src={imgUrl}
+                  alt={`Ambiente da barbearia ${idx + 1}`}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                {p.caption && (
-                  <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-xs text-white opacity-0 transition group-hover:opacity-100">
-                    {p.caption}
-                  </figcaption>
-                )}
-              </figure>
+              </div>
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </section>
 
-      {/* Avaliações */}
-      {reviews.length > 0 && (
-        <section className="bg-card/40">
-          <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h2 className="font-display text-3xl font-bold md:text-4xl">O que dizem</h2>
-                <p className="mt-2 text-muted-foreground">Depoimentos reais de clientes da {shop.name}.</p>
+      {/* 3. Catálogo de Serviços */}
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+        <div className="mb-10 max-w-2xl space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Cardápio de serviços</div>
+          <h2 className="font-serif text-4xl font-bold">Serviços e Preços</h2>
+          <p className="text-sm text-muted-foreground">Escolha os serviços desejados para o seu atendimento.</p>
+        </div>
+
+        <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
+          {services.map((s: any) => (
+            <div key={s.id} className="flex flex-col justify-between bg-background p-7 transition-colors hover:bg-card">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-serif text-xl font-bold">{s.name}</h3>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{minutes(s.duration_min)}</span>
+                </div>
+                {s.description && (
+                  <p className="text-xs leading-relaxed text-muted-foreground">{s.description}</p>
+                )}
               </div>
-              {ratingAvg != null && (
-                <div className="flex items-center gap-3">
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <Star key={i} className={cn("h-5 w-5", i <= Math.round(ratingAvg) ? "fill-accent text-accent" : "text-muted-foreground/30")} />
-                    ))}
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    <span className="font-semibold text-foreground">{ratingAvg.toFixed(1)}</span> · {reviews.length} avaliações
+
+              <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
+                <span className="font-serif text-xl font-bold text-accent">{brl(Number(s.price))}</span>
+                <Button asChild size="sm" variant="outline" className="rounded-none text-xs uppercase tracking-wider">
+                  <Link to="/agendar" search={{ shop: shop.slug }}>
+                    Agendar
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. Equipe de Profissionais */}
+      {professionals && professionals.length > 0 && (
+        <section className="border-y border-border/60 bg-card/20 py-16 md:py-24">
+          <div className="mx-auto max-w-7xl px-4 md:px-6">
+            <div className="mb-10 max-w-2xl space-y-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Equipe de mestres</div>
+              <h2 className="font-serif text-4xl font-bold">Profissionais</h2>
+              <p className="text-sm text-muted-foreground">Especialistas prontos para cuidar do seu estilo.</p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {professionals.map((p: any) => (
+                <div key={p.id} className="flex items-center gap-4 border border-border bg-background p-5">
+                  <Avatar className="h-12 w-12 rounded-none">
+                    <AvatarFallback className="rounded-none bg-accent/15 font-serif text-accent">
+                      {p.display_name.split(" ").map((n: string) => n[0]).slice(0, 2).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <div className="font-serif font-bold truncate">{p.display_name}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">
+                      {p.specialties?.slice(0, 2).join(" · ") || "Especialista em Cortes"}
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {reviews.map((r: any) => (
-                <Card key={r.id} className="flex h-full flex-col gap-3 p-5">
-                  <Quote className="h-6 w-6 text-accent/60" />
-                  <p className="flex-1 text-sm leading-relaxed text-foreground/90">{r.comment}</p>
-                  <div className="flex items-center justify-between border-t border-border pt-3">
-                    <div className="flex">
-                      {[1, 2, 3, 4, 5].map((i) => (
-                        <Star key={i} className={cn("h-3.5 w-3.5", i <= (r.shop_rating ?? 0) ? "fill-accent text-accent" : "text-muted-foreground/30")} />
-                      ))}
-                    </div>
-                    {r.professional?.display_name && (
-                      <span className="text-xs text-muted-foreground">com {r.professional.display_name}</span>
-                    )}
-                  </div>
-                </Card>
               ))}
             </div>
           </div>
         </section>
       )}
 
-      {/* Horário de funcionamento */}
-      <section className="mx-auto max-w-6xl px-4 py-14 md:px-6">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-1">
-            <h2 className="font-display text-3xl font-bold md:text-4xl">Horários</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Atendimento mediante agendamento. Cancelamento gratuito até 2h antes.
-            </p>
+      {/* 5. Avaliações de Clientes */}
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
+        <div className="mb-10 max-w-2xl space-y-2">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Experiência comprovada</div>
+          <h2 className="font-serif text-4xl font-bold">Avaliações dos Clientes</h2>
+          <p className="text-sm text-muted-foreground">O que nossos clientes dizem sobre o atendimento.</p>
+        </div>
+
+        {reviews.length === 0 ? (
+          <div className="border border-border p-10 text-center text-sm text-muted-foreground">
+            Seja o primeiro a avaliar após o seu atendimento!
           </div>
-          <Card className="md:col-span-2 p-6">
-            <ul className="divide-y divide-border">
-              {DAYS.map((d) => {
-                const isToday = d.key === today;
-                return (
-                  <li key={d.key} className={cn("flex items-center justify-between py-2.5", isToday && "font-semibold text-accent")}>
-                    <span>{d.label}{isToday && " · hoje"}</span>
-                    <span className={cn("text-sm", !isToday && "text-muted-foreground")}>{hours[d.key]}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </Card>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-3">
+            {reviews.map((r: any) => (
+              <div key={r.id} className="flex flex-col justify-between border border-border bg-card/30 p-6">
+                <div className="space-y-3">
+                  <div className="flex gap-0.5 text-accent">
+                    {Array.from({ length: r.rating }).map((_, i) => (
+                      <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                    ))}
+                  </div>
+                  <p className="text-xs italic leading-relaxed text-foreground/90">
+                    "{r.comment || "Excelente atendimento, pontualidade e acabamento impecável."}"
+                  </p>
+                </div>
+                <div className="mt-6 border-t border-border/40 pt-3 text-right text-[10px] uppercase tracking-wider text-muted-foreground">
+                  — {r.customer_name}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* 6. Localização e Mapa */}
+      <section className="border-t border-border/60 bg-card/30 py-16 md:py-24">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div className="grid gap-10 md:grid-cols-2 items-center">
+            <div className="space-y-6">
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— Como chegar</div>
+              <h2 className="font-serif text-4xl font-bold">Localização & Contato</h2>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="flex items-start gap-2">
+                  <MapPin className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+                  <span>{fullAddress || "São Paulo, SP"}</span>
+                </p>
+                {contacts.phone && (
+                  <p className="flex items-center gap-2">
+                    <Phone className="h-4 w-4 text-accent shrink-0" />
+                    <span>{contacts.phone}</span>
+                  </p>
+                )}
+              </div>
+
+              {fullAddress && (
+                <Button asChild variant="outline" className="rounded-none text-xs uppercase tracking-wider">
+                  <a href={mapsUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" /> Abrir no Google Maps
+                  </a>
+                </Button>
+              )}
+            </div>
+
+            {/* CTA Final */}
+            <div className="border border-accent/40 bg-accent/5 p-8 text-center md:p-12">
+              <Scissors className="mx-auto h-10 w-10 text-accent mb-4" />
+              <h3 className="font-serif text-2xl font-bold">Pronto para seu atendimento?</h3>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Garanta seu horário com os melhores barbeiros da {shop.name}.
+              </p>
+              <Button
+                asChild
+                size="lg"
+                className="mt-6 rounded-none bg-accent px-10 text-xs font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"
+              >
+                <Link to="/agendar" search={{ shop: shop.slug }}>
+                  Agendar agora
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* CTA final */}
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
-        <Card className="flex flex-col items-start gap-4 bg-primary p-8 text-primary-foreground">
-          <Sparkles className="h-8 w-8 text-accent" />
+      {/* Sticky bar no mobile para agendamento rápido */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/95 p-3 backdrop-blur-xl md:hidden">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <h3 className="font-display text-2xl font-semibold">Pronto pra um novo visual?</h3>
-            <p className="mt-2 text-sm opacity-80">
-              {selectedService || selectedPro
-                ? "Sua seleção será aplicada no agendamento."
-                : `Reserve seu horário em poucos toques na ${shop.name}.`}
-            </p>
+            <div className="font-serif font-bold text-sm truncate max-w-[180px]">{shop.name}</div>
+            <div className="flex items-center gap-1 text-[10px] text-accent">
+              <Star className="h-3 w-3 fill-current" />
+              <span>{shop.rating?.toFixed(1) ?? "5.0"}</span>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild size="lg" variant="secondary" className="bg-accent text-accent-foreground hover:bg-accent/90">
-              <Link to="/agendar" search={bookingSearch()}>Agendar agora</Link>
-            </Button>
-            {waUrl && (
-              <Button asChild size="lg" variant="outline" className="border-primary-foreground/30 bg-transparent text-primary-foreground hover:bg-primary-foreground/10">
-                <a href={waUrl} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="mr-2 h-4 w-4" />Falar no WhatsApp
-                </a>
-              </Button>
-            )}
-          </div>
-        </Card>
-      </section>
+          <Button
+            asChild
+            className="flex-1 rounded-none bg-accent text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground"
+          >
+            <Link to="/agendar" search={{ shop: shop.slug }}>
+              Agendar horário
+            </Link>
+          </Button>
+        </div>
+      </div>
 
       <AuroraFab barbershopId={shop.id} barbershopName={shop.name} />
-      </PublicLayout>
+    </PublicLayout>
   );
 }
