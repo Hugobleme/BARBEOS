@@ -192,29 +192,49 @@ function Landing() {
           </div>
 
           <div className="relative">
-            <div className="absolute -right-10 -top-10 h-64 w-64 rounded-full bg-accent/10 blur-[100px]" />
-            <div className="group relative aspect-[3/4] overflow-hidden border border-border">
+            <div className="pointer-events-none absolute -right-10 -top-10 h-72 w-72 rounded-full bg-accent/20 blur-[120px]" />
+            <div className="pointer-events-none absolute -left-10 -bottom-10 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
+
+            <div className="group relative aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]">
               <OptimizedImage
-                src={heroImage}
-                alt="Interior moderno da BarberOS"
+                src="/hero-barbershop.jpg"
+                fallback="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1200&q=85"
+                alt="Interior de barbearia luxuosa BarberOS"
                 aspectRatio="portrait"
                 fetchPriority="high"
                 loading="eager"
                 className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/20 to-transparent opacity-90" />
 
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-                <div className="flex items-center justify-between border border-border bg-background/40 p-5 backdrop-blur-xl">
+              {/* Gradient overlay sutil para manter a imagem brilhante e visível */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none" />
+
+              {/* Badge superior */}
+              <div className="absolute left-6 top-6 z-20">
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1.5 backdrop-blur-md">
+                  <Sparkles className="h-3.5 w-3.5 text-accent" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-white">
+                    Experiência Exclusiva
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Inferior BarberOS Prestige */}
+              <div className="absolute bottom-0 left-0 right-0 z-20 p-6 md:p-8">
+                <div className="flex items-center justify-between border border-white/15 bg-black/70 p-5 backdrop-blur-xl">
                   <div className="space-y-1">
-                    <h3 className="font-serif text-lg font-bold">BarberOS Prestige</h3>
-                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                      <MapPin className="h-3 w-3" /> Unidades selecionadas no Brasil
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <h3 className="font-serif text-lg font-bold text-white">BarberOS Prestige</h3>
+                    </div>
+                    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] text-neutral-300">
+                      <MapPin className="h-3 w-3 text-accent" /> Unidades selecionadas no Brasil
                     </p>
                   </div>
                   <Link
                     to="/barbearias"
-                    className="grid h-12 w-12 place-items-center rounded-full border border-accent text-accent transition-colors hover:bg-accent hover:text-accent-foreground"
+                    aria-label="Ver barbearias"
+                    className="grid h-12 w-12 place-items-center rounded-full bg-accent text-accent-foreground transition-all hover:scale-105 hover:bg-white hover:text-black shadow-lg"
                   >
                     <ArrowRight className="h-5 w-5" />
                   </Link>
