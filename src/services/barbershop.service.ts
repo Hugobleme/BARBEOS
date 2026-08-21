@@ -11,6 +11,9 @@ export type BarbershopMember = Database["public"]["Tables"]["barbershop_members"
   } | null;
 };
 
+export type Service = Database["public"]["Tables"]["services"]["Row"];
+export type Professional = Database["public"]["Tables"]["professionals"]["Row"];
+
 export type BarbershopMembership = {
   id: string;
   role: Database["public"]["Enums"]["app_role"];
@@ -106,7 +109,6 @@ export const barbershopService = {
       .select("*, satisfaction_surveys(shop_rating), appointments(id)", { count: "exact" })
       .eq("active", true);
 
-    // Filtro de busca textual
     if (filters?.q) {
       const term = `%${filters.q.trim()}%`;
       query = query.or(`name.ilike.${term},slug.ilike.${term},description.ilike.${term}`);
@@ -124,7 +126,7 @@ export const barbershopService = {
       const review_count = validRatings.length;
       const rating = review_count > 0
         ? Number((validRatings.reduce((a: number, b: number) => a + b, 0) / review_count).toFixed(1))
-        : 5.0; // Padrão 5.0 para novas barbearias
+        : 5.0;
 
       const address = (shop.address ?? {}) as any;
       const city = address?.city ?? "";
@@ -140,24 +142,20 @@ export const barbershopService = {
       };
     });
 
-    // Filtro por cidade
     if (filters?.city) {
       const c = filters.city.trim().toLowerCase();
       shops = shops.filter((s: any) => s._city.includes(c) || JSON.stringify(s.address ?? {}).toLowerCase().includes(c));
     }
 
-    // Filtro por bairro
     if (filters?.neighborhood) {
       const n = filters.neighborhood.trim().toLowerCase();
       shops = shops.filter((s: any) => s._neighborhood.includes(n) || JSON.stringify(s.address ?? {}).toLowerCase().includes(n));
     }
 
-    // Filtro por nota mínima
     if (filters?.minRating) {
       shops = shops.filter((s) => (s.rating ?? 0) >= filters.minRating!);
     }
 
-    // Ordenação
     const sort = filters?.sort || "rating";
     if (sort === "rating") {
       shops.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -188,7 +186,6 @@ export const barbershopService = {
 
     if (sErr || !shop) throw sErr || new Error("Barbearia não encontrada.");
 
-    // Buscar serviços, profissionais, portfólio e avaliações em paralelo
     const [servicesRes, prosRes, portfolioRes, reviewsRes] = await Promise.all([
       supabase
         .from("services")
@@ -247,6 +244,159 @@ export const barbershopService = {
       portfolio: portfolioRes.data ?? [],
       reviews,
     };
+  },
+
+  /**
+   * Métodos CRUD para Serviços (Services)
+   */
+  async getServices(barbershopId: string): Promise<Service[]> {
+    const { data, error } = await supabase
+      .from("services")
+      .select("*")
+      .eq("barbershop_id", barbershopId)
+      .order("sort")
+      .order("name");
+
+    if (error) throw error;
+    return (data as Service[]) ?? [];
+  },
+
+  async createService(data: {
+    barbershop_id: string;
+    name: string;
+    description?: string | null;
+    duration_min: number;
+    price?: number;
+    price_cents?: number;
+    active?: boolean;
+  }): Promise<Service> {
+    const finalPrice = data.price ?? (data.price_cents ? data.price_cents / 100 : 0);
+
+    const { data: service, error } = await supabase
+      .from("services")
+      .insert({
+        barbershop_id: data.barbershop_id,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        duration_min: data.duration_min,
+        price: finalPrice,
+        active: data.active ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return service;
+  },
+
+  async updateService(id: string, data: Partial<Service> & { price_cents?: number }): Promise<Service> {
+    const updatePayload: any = { ...data };
+    if (data.price_cents !== undefined) {
+      updatePayload.price = data.price_cents / 100;
+      delete updatePayload.price_cents;
+    }
+
+    const { data: updated, error } = await supabase
+      .from("services")
+      .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updated;
+  },
+
+  async deleteService(id: string) {
+    const { error } = await supabase
+      .from("services")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+
+  /**
+   * Métodos CRUD para Barbeiros / Profissionais (Barbers)
+   */
+  async getBarbers(barbershopId: string): Promise<Professional[]> {
+    const { data, error } = await supabase
+      .from("professionals")
+      .select("*")
+      .eq("barbershop_id", barbershopId)
+      .order("display_name");
+
+    if (error) throw error;
+    return (data as Professional[]) ?? [];
+  },
+
+  async createBarber(data: {
+    barbershop_id: string;
+    display_name: string;
+    bio?: string | null;
+    specialties?: string[];
+    commission_percent?: number;
+    phone?: string | null;
+    email?: string | null;
+    active?: boolean;
+  }): Promise<Professional> {
+    const slug = data.display_name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "") || crypto.randomUUID().slice(0, 8);
+
+    const commission_rule = {
+      percentage: data.commission_percent ?? 40,
+    };
+
+    const { data: pro, error } = await supabase
+      .from("professionals")
+      .insert({
+        barbershop_id: data.barbershop_id,
+        display_name: data.display_name.trim(),
+        bio: data.bio?.trim() || null,
+        specialties: data.specialties ?? ["Corte", "Barba"],
+        commission_rule,
+        slug,
+        active: data.active ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return pro;
+  },
+
+  async updateBarber(id: string, data: Partial<Professional> & { commission_percent?: number }): Promise<Professional> {
+    const updatePayload: any = { ...data };
+    if (data.commission_percent !== undefined) {
+      updatePayload.commission_rule = {
+        ...(typeof updatePayload.commission_rule === "object" ? updatePayload.commission_rule : {}),
+        percentage: data.commission_percent,
+      };
+      delete updatePayload.commission_percent;
+    }
+
+    const { data: updated, error } = await supabase
+      .from("professionals")
+      .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updated;
+  },
+
+  async deleteBarber(id: string) {
+    const { error } = await supabase
+      .from("professionals")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
   },
 
   /**

@@ -1,257 +1,338 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useInfiniteQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentShopId } from "@/hooks/use-current-shop";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { customerService, Customer, CustomerStats } from "@/services/customer.service";
+import { useCurrentShop } from "@/hooks/use-current-shop";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
-import { useState, useRef, useEffect } from "react";
-import { Search, Users, ShieldOff, ShieldCheck, Loader2 } from "lucide-react";
+import { brl } from "@/lib/format";
+import { Search, Users, ShieldOff, ShieldCheck, History, Calendar, Scissors, Phone, Mail, DollarSign, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/admin/clientes")({ component: Page });
 
-const PAGE_SIZE = 20;
-
 function Page() {
-  const shopId = useCurrentShopId();
-  const [q, setQ] = useState("");
-  const [sortBy, setSortBy] = useState("created_at");
+  const { shopId, shop } = useCurrentShop();
+  const canManage = shop?.role === "owner" || shop?.role === "admin";
+
+  const [search, setSearch] = useState("");
   const [filterBlocked, setFilterBlocked] = useState("all");
-  const parentRef = useRef<HTMLDivElement>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ["customers", shopId, q, sortBy, filterBlocked],
+  const { data: result, isLoading, refetch } = useQuery({
+    queryKey: ["admin-customers", shopId, search, filterBlocked],
     enabled: !!shopId,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam = 0 }) => {
-      let query = supabase
-        .from("customers")
-        .select("*", { count: "exact" })
-        .eq("barbershop_id", shopId)
-        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
-
-      if (q) {
-        query = query.or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`);
-      }
-
-      if (filterBlocked === "blocked") {
-        query = query.eq("blocked", true);
-      } else if (filterBlocked === "active") {
-        query = query.eq("blocked", false);
-      }
-
-      if (sortBy === "created_at") {
-        query = query.order("created_at", { ascending: false });
-      } else if (sortBy === "full_name") {
-        query = query.order("full_name", { ascending: true });
-      } else if (sortBy === "no_show_count") {
-        query = query.order("no_show_count", { ascending: false });
-      }
-
-      const { data, count } = await query;
-      return {
-        data: data ?? [],
-        nextPage: (data?.length ?? 0) === PAGE_SIZE ? pageParam + 1 : undefined,
-        totalCount: count ?? 0,
-      };
-    },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
+    queryFn: () =>
+      customerService.getCustomers(shopId!, {
+        q: search || undefined,
+        blocked: filterBlocked === "blocked" ? true : filterBlocked === "active" ? false : undefined,
+        limit: 100,
+      }),
   });
 
-  const allRows = data?.pages.flatMap((page) => page.data) ?? [];
+  const customers = result?.data ?? [];
 
-  const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? allRows.length + 1 : allRows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
-    overscan: 5,
+  // Query para obter detalhes e histórico do cliente selecionado
+  const { data: customerHistory, isLoading: loadingHistory } = useQuery({
+    queryKey: ["customer-history", selectedCustomer?.id],
+    enabled: !!selectedCustomer?.id,
+    queryFn: () => customerService.getCustomerHistory(selectedCustomer!.id),
   });
 
-  useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-    if (
-      lastItem &&
-      lastItem.index >= allRows.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
+  const { data: customerStats } = useQuery({
+    queryKey: ["customer-stats", selectedCustomer?.id],
+    enabled: !!selectedCustomer?.id,
+    queryFn: () => customerService.getCustomerStats(selectedCustomer!.id),
+  });
+
+  async function handleToggleBlock(c: Customer, e?: React.MouseEvent) {
+    if (e) e.stopPropagation();
+    if (!canManage) {
+      toast.error("Permissão insuficiente para alterar status de clientes.");
+      return;
     }
-  }, [
-    hasNextPage,
-    fetchNextPage,
-    allRows.length,
-    isFetchingNextPage,
-    rowVirtualizer.getVirtualItems(),
-  ]);
 
-  async function toggleBlock(c: any) {
-    const { error } = await supabase
-      .from("customers")
-      .update({ blocked: !c.blocked, ...(c.blocked ? { no_show_count: 0 } : {}) })
-      .eq("id", c.id);
-    if (error) return toast.error(error.message);
-    toast.success(c.blocked ? "Cliente desbloqueado" : "Cliente bloqueado");
-    refetch();
+    try {
+      if (c.blocked) {
+        await customerService.unblockCustomer(c.id);
+        toast.success(`Cliente "${c.full_name}" desbloqueado com sucesso!`);
+      } else {
+        await customerService.blockCustomer(c.id);
+        toast.warning(`Cliente "${c.full_name}" foi bloqueado.`);
+      }
+      refetch();
+      if (selectedCustomer?.id === c.id) {
+        setSelectedCustomer((prev) => (prev ? { ...prev, blocked: !prev.blocked } : null));
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar cliente.");
+    }
   }
-
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="font-display text-3xl font-bold">Clientes</h1>
-        <p className="text-muted-foreground">Sua base de clientes.</p>
+        <p className="text-muted-foreground">Base de clientes e histórico detalhado de atendimentos.</p>
       </div>
-      <div className="flex flex-wrap items-center gap-4 bg-card/50 p-4 rounded-xl border border-border/40 backdrop-blur-md">
-        <div className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
-          <Input className="pl-9 h-11 bg-background/50 border-border/40 rounded-xl" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
+
+      {/* Barra de Filtros e Busca */}
+      <div className="flex flex-wrap items-center gap-4 border border-border/60 bg-card/40 p-4 backdrop-blur-md">
+        <div className="relative min-w-[280px] flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="h-11 rounded-none border-border bg-background/50 pl-9 text-sm"
+            placeholder="Buscar por nome, telefone ou e-mail..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Select value={filterBlocked} onValueChange={setFilterBlocked}>
-              <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os clientes</SelectItem>
-                <SelectItem value="active">Apenas ativos</SelectItem>
-                <SelectItem value="blocked">Apenas bloqueados</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1.5 min-w-[150px]">
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="h-11 bg-background/50 border-border/40 rounded-xl">
-                <SelectValue placeholder="Ordenar por" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created_at">Mais recentes</SelectItem>
-                <SelectItem value="full_name">Nome (A-Z)</SelectItem>
-                <SelectItem value="no_show_count">Mais faltas</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="w-[180px]">
+          <Select value={filterBlocked} onValueChange={setFilterBlocked}>
+            <SelectTrigger className="h-11 rounded-none border-border bg-background/50 text-sm">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent className="rounded-none">
+              <SelectItem value="all">Todos os clientes</SelectItem>
+              <SelectItem value="active">Apenas ativos</SelectItem>
+              <SelectItem value="blocked">Apenas bloqueados</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
+
+      {/* Modal / Detalhes do Histórico do Cliente */}
+      <Dialog open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
+        <DialogContent className="max-w-2xl rounded-none border-border p-6">
+          {selectedCustomer && (
+            <div className="space-y-6">
+              <DialogHeader>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <DialogTitle className="font-serif text-2xl font-bold">
+                      {selectedCustomer.full_name}
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      {selectedCustomer.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5 text-accent" /> {selectedCustomer.phone}
+                        </span>
+                      )}
+                      {selectedCustomer.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3.5 w-3.5 text-accent" /> {selectedCustomer.email}
+                        </span>
+                      )}
+                    </DialogDescription>
+                  </div>
+
+                  <Badge
+                    variant="outline"
+                    className={`rounded-none font-bold uppercase text-[10px] ${
+                      selectedCustomer.blocked
+                        ? "border-destructive/30 bg-destructive/10 text-destructive"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                    }`}
+                  >
+                    {selectedCustomer.blocked ? "Bloqueado" : "Ativo"}
+                  </Badge>
+                </div>
+              </DialogHeader>
+
+              {/* Estatísticas Rápidas */}
+              <div className="grid grid-cols-3 gap-3 border-y border-border/40 py-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Total Gasto
+                  </span>
+                  <div className="font-serif text-xl font-bold text-accent">
+                    {brl(customerStats?.totalSpent ?? 0)}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Atendimentos
+                  </span>
+                  <div className="font-serif text-xl font-bold text-foreground">
+                    {customerStats?.totalAppointments ?? 0}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Última Visita
+                  </span>
+                  <div className="text-xs font-semibold text-foreground">
+                    {customerStats?.lastVisit
+                      ? format(new Date(customerStats.lastVisit), "dd/MM/yyyy", { locale: ptBR })
+                      : "Nunca"}
+                  </div>
+                </div>
+              </div>
+
+              {/* Lista de Atendimentos Anteriores */}
+              <div className="space-y-3">
+                <h4 className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  <History className="h-4 w-4 text-accent" /> Histórico de Agendamentos
+                </h4>
+
+                {loadingHistory ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground animate-pulse">
+                    Carregando histórico...
+                  </div>
+                ) : !customerHistory || customerHistory.length === 0 ? (
+                  <div className="border border-border/40 p-8 text-center text-xs text-muted-foreground">
+                    Nenhum agendamento registrado para este cliente.
+                  </div>
+                ) : (
+                  <div className="max-h-[300px] divide-y divide-border/20 overflow-y-auto border border-border/40">
+                    {customerHistory.map((appt: any) => {
+                      const serviceNames = (appt.services ?? [])
+                        .map((s: any) => s.service?.name)
+                        .filter(Boolean)
+                        .join(", ") || "Atendimento";
+
+                      return (
+                        <div key={appt.id} className="flex items-center justify-between p-4 text-xs hover:bg-card/40">
+                          <div className="space-y-1">
+                            <div className="font-bold text-foreground">{serviceNames}</div>
+                            <div className="flex items-center gap-3 text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(appt.scheduled_start), "dd/MM/yyyy · HH:mm", { locale: ptBR })}
+                              </span>
+                              {appt.professional?.display_name && (
+                                <span>Profissional: {appt.professional.display_name}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="text-right">
+                            <div className="font-bold text-accent">{brl(Number(appt.total_amount || 0))}</div>
+                            <Badge variant="outline" className="mt-1 rounded-none text-[9px] uppercase border-border/40">
+                              {appt.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {canManage && (
+                <div className="flex justify-end border-t border-border/40 pt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleToggleBlock(selectedCustomer)}
+                    className="rounded-none text-xs"
+                  >
+                    {selectedCustomer.blocked ? (
+                      <>
+                        <ShieldCheck className="mr-1.5 h-3.5 w-3.5 text-emerald-500" /> Desbloquear cliente
+                      </>
+                    ) : (
+                      <>
+                        <ShieldOff className="mr-1.5 h-3.5 w-3.5 text-destructive" /> Bloquear agendamentos
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Tabela de Clientes */}
       {isLoading ? (
         <TableSkeleton />
-      ) : allRows.length === 0 ? (
+      ) : customers.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={q ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
-          description={q ? "Tente outro termo de busca." : "Os clientes aparecem aqui automaticamente após o primeiro agendamento."}
+          title={search ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
+          description={
+            search
+              ? "Tente outro termo de busca."
+              : "Os clientes são registrados automaticamente ao realizar agendamentos ou compras."
+          }
         />
       ) : (
-        <Card className="overflow-hidden border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
-          <div 
-            ref={parentRef}
-            className="h-[600px] overflow-auto scrollbar-thin scrollbar-thumb-muted-foreground/20"
-          >
-            <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
-            >
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 z-10 border-b border-border/40 bg-background/80 backdrop-blur-md text-left text-xs uppercase tracking-widest text-muted-foreground/60">
-                  <tr>
-                    <th className="px-6 py-4 font-bold">Nome</th>
-                    <th className="px-6 py-4 font-bold">Telefone</th>
-                    <th className="px-6 py-4 font-bold">E-mail</th>
-                    <th className="px-6 py-4 font-bold">Faltas</th>
-                    <th className="px-6 py-4 font-bold">Status</th>
-                    <th className="px-6 py-4 text-right font-bold">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                    const isLoaderRow = virtualRow.index > allRows.length - 1;
-                    const c = allRows[virtualRow.index];
-
-                    if (isLoaderRow) {
-                      return (
-                        <tr 
-                          key="loader"
-                          style={{
-                            position: "absolute",
-                            top: 0,
-                            left: 0,
-                            width: "100%",
-                            height: `${virtualRow.size}px`,
-                            transform: `translateY(${virtualRow.start}px)`,
-                          }}
-                        >
-                          <td colSpan={6} className="py-4 text-center">
-                            <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
-                          </td>
-                        </tr>
-                      );
-                    }
-
-                    return (
-                      <tr 
-                        key={c.id} 
-                        className="transition-colors hover:bg-black/5"
-                        style={{
-                          position: "absolute",
-                          top: 0,
-                          left: 0,
-                          width: "100%",
-                          height: `${virtualRow.size}px`,
-                          transform: `translateY(${virtualRow.start}px)`,
+        <Card className="overflow-hidden rounded-none border border-border bg-card/40 backdrop-blur-md">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border/60 bg-background/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <tr>
+                  <th className="px-6 py-4">Nome do Cliente</th>
+                  <th className="px-6 py-4">Telefone</th>
+                  <th className="px-6 py-4">E-mail</th>
+                  <th className="px-6 py-4">Faltas (No-Show)</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {customers.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => setSelectedCustomer(c)}
+                    className="cursor-pointer transition-colors hover:bg-card/80"
+                  >
+                    <td className="px-6 py-4">
+                      <div className="font-serif font-bold text-foreground">{c.full_name}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">{c.phone || "—"}</td>
+                    <td className="px-6 py-4 text-xs text-muted-foreground">{c.email || "—"}</td>
+                    <td className="px-6 py-4">
+                      {Number(c.no_show_count ?? 0) > 0 ? (
+                        <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold">
+                          {c.no_show_count} {Number(c.no_show_count) === 1 ? "falta" : "faltas"}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60">0</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {c.blocked ? (
+                        <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
+                          Bloqueado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
+                          Ativo
+                        </Badge>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCustomer(c);
                         }}
+                        className="rounded-none text-xs hover:text-accent"
                       >
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-foreground">{c.full_name}</div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground font-medium">{c.phone}</td>
-                        <td className="px-6 py-4 text-muted-foreground font-medium">{c.email}</td>
-                        <td className="px-6 py-4">
-                          {Number(c.no_show_count ?? 0) > 0 ? (
-                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 font-bold">
-                              {c.no_show_count} {Number(c.no_show_count) === 1 ? 'falta' : 'faltas'}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground/40 font-medium">0</span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4">
-                          {c.blocked
-                            ? <Badge className="bg-destructive/10 text-destructive border-destructive/20 font-bold" variant="outline">Bloqueado</Badge>
-                            : <Badge variant="outline" className="bg-success/10 text-success border-success/20 font-bold">Ativo</Badge>}
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Button size="sm" variant="ghost" onClick={() => toggleBlock(c)} className="rounded-lg hover:bg-muted/50">
-                            {c.blocked ? <><ShieldCheck className="mr-2 h-4 w-4 text-success"/>Desbloquear</> : <><ShieldOff className="mr-2 h-4 w-4 text-destructive"/>Bloquear</>}
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        <History className="mr-1.5 h-3.5 w-3.5" /> Ver histórico
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </Card>
       )}
-
     </div>
   );
 }

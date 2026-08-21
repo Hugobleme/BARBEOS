@@ -41,7 +41,6 @@ function ServicesDirectoryPage() {
           description,
           price,
           duration_min,
-          category,
           barbershop:barbershops!inner(
             id,
             name,
@@ -70,8 +69,7 @@ function ServicesDirectoryPage() {
       const matchService =
         !query ||
         item.name.toLowerCase().includes(query) ||
-        (item.description && item.description.toLowerCase().includes(query)) ||
-        (item.category && item.category.toLowerCase().includes(query));
+        (item.description && item.description.toLowerCase().includes(query));
 
       const matchShop =
         !query ||
