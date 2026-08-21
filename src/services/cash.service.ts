@@ -131,6 +131,101 @@ export const cashService = {
   },
 
   /**
+   * Registra um lançamento avulso no caixa (entrada ou saída)
+   */
+  async createCashEntry(params: {
+    barbershop_id: string;
+    description: string;
+    amount?: number;
+    amount_cents?: number;
+    type?: "entrada" | "saída" | "in" | "out" | "sale" | "withdraw";
+    kind?: string;
+    payment_method?: PaymentMethod | string;
+    method?: PaymentMethod;
+    created_by?: string;
+    session_id?: string;
+  }) {
+    const finalAmount = params.amount ?? (params.amount_cents ? params.amount_cents / 100 : 0);
+    const kind =
+      params.kind ??
+      (params.type === "saída" || params.type === "out" || params.type === "withdraw" ? "withdraw" : "in");
+
+    const method: PaymentMethod =
+      params.method ??
+      (params.payment_method === "PIX"
+        ? "pix"
+        : params.payment_method === "Cartão"
+        ? "credit"
+        : params.payment_method === "Dinheiro"
+        ? "cash"
+        : (params.payment_method as PaymentMethod) || "cash");
+
+    let sessionId = params.session_id;
+    if (!sessionId) {
+      const openSession = await this.getOpenSession(params.barbershop_id);
+      sessionId = openSession?.id;
+      if (!sessionId && params.created_by) {
+        const newSession = await this.openSession(params.barbershop_id, params.created_by, 0);
+        sessionId = newSession.id;
+      }
+    }
+
+    if (!sessionId) {
+      throw new Error("Não foi possível encontrar ou abrir uma sessão de caixa ativa.");
+    }
+
+    return this.createTransaction({
+      barbershop_id: params.barbershop_id,
+      session_id: sessionId,
+      kind,
+      method,
+      amount: finalAmount,
+      description: params.description.trim(),
+      created_by: params.created_by || "",
+    });
+  },
+
+  /**
+   * Obtém resumo da carteira/saldo acumulado da barbearia
+   */
+  async getWalletSummary(barbershopId: string) {
+    const { data: transactions, error: txErr } = await supabase
+      .from("cash_transactions")
+      .select("amount, kind, method, created_at")
+      .eq("barbershop_id", barbershopId);
+
+    if (txErr) throw txErr;
+
+    let balance = 0;
+    (transactions ?? []).forEach((t) => {
+      if (t.kind === "sale" || t.kind === "in" || t.kind === "deposit") {
+        balance += Number(t.amount || 0);
+      } else if (t.kind === "withdraw" || t.kind === "fee" || t.kind === "out") {
+        balance -= Number(t.amount || 0);
+      }
+    });
+
+    const { data: pendingAppts, error: apptErr } = await supabase
+      .from("appointments")
+      .select("total_amount")
+      .eq("barbershop_id", barbershopId)
+      .in("status", ["scheduled", "in_progress"]);
+
+    if (apptErr) throw apptErr;
+
+    const pendingReceivables = (pendingAppts ?? []).reduce(
+      (sum, a) => sum + Number(a.total_amount || 0),
+      0
+    );
+
+    return {
+      balance,
+      pendingReceivables,
+      transactionsCount: transactions?.length ?? 0,
+    };
+  },
+
+  /**
    * Atualiza um lançamento do caixa
    */
   async updateCashEntry(id: string, data: Database["public"]["Tables"]["cash_transactions"]["Update"]) {

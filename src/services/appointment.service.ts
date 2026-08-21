@@ -245,6 +245,25 @@ export const appointmentService = {
     return (data as Appointment[]) ?? [];
   },
 
+  async getTodayAppointments(shopId: string): Promise<Appointment[]> {
+    return this.getByDate(shopId, new Date());
+  },
+
+  async getNextAppointments(shopId: string, limit: number = 5): Promise<Appointment[]> {
+    const now = new Date();
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
+      .eq("barbershop_id", shopId)
+      .gte("scheduled_start", now.toISOString())
+      .in("status", ["scheduled", "in_progress"])
+      .order("scheduled_start", { ascending: true })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data as Appointment[]) ?? [];
+  },
+
   async updateStatus(id: string, status: AppointmentStatus) {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", id);
     if (error) throw error;

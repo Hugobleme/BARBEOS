@@ -1,187 +1,352 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShop } from "@/hooks/use-current-shop";
+import { useAuth } from "@/hooks/use-auth";
+import { cashService, CashTransaction, PaymentMethod } from "@/services/cash.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { brl } from "@/lib/format";
-import { Wallet, Search, Plus, Minus, Percent } from "lucide-react";
+import { format, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Wallet,
+  ArrowDownRight,
+  ArrowUpRight,
+  DollarSign,
+  Clock,
+  Send,
+  ShieldCheck,
+  Receipt,
+  HelpCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/carteira")({
-  head: () => ({ meta: [{ title: "Carteira — Admin BarberOS" }, { name: "robots", content: "noindex" }] }),
-  component: Page,
+  head: () => ({ meta: [{ title: "Carteira & Saldo — BarberOS" }] }),
+  component: CarteiraPage,
 });
 
-function Page() {
-  const { shopId } = useCurrentShop();
-  const [q, setQ] = useState("");
+const METHOD_LABELS: Record<string, string> = {
+  cash: "Dinheiro",
+  pix: "PIX",
+  credit: "Cartão de Crédito",
+  debit: "Cartão de Débito",
+  transfer: "Transferência",
+  other: "Outro",
+};
 
-  const { data: settings, refetch: refetchSettings } = useQuery({
+function CarteiraPage() {
+  const { shopId, shop } = useCurrentShop();
+  const { user } = useAuth();
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+
+  const isOwner = shop?.role === "owner";
+  const canWithdraw = isOwner;
+
+  // Consulta 1: Resumo da Carteira
+  const { data: walletSummary, isLoading: loadingSummary, refetch: refetchSummary } = useQuery({
+    queryKey: ["admin-wallet-summary", shopId],
     enabled: !!shopId,
-    queryKey: ["wallet-settings", shopId],
-    queryFn: async () => {
-      const { data } = await supabase.from("barbershops").select("settings").eq("id", shopId!).single();
-      const c = ((data?.settings as any)?.cashback ?? {}) as { enabled?: boolean; percent?: number };
-      return { enabled: !!c.enabled, percent: Number(c.percent ?? 5) };
-    },
-    staleTime: 1000 * 60 * 5,
+    queryFn: () => cashService.getWalletSummary(shopId!),
   });
 
-  const { data: balances, refetch: refetchBalances } = useQuery({
+  // Consulta 2: Últimas 10 Transações
+  const { data: recentTransactions, isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
+    queryKey: ["admin-wallet-recent-txs", shopId],
     enabled: !!shopId,
-    queryKey: ["wallet-balances", shopId],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("wallet_balances")
-        .select("id, balance, lifetime_credited, updated_at, customer:customers(id, full_name, phone)")
-        .eq("barbershop_id", shopId!)
-        .order("balance", { ascending: false })
-        .limit(500);
-      return data ?? [];
+      const now = new Date();
+      const past30Days = subDays(now, 30);
+      const all = await cashService.getCashEntries(shopId!, past30Days, now);
+      return all.slice(0, 10);
     },
-    staleTime: 1000 * 60 * 1, // 1 minute
   });
 
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return balances ?? [];
-    return (balances ?? []).filter((b: any) =>
-      (b.customer?.full_name ?? "").toLowerCase().includes(term) ||
-      (b.customer?.phone ?? "").toLowerCase().includes(term),
-    );
-  }, [balances, q]);
-
-  async function saveSettings(next: { enabled: boolean; percent: number }) {
-    const { data: cur } = await supabase.from("barbershops").select("settings").eq("id", shopId!).single();
-    const merged = { ...((cur?.settings as any) ?? {}), cashback: next };
-    const { error } = await supabase.from("barbershops").update({ settings: merged }).eq("id", shopId!);
-    if (error) return toast.error(error.message);
-    toast.success("Configurações salvas");
-    refetchSettings();
-  }
-
-  const totalCredits = (balances ?? []).reduce((acc: number, b: any) => acc + Number(b.balance), 0);
+  const balance = walletSummary?.balance ?? 0;
+  const pendingReceivables = walletSummary?.pendingReceivables ?? 0;
 
   return (
     <div className="space-y-8">
-      <header>
-        <div className="text-xs uppercase tracking-[0.3em] text-accent">Cashback & créditos</div>
-        <h1 className="mt-1 font-display text-3xl font-bold">Carteira</h1>
-        <p className="text-sm text-muted-foreground">Devolva uma % de cada atendimento em crédito. Use no PDV como forma de pagamento.</p>
-      </header>
+      {/* Topo / Cabeçalho */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold">Carteira & Saldo da Barbearia</h1>
+          <p className="text-muted-foreground">
+            Acompanhe o saldo consolidado, recebíveis futuros e realize retiradas de lucros.
+          </p>
+        </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="p-5"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Saldo total dos clientes</div><div className="mt-2 font-display text-3xl font-bold text-accent">{brl(totalCredits)}</div></Card>
-        <Card className="p-5"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Clientes com saldo</div><div className="mt-2 font-display text-3xl font-bold">{(balances ?? []).filter((b: any) => Number(b.balance) > 0).length}</div></Card>
-        <Card className="p-5"><div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Cashback configurado</div><div className="mt-2 font-display text-3xl font-bold">{settings?.enabled ? `${settings.percent}%` : "—"}</div></Card>
+        <div>
+          {canWithdraw ? (
+            <Button
+              onClick={() => setWithdrawModalOpen(true)}
+              className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
+            >
+              <Send className="mr-1.5 h-3.5 w-3.5" /> Retirar Saldo
+            </Button>
+          ) : (
+            <Badge variant="outline" className="rounded-none text-xs text-muted-foreground">
+              Apenas sócios e donos podem realizar retiradas
+            </Badge>
+          )}
+        </div>
       </div>
 
-      <Card className="p-6">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-lg bg-accent/15 text-accent"><Percent className="h-5 w-5" /></div>
-          <div className="flex-1">
-            <div className="font-medium">Cashback ativo</div>
-            <div className="text-xs text-muted-foreground">Quando ligado, % do valor pago volta como crédito para o cliente.</div>
+      {/* Cards de Saldo */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        {/* Saldo Atual Disponível */}
+        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Saldo Disponível
+            </span>
+            <div className="grid h-8 w-8 place-items-center bg-accent/15 text-accent">
+              <Wallet className="h-4 w-4" />
+            </div>
           </div>
-          <Switch checked={!!settings?.enabled} onCheckedChange={(v) => saveSettings({ percent: settings?.percent ?? 5, enabled: v })} />
+          <div className={`mt-3 font-serif text-4xl font-bold ${balance >= 0 ? "text-accent" : "text-destructive"}`}>
+            {brl(balance)}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Líquido acumulado de vendas e despesas</p>
+        </Card>
+
+        {/* Recebíveis Futuros */}
+        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Recebíveis Futuros
+            </span>
+            <div className="grid h-8 w-8 place-items-center bg-blue-500/15 text-blue-400">
+              <Clock className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 font-serif text-4xl font-bold text-foreground">
+            {brl(pendingReceivables)}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Agendamentos marcados pendentes de atendimento</p>
+        </Card>
+
+        {/* Total Movimentações */}
+        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Histórico de Lançamentos
+            </span>
+            <div className="grid h-8 w-8 place-items-center bg-emerald-500/15 text-emerald-400">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3 font-serif text-4xl font-bold text-foreground">
+            {walletSummary?.transactionsCount ?? 0}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Transações registradas no caixa</p>
+        </Card>
+      </div>
+
+      {/* Tabela: Últimas 10 Transações */}
+      <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
+        <div className="mb-4 flex items-center justify-between border-b border-border/40 pb-3">
+          <div className="flex items-center gap-2 font-serif text-lg font-bold">
+            <Receipt className="h-5 w-5 text-accent" />
+            <span>Últimas Movimentações da Carteira</span>
+          </div>
         </div>
-        <div className="mt-6 grid gap-2 md:max-w-sm">
-          <Label>Percentual de cashback (%)</Label>
-          <Input
-            type="number" min="0" max="100" step="0.5"
-            defaultValue={settings?.percent ?? 5}
-            onBlur={(e) => saveSettings({ enabled: !!settings?.enabled, percent: Math.max(0, Math.min(100, Number(e.target.value))) })}
+
+        {loadingTransactions ? (
+          <TableSkeleton />
+        ) : !recentTransactions || recentTransactions.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="Nenhuma movimentação recente"
+            description="As movimentações de vendas e retiradas aparecerão aqui."
           />
-          <p className="text-xs text-muted-foreground">Ex.: 5% → em um corte de R$ 50 o cliente ganha R$ 2,50 de crédito.</p>
-        </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                <tr>
+                  <th className="py-3">Data / Hora</th>
+                  <th className="py-3">Tipo</th>
+                  <th className="py-3">Descrição</th>
+                  <th className="py-3">Forma de Pagamento</th>
+                  <th className="py-3 text-right">Valor</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/20">
+                {recentTransactions.map((tx) => {
+                  const isEntry = tx.kind === "sale" || tx.kind === "in" || tx.kind === "deposit";
+
+                  return (
+                    <tr key={tx.id} className="hover:bg-card/60 transition-colors">
+                      <td className="py-3 font-mono text-xs text-muted-foreground">
+                        {format(new Date(tx.created_at), "dd/MM/yyyy · HH:mm", { locale: ptBR })}
+                      </td>
+                      <td className="py-3">
+                        {isEntry ? (
+                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
+                            Entrada
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
+                            Retirada / Saída
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="py-3 font-medium text-foreground">{tx.description || "Transação"}</td>
+                      <td className="py-3 text-xs text-muted-foreground">
+                        {METHOD_LABELS[tx.method] || tx.method}
+                      </td>
+                      <td className={`py-3 text-right font-mono font-bold ${isEntry ? "text-emerald-500" : "text-destructive"}`}>
+                        {isEntry ? `+ ${brl(Number(tx.amount))}` : `- ${brl(Number(tx.amount))}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-display text-xl font-bold">Saldos dos clientes</h2>
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="w-64 pl-9" placeholder="Buscar cliente…" value={q} onChange={(e) => setQ(e.target.value)} />
-          </div>
-        </div>
-        <Card className="divide-y divide-border">
-          {filtered.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">Ninguém com saldo ainda.</div>}
-          {filtered.map((b: any) => (
-            <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
-              <div>
-                <div className="font-medium">{b.customer?.full_name ?? "—"}</div>
-                <div className="text-xs text-muted-foreground">{b.customer?.phone ?? "sem telefone"} · atualizado {format(new Date(b.updated_at), "d MMM yyyy", { locale: ptBR })}</div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <div className="font-display text-2xl font-bold text-accent">{brl(Number(b.balance))}</div>
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">recebeu {brl(Number(b.lifetime_credited))}</div>
-                </div>
-                <WalletActions customerId={b.customer?.id} customerName={b.customer?.full_name} current={Number(b.balance)} onDone={() => refetchBalances()} />
-              </div>
-            </div>
-          ))}
-        </Card>
-      </section>
+      {/* Modal de Retirada de Saldo */}
+      <WithdrawModal
+        open={withdrawModalOpen}
+        onOpenChange={setWithdrawModalOpen}
+        shopId={shopId!}
+        currentBalance={balance}
+        userId={user?.id || ""}
+        onSuccess={() => {
+          setWithdrawModalOpen(false);
+          refetchSummary();
+          refetchTransactions();
+        }}
+      />
     </div>
   );
 }
 
-function WalletActions({ customerId, customerName, current, onDone }: { customerId: string; customerName?: string; current: number; onDone: () => void }) {
-  const { shopId } = useCurrentShop();
-  const [open, setOpen] = useState<null | "credit" | "debit">(null);
-  const [amount, setAmount] = useState("");
-  const [desc, setDesc] = useState("");
+function WithdrawModal({
+  open,
+  onOpenChange,
+  shopId,
+  currentBalance,
+  userId,
+  onSuccess,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  shopId: string;
+  currentBalance: number;
+  userId: string;
+  onSuccess: () => void;
+}) {
+  const [amountStr, setAmountStr] = useState("");
+  const [description, setDescription] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("pix");
   const [busy, setBusy] = useState(false);
 
-  async function submit() {
-    const a = Number(amount.replace(",", "."));
-    if (!a || a <= 0) return toast.error("Informe um valor válido");
-    if (open === "debit" && a > current) return toast.error("Saldo insuficiente");
+  async function handleWithdraw(e: React.FormEvent) {
+    e.preventDefault();
+    const amountNum = Number(amountStr.replace(",", "."));
+
+    if (!amountNum || amountNum <= 0) return toast.error("Informe um valor de retirada válido.");
+    if (amountNum > currentBalance) return toast.error("O valor de retirada excede o saldo disponível na carteira.");
+
     setBusy(true);
-    const rpc = open === "credit" ? "credit_wallet_manual" : "redeem_wallet";
-    const args: any = open === "credit"
-      ? { _barbershop_id: shopId!, _customer_id: customerId, _amount: a, _description: desc || "Crédito manual" }
-      : { _barbershop_id: shopId!, _customer_id: customerId, _amount: a, _description: desc || "Uso de crédito" };
-    const { error } = await supabase.rpc(rpc as any, args);
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(open === "credit" ? "Crédito lançado" : "Crédito utilizado");
-    setOpen(null); setAmount(""); setDesc("");
-    onDone();
+    try {
+      await cashService.createCashEntry({
+        barbershop_id: shopId,
+        description: description.trim() || "Retirada de lucros / Sangria de carteira",
+        amount: amountNum,
+        type: "saída",
+        payment_method: method,
+        created_by: userId,
+      });
+
+      toast.success("Retirada registrada com sucesso no fluxo financeiro!");
+      setAmountStr("");
+      setDescription("");
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao registrar retirada.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
-    <>
-      <Button size="sm" variant="outline" onClick={() => setOpen("credit")}><Plus className="mr-1 h-4 w-4" />Creditar</Button>
-      <Button size="sm" variant="outline" onClick={() => setOpen("debit")} disabled={current <= 0}><Minus className="mr-1 h-4 w-4" />Usar</Button>
-      <Dialog open={open !== null} onOpenChange={(v) => !v && setOpen(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>{open === "credit" ? "Creditar" : "Usar crédito"} · {customerName}</DialogTitle></DialogHeader>
-          <div className="grid gap-3">
-            <div className="grid gap-2">
-              <Label>Valor em R$ {open === "debit" ? `(saldo: ${brl(current)})` : ""}</Label>
-              <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-none border-border sm:max-w-md">
+        <form onSubmit={handleWithdraw}>
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">Retirar Saldo da Barbearia</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 text-xs">
+            <div className="border border-border bg-card/60 p-3">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível:</span>
+              <div className="font-serif text-xl font-bold text-accent">{brl(currentBalance)}</div>
             </div>
-            <div className="grid gap-2">
-              <Label>Descrição (opcional)</Label>
-              <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder={open === "credit" ? "Ex.: Cortesia aniversário" : "Ex.: Pagamento parcial corte"} />
+
+            <div className="space-y-1.5">
+              <Label htmlFor="w_amount">Valor a Retirar (R$) *</Label>
+              <Input
+                id="w_amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                max={currentBalance > 0 ? currentBalance : 0.01}
+                value={amountStr}
+                onChange={(e) => setAmountStr(e.target.value)}
+                placeholder="0,00"
+                className="rounded-none"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Forma de Saída</Label>
+              <Select value={method} onValueChange={(v: any) => setMethod(v)}>
+                <SelectTrigger className="rounded-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-none">
+                  <SelectItem value="pix">Transferência PIX</SelectItem>
+                  <SelectItem value="transfer">TED / DOC</SelectItem>
+                  <SelectItem value="cash">Dinheiro em Espécie</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="w_desc">Motivo / Descrição</Label>
+              <Input
+                id="w_desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex.: Distribuição de lucros sócios, Transferência para conta PJ"
+                className="rounded-none"
+              />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(null)}>Cancelar</Button>
-            <Button onClick={submit} disabled={busy}>{busy ? "Salvando…" : "Confirmar"}</Button>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-none">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={busy} className="rounded-none bg-accent text-accent-foreground">
+              {busy ? "Processando..." : "Confirmar Retirada"}
+            </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
