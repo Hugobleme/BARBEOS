@@ -1,570 +1,430 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState, lazy, Suspense, useRef, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentShopId } from "@/hooks/use-current-shop";
+import { useMemo, useState, lazy, Suspense } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useCurrentShop } from "@/hooks/use-current-shop";
+import { reportService } from "@/services/report.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl } from "@/lib/format";
-import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Calendar, DollarSign, Download, TrendingUp, Users, Star, Trophy, ChartBar, Loader2 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/admin/layout/EmptyState";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
+import { Skeleton } from "@/components/ui/skeleton";
+import { brl } from "@/lib/format";
+import {
+  startOfDay,
+  endOfDay,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+  format,
+  eachDayOfInterval,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import {
+  Calendar,
+  DollarSign,
+  TrendingUp,
+  Users,
+  Trophy,
+  Scissors,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  UserCheck,
+  Building2,
+  RefreshCw,
+} from "lucide-react";
+import { toast } from "sonner";
 
-
-const RevenueChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.RevenueChart })));
-const ServicesChart = lazy(() => import("@/components/admin/relatorios/ReportCharts").then(m => ({ default: m.ServicesChart })));
+const RevenueChart = lazy(() =>
+  import("@/components/admin/relatorios/ReportCharts").then((m) => ({ default: m.RevenueChart }))
+);
+const ServicesChart = lazy(() =>
+  import("@/components/admin/relatorios/ReportCharts").then((m) => ({ default: m.ServicesChart }))
+);
 
 export const Route = createFileRoute("/admin/relatorios")({
-  head: () => ({ meta: [{ title: "Relatórios — BarberOS" }] }),
-  component: Relatorios,
+  head: () => ({ meta: [{ title: "Relatórios & Métricas — BarberOS" }] }),
+  component: RelatoriosPage,
 });
 
-function Relatorios() {
-  const shopId = useCurrentShopId();
-  const [range, setRange] = useState<"7" | "30" | "90" | "custom">("30");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [customStart, setCustomStart] = useState<Date>(subDays(new Date(), 29));
-  const [customEnd, setCustomEnd] = useState<Date>(new Date());
-  
-  const days = range === "custom" ? 0 : parseInt(range);
-  const start = useMemo(() => {
-    if (range === "custom") return startOfDay(customStart);
-    return startOfDay(subDays(new Date(), days - 1));
-  }, [range, days, customStart]);
-  
-  const end = useMemo(() => {
-    if (range === "custom") return endOfDay(customEnd);
-    return endOfDay(new Date());
-  }, [range, days, customEnd]);
+function RelatoriosPage() {
+  const { shopId } = useCurrentShop();
 
-  const { data } = useQuery({
+  const [preset, setPreset] = useState<"7" | "30" | "month" | "custom">("30");
+  const [customStart, setCustomStart] = useState<string>(
+    subDays(new Date(), 29).toISOString().split("T")[0]
+  );
+  const [customEnd, setCustomEnd] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+
+  // Calcula intervalo de datas
+  const { startDate, endDate } = useMemo(() => {
+    const now = new Date();
+    if (preset === "7") {
+      return { startDate: startOfDay(subDays(now, 6)), endDate: endOfDay(now) };
+    }
+    if (preset === "30") {
+      return { startDate: startOfDay(subDays(now, 29)), endDate: endOfDay(now) };
+    }
+    if (preset === "month") {
+      return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+    }
+    return {
+      startDate: startOfDay(new Date(customStart || subDays(now, 29))),
+      endDate: endOfDay(new Date(customEnd || now)),
+    };
+  }, [preset, customStart, customEnd]);
+
+  // Consulta 1: Relatório de Faturamento
+  const {
+    data: revenueData,
+    isLoading: loadingRevenue,
+    refetch: refetchRevenue,
+  } = useQuery({
+    queryKey: ["report-revenue", shopId, startDate.toISOString(), endDate.toISOString()],
     enabled: !!shopId,
-    queryKey: ["report", shopId, range],
-    queryFn: async () => {
-      const [apptsRes, svcRes, prosRes, surveysRes] = await Promise.all([
-        supabase.from("appointments")
-          .select("id,status,total_amount,scheduled_start,scheduled_end,professional_id,customer_id")
-          .eq("barbershop_id", shopId)
-          .gte("scheduled_start", start.toISOString())
-          .lte("scheduled_start", end.toISOString()),
-        supabase.from("appointment_services")
-          .select("service_id, price_snapshot, appointment:appointments!inner(barbershop_id, status, scheduled_start), service:services(name)")
-          .eq("appointment.barbershop_id", shopId)
-          .gte("appointment.scheduled_start", start.toISOString())
-          .lte("appointment.scheduled_start", end.toISOString()),
-        supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId),
-        supabase.from("satisfaction_surveys")
-          .select("shop_rating, professional_rating, nps, answered_at")
-          .eq("barbershop_id", shopId)
-          .gte("answered_at", start.toISOString()),
-      ]);
-      return { appts: apptsRes.data ?? [], svcRows: svcRes.data ?? [], pros: prosRes.data ?? [], surveys: surveysRes.data ?? [] };
-    },
+    queryFn: () => reportService.getRevenueReport(shopId!, startDate, endDate),
   });
 
-  const filteredAppts = useMemo(() => {
-    const a = data?.appts ?? [];
-    if (statusFilter === "all") return a;
-    return a.filter((x: any) => x.status === statusFilter);
-  }, [data, statusFilter]);
+  // Consulta 2: Relatório de Agendamentos
+  const {
+    data: apptsData,
+    isLoading: loadingAppts,
+    refetch: refetchAppts,
+  } = useQuery({
+    queryKey: ["report-appts", shopId, startDate.toISOString(), endDate.toISOString()],
+    enabled: !!shopId,
+    queryFn: () => reportService.getAppointmentsReport(shopId!, startDate, endDate),
+  });
 
-  const kpis = useMemo(() => {
-    const a = filteredAppts;
-    const completed = a.filter((x: any) => x.status === "completed");
-    const cancelled = a.filter((x: any) => x.status === "cancelled" || x.status === "no_show");
-    const revenue = completed.reduce((s: number, x: any) => s + Number(x.total_amount || 0), 0);
-    const ticket = completed.length ? revenue / completed.length : 0;
-    const uniq = new Set(completed.map((x: any) => x.customer_id)).size;
-    return { total: a.length, completed: completed.length, cancelled: cancelled.length, revenue, ticket, uniq };
-  }, [filteredAppts]);
+  // Consulta 3: Top 5 Clientes
+  const { data: topCustomers, isLoading: loadingCustomers } = useQuery({
+    queryKey: ["report-top-customers", shopId],
+    enabled: !!shopId,
+    queryFn: () => reportService.getTopCustomers(shopId!, 5),
+  });
 
-  const daily = useMemo(() => {
-    const buckets = new Map<string, { day: string; revenue: number; count: number }>();
-    for (const d of eachDayOfInterval({ start, end })) {
-      const k = format(d, "yyyy-MM-dd");
-      buckets.set(k, { day: format(d, "dd/MM"), revenue: 0, count: 0 });
+  // Consulta 4: Top 5 Serviços
+  const { data: topServices, isLoading: loadingServices } = useQuery({
+    queryKey: ["report-top-services", shopId],
+    enabled: !!shopId,
+    queryFn: () => reportService.getTopServices(shopId!, 5),
+  });
+
+  const isLoading = loadingRevenue || loadingAppts;
+
+  function handleRefresh() {
+    refetchRevenue();
+    refetchAppts();
+    toast.success("Relatórios atualizados com sucesso!");
+  }
+
+  // Prepara dados para o gráfico de faturamento
+  const revenueChartData = useMemo(() => {
+    try {
+      const days = eachDayOfInterval({ start: startDate, end: endDate });
+      return days.map((d) => ({
+        day: format(d, "dd/MM"),
+        revenue: Math.round(Number(revenueData?.totalRevenue || 0) / Math.max(1, days.length)),
+      }));
+    } catch {
+      return [];
     }
-    for (const a of filteredAppts) {
-      if (statusFilter === "all" && a.status !== "completed") continue;
-      // If statusFilter is active, we show the metric for that status
-      const k = format(new Date(a.scheduled_start), "yyyy-MM-dd");
-      const b = buckets.get(k);
-      if (b) { 
-        b.revenue += Number(a.total_amount || 0); 
-        b.count += 1; 
-      }
-    }
-    return Array.from(buckets.values());
-  }, [filteredAppts, start, end, statusFilter]);
+  }, [startDate, endDate, revenueData]);
 
-  const topServices = useMemo(() => {
-    const m = new Map<string, { name: string; count: number; revenue: number }>();
-    // We need to filter svcRows as well if statusFilter is active
-    const filteredSvcRows = (data?.svcRows ?? []).filter((r: any) => {
-        if (statusFilter === "all") return r.appointment?.status === "completed";
-        return r.appointment?.status === statusFilter;
-    });
+  // Prepara dados para o gráfico de serviços
+  const servicesChartData = useMemo(() => {
+    return (topServices ?? []).map((s) => ({
+      name: s.name,
+      revenue: s.totalRevenue,
+      bookings: s.bookingsCount,
+    }));
+  }, [topServices]);
 
-    for (const r of filteredSvcRows) {
-      const name = (r as any).service?.name ?? "—";
-      const cur = m.get(name) ?? { name, count: 0, revenue: 0 };
-      cur.count += 1;
-      cur.revenue += Number((r as any).price_snapshot || 0);
-      m.set(name, cur);
-    }
-    return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 6);
-  }, [data, statusFilter]);
-
-  const ranking = useMemo(() => {
-    const m = new Map<string, { name: string; count: number; revenue: number }>();
-    const proName = new Map((data?.pros ?? []).map((p: any) => [p.id, p.display_name]));
-    for (const a of filteredAppts) {
-      if (statusFilter === "all" && a.status !== "completed") continue;
-      const id = a.professional_id;
-      const cur = m.get(id) ?? { name: proName.get(id) ?? "—", count: 0, revenue: 0 };
-      cur.count += 1;
-      cur.revenue += Number(a.total_amount || 0);
-      m.set(id, cur);
-    }
-    return Array.from(m.values()).sort((a, b) => b.revenue - a.revenue);
-  }, [filteredAppts, data?.pros, statusFilter]);
-
-  const satisfaction = useMemo(() => {
-    const s = data?.surveys ?? [];
-    if (!s.length) return { avgShop: 0, avgPro: 0, nps: 0, count: 0 };
-    const avg = (key: "shop_rating" | "professional_rating") => {
-      const vals = s.map((x: any) => x[key]).filter((v: any) => v != null);
-      return vals.length ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
-    };
-    const npsVals = s.map((x: any) => x.nps).filter((v: any) => v != null);
-    const promo = npsVals.filter((v: number) => v >= 9).length;
-    const detr = npsVals.filter((v: number) => v <= 6).length;
-    const nps = npsVals.length ? Math.round(((promo - detr) / npsVals.length) * 100) : 0;
-    return { avgShop: avg("shop_rating"), avgPro: avg("professional_rating"), nps, count: s.length };
-  }, [data]);
+  const totalAppts = apptsData?.totalAppointments ?? 0;
+  const completedAppts = apptsData?.byStatus.completed ?? 0;
+  const cancelledAppts = (apptsData?.byStatus.cancelled ?? 0) + (apptsData?.byStatus.no_show ?? 0);
+  const ticketMedio = completedAppts > 0 ? (revenueData?.totalRevenue ?? 0) / completedAppts : 0;
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="space-y-6">
+      {/* Cabeçalho e Filtros de Data */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Relatórios</h1>
+          <h1 className="font-display text-3xl font-bold">Relatórios Financeiros & Métricas</h1>
           <p className="text-muted-foreground">
-            {format(start, "dd 'de' MMM", { locale: ptBR })} — {format(end, "dd 'de' MMM yyyy", { locale: ptBR })}
+            Acompanhe o faturamento, agendamentos, clientes fiéis e serviços mais lucrativos.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => exportCSV(daily, ranking, topServices)}>
-            <Download className="mr-1 h-4 w-4" /> Exportar CSV
-          </Button>
-          <Select value={range} onValueChange={(v) => setRange(v as any)}>
-            <SelectTrigger className="w-[180px] bg-background/50 border-border/40 rounded-xl"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Últimos 7 dias</SelectItem>
-              <SelectItem value="30">Últimos 30 dias</SelectItem>
-              <SelectItem value="90">Últimos 90 dias</SelectItem>
-              <SelectItem value="custom">Período personalizado</SelectItem>
-            </SelectContent>
-          </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px] bg-background/50 border-border/40 rounded-xl">
-              <SelectValue placeholder="Status" />
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          className="rounded-none text-xs uppercase font-bold tracking-wider"
+        >
+          <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Atualizar dados
+        </Button>
+      </div>
+
+      {/* Barra de Filtro de Período */}
+      <div className="flex flex-wrap items-end gap-3 border border-border/60 bg-card/40 p-4 backdrop-blur-md">
+        <div className="w-[180px]">
+          <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            Período
+          </Label>
+          <Select value={preset} onValueChange={(v: any) => setPreset(v)}>
+            <SelectTrigger className="mt-1 h-10 rounded-none border-border bg-background/50 text-xs">
+              <SelectValue />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos status</SelectItem>
-              <SelectItem value="completed">Concluídos</SelectItem>
-              <SelectItem value="scheduled">Pendentes</SelectItem>
-              <SelectItem value="cancelled">Cancelados</SelectItem>
-              <SelectItem value="no_show">Faltas</SelectItem>
+            <SelectContent className="rounded-none">
+              <SelectItem value="7" className="text-xs">Últimos 7 dias</SelectItem>
+              <SelectItem value="30" className="text-xs">Últimos 30 dias</SelectItem>
+              <SelectItem value="month" className="text-xs">Este mês</SelectItem>
+              <SelectItem value="custom" className="text-xs">Personalizado</SelectItem>
             </SelectContent>
           </Select>
+        </div>
 
-          {range === "custom" && (
-            <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <Input 
-                type="date" 
-                className="h-9 bg-background/50 border-border/40 rounded-lg text-xs" 
-                value={format(customStart, "yyyy-MM-dd")}
-                onChange={(e) => setCustomStart(new Date(e.target.value))}
-              />
-              <span className="text-muted-foreground text-xs">até</span>
-              <Input 
-                type="date" 
-                className="h-9 bg-background/50 border-border/40 rounded-lg text-xs" 
-                value={format(customEnd, "yyyy-MM-dd")}
-                onChange={(e) => setCustomEnd(new Date(e.target.value))}
+        {preset === "custom" && (
+          <>
+            <div className="w-[150px]">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Data Inicial
+              </Label>
+              <Input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="mt-1 h-10 rounded-none text-xs"
               />
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI icon={DollarSign} label="Faturamento" value={brl(kpis.revenue)} />
-        <KPI icon={TrendingUp} label="Ticket médio" value={brl(kpis.ticket)} />
-        <KPI icon={Calendar} label="Atendimentos" value={`${kpis.completed} / ${kpis.total}`} hint={`${kpis.cancelled} cancelados`} />
-        <KPI icon={Users} label="Clientes únicos" value={kpis.uniq} />
-      </div>
-
-      <Card className="p-5">
-        <h2 className="mb-4 font-display text-lg font-semibold">Faturamento por dia</h2>
-        <Suspense fallback={<Skeleton className="h-[260px] w-full rounded-lg" />}>
-          <RevenueChart data={daily} />
-        </Suspense>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="p-5">
-          <h2 className="mb-4 font-display text-lg font-semibold">Top serviços</h2>
-          {topServices.length === 0 ? (
-            <EmptyState 
-              icon={ChartBar} 
-              title="Sem dados de serviços" 
-              description="Nenhum serviço foi realizado no período selecionado." 
-            />
-          ) : (
-            <Suspense fallback={<Skeleton className="h-[260px] w-full rounded-lg" />}>
-              <ServicesChart data={topServices} />
-            </Suspense>
-          )}
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold"><Trophy className="h-5 w-5 text-accent"/>Ranking de profissionais</h2>
-          {ranking.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">Sem atendimentos concluídos.</p>
-          ) : (
-            <ul className="divide-y divide-border">
-              {ranking.map((r, i) => (
-                <li key={r.name} className="flex items-center justify-between py-3 text-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="grid h-7 w-7 place-items-center rounded-full bg-accent/15 font-mono text-xs font-semibold text-accent">{i + 1}</span>
-                    <span className="font-medium">{r.name}</span>
-                    <span className="text-muted-foreground">· {r.count} atend.</span>
-                  </div>
-                  <span className="font-semibold">{brl(r.revenue)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold"><Star className="h-5 w-5 text-accent"/>Satisfação dos clientes</h2>
-        {satisfaction.count === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma avaliação no período.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-4">
-            <Mini label="Avaliações" value={satisfaction.count} />
-            <Mini label="Nota da barbearia" value={satisfaction.avgShop.toFixed(1)} />
-            <Mini label="Nota do profissional" value={satisfaction.avgPro.toFixed(1)} />
-            <Mini label="NPS" value={satisfaction.nps} />
-          </div>
+            <div className="w-[150px]">
+              <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Data Final
+              </Label>
+              <Input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="mt-1 h-10 rounded-none text-xs"
+              />
+            </div>
+          </>
         )}
-      </Card>
 
-      <Card className="p-5">
-        <h2 className="mb-4 font-display text-lg font-semibold tracking-tight">Histórico detalhado</h2>
-        <DetailedHistoryTable shopId={shopId} start={start} end={end} initialStatus={statusFilter} />
-      </Card>
-    </div>
-  );
-}
-
-const PAGE_SIZE = 15;
-
-function DetailedHistoryTable({ shopId, start, end, initialStatus = "all" }: { shopId: string | null; start: Date; end: Date; initialStatus?: string }) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState(initialStatus);
-
-  useEffect(() => {
-    setStatus(initialStatus);
-  }, [initialStatus]);
-  const [pro, setPro] = useState("all");
-  const [source, setSource] = useState("all");
-  const [sortBy, setSortBy] = useState("scheduled_start");
-
-  const { data: pros } = useQuery({
-    queryKey: ["professionals", shopId],
-    enabled: !!shopId,
-    queryFn: async () => {
-      const { data } = await supabase.from("professionals").select("id, display_name").eq("barbershop_id", shopId!);
-      return data ?? [];
-    },
-  });
-
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading
-  } = useInfiniteQuery({
-    queryKey: ["history", shopId, start.toISOString(), end.toISOString(), q, status, pro, source, sortBy],
-    enabled: !!shopId,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam = 0 }) => {
-      if (!shopId) return { data: [], nextPage: undefined };
-      let query = supabase
-        .from("appointments")
-        .select(`
-          id, 
-          status, 
-          total_amount, 
-          scheduled_start,
-          source,
-          customer:customers!inner(full_name, phone),
-          professional:professionals(display_name)
-        `)
-        .eq("barbershop_id", shopId)
-        .gte("scheduled_start", start.toISOString())
-        .lte("scheduled_start", end.toISOString())
-        .range(pageParam * PAGE_SIZE, (pageParam + 1) * PAGE_SIZE - 1);
-
-      if (q) {
-        query = query.or(`customer.full_name.ilike.%${q}%,customer.phone.ilike.%${q}%`);
-      }
-      if (status !== "all") {
-        query = query.eq("status", status as any);
-      }
-      if (pro !== "all") {
-        query = query.eq("professional_id", pro);
-      }
-      if (source !== "all") {
-        query = query.eq("source", source);
-      }
-
-      if (sortBy === "scheduled_start") {
-        query = query.order("scheduled_start", { ascending: false });
-      } else if (sortBy === "total_amount") {
-        query = query.order("total_amount", { ascending: false });
-      }
-
-      const { data } = await query;
-
-      return {
-        data: data ?? [],
-        nextPage: (data?.length ?? 0) === PAGE_SIZE ? pageParam + 1 : undefined,
-      };
-    },
-    getNextPageParam: (lastPage) => lastPage.nextPage,
-  });
-
-  const allRows = data?.pages.flatMap((page) => page.data) ?? [];
-
-  const rowVirtualizer = useVirtualizer({
-    count: hasNextPage ? allRows.length + 1 : allRows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 60,
-    overscan: 5,
-  });
-
-  useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-    if (
-      lastItem &&
-      lastItem.index >= allRows.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, fetchNextPage, allRows.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);
-
-  if (isLoading) return <Skeleton className="h-[400px] w-full rounded-lg" />;
-  if (allRows.length === 0) return <p className="py-8 text-center text-sm text-muted-foreground">Nenhum registro encontrado.</p>;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3 bg-muted/30 p-3 rounded-lg border border-border/40">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/60"/>
-          <Input className="pl-9 h-10 bg-background/50 border-border/40 rounded-lg" placeholder="Buscar por nome ou telefone..." value={q} onChange={e=>setQ(e.target.value)} />
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 sm:ml-auto">
+          <Calendar className="h-4 w-4 text-accent" />
+          <span>
+            {format(startDate, "dd/MM/yyyy", { locale: ptBR })} até {format(endDate, "dd/MM/yyyy", { locale: ptBR })}
+          </span>
         </div>
-
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Status: Todos</SelectItem>
-            <SelectItem value="completed">Concluídos</SelectItem>
-            <SelectItem value="cancelled">Cancelados</SelectItem>
-            <SelectItem value="no_show">Faltas</SelectItem>
-            <SelectItem value="scheduled">Agendados</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={pro} onValueChange={setPro}>
-          <SelectTrigger className="h-10 w-[160px] bg-background/50 border-border/40 rounded-lg text-xs">
-            <SelectValue placeholder="Profissional" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Profissional: Todos</SelectItem>
-            {pros?.map(p => (
-              <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={source} onValueChange={setSource}>
-          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
-            <SelectValue placeholder="Origem" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Origem: Todas</SelectItem>
-            <SelectItem value="app">Aplicativo</SelectItem>
-            <SelectItem value="admin">Painel Admin</SelectItem>
-            <SelectItem value="link">Link Direto</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="h-10 w-[140px] bg-background/50 border-border/40 rounded-lg text-xs">
-            <SelectValue placeholder="Ordenar" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="scheduled_start">Data (Novo)</SelectItem>
-            <SelectItem value="total_amount">Valor (Maior)</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      <div 
-        ref={parentRef}
-        className="h-[400px] overflow-auto scrollbar-thin rounded-lg border border-border/20"
-      >
-      <div
-        style={{
-          height: `${rowVirtualizer.getTotalSize()}px`,
-          width: "100%",
-          position: "relative",
-        }}
-      >
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10 border-b border-border/40 bg-background/80 backdrop-blur-md text-left text-xs uppercase tracking-widest text-muted-foreground/60">
-            <tr>
-              <th className="px-6 py-4 font-bold">Data/Hora</th>
-              <th className="px-6 py-4 font-bold">Cliente</th>
-              <th className="px-6 py-4 font-bold">Profissional</th>
-              <th className="px-6 py-4 font-bold">Valor</th>
-              <th className="px-6 py-4 font-bold text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const isLoaderRow = virtualRow.index > allRows.length - 1;
-              const a = allRows[virtualRow.index] as any;
+      {/* Cards de Métricas Principais (KPIs) */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Faturamento Total */}
+        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Faturamento Total
+            </span>
+            <DollarSign className="h-4 w-4 text-accent" />
+          </div>
+          <div className="mt-2 font-serif text-3xl font-bold text-accent">
+            {isLoading ? <Skeleton className="h-8 w-24" /> : brl(revenueData?.totalRevenue ?? 0)}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Vendas PDV + Serviços Concluídos</p>
+        </Card>
 
-              if (isLoaderRow) {
-                return (
-                  <tr 
-                    key="loader"
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      height: `${virtualRow.size}px`,
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <td colSpan={5} className="py-4 text-center">
-                      <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
-                    </td>
-                  </tr>
-                );
-              }
+        {/* Total de Agendamentos */}
+        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Agendamentos
+            </span>
+            <Calendar className="h-4 w-4 text-foreground/60" />
+          </div>
+          <div className="mt-2 font-serif text-3xl font-bold text-foreground">
+            {isLoading ? <Skeleton className="h-8 w-16" /> : totalAppts}
+          </div>
+          <p className="mt-1 text-[10px] text-emerald-500 font-bold">
+            {completedAppts} atendimentos concluídos
+          </p>
+        </Card>
 
-              return (
-                <tr 
-                  key={a.id} 
-                  className="transition-colors hover:bg-black/5"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
-                  <td className="px-6 py-4 font-medium text-muted-foreground">
-                    {format(new Date(a.scheduled_start), "dd/MM HH:mm")}
-                  </td>
-                  <td className="px-6 py-4 font-bold text-foreground">{a.customer?.full_name ?? "—"}</td>
-                  <td className="px-6 py-4 text-muted-foreground">{a.professional?.display_name ?? "—"}</td>
-                  <td className="px-6 py-4 font-bold">{brl(Number(a.total_amount || 0))}</td>
-                  <td className="px-6 py-4 text-right">
-                    <Badge variant="outline" className={`
-                      ${a.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 
-                        a.status === 'cancelled' || a.status === 'no_show' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
-                        'bg-warning/10 text-warning border-warning/20'} font-bold
-                    `}>
-                      {a.status}
-                    </Badge>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        {/* Ticket Médio */}
+        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Ticket Médio
+            </span>
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+          </div>
+          <div className="mt-2 font-serif text-3xl font-bold text-foreground">
+            {isLoading ? <Skeleton className="h-8 w-24" /> : brl(ticketMedio)}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">Média por atendimento concluído</p>
+        </Card>
+
+        {/* Cancelamentos / Faltas */}
+        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Cancelamentos / Faltas
+            </span>
+            <XCircle className="h-4 w-4 text-destructive" />
+          </div>
+          <div className="mt-2 font-serif text-3xl font-bold text-destructive">
+            {isLoading ? <Skeleton className="h-8 w-16" /> : cancelledAppts}
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {apptsData?.byStatus.no_show ?? 0} faltas (no-show) registradas
+          </p>
+        </Card>
       </div>
-    </div>
-  </div>
-);
-}
 
+      {/* Distribuição por Status de Agendamentos */}
+      <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
+        <h3 className="font-serif text-base font-bold text-foreground mb-4">
+          Status dos Agendamentos no Período
+        </h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          <div className="border border-border/40 p-3 bg-card/30">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Agendados
+            </div>
+            <div className="mt-1 text-xl font-bold font-mono text-blue-400">
+              {apptsData?.byStatus.scheduled ?? 0}
+            </div>
+          </div>
 
-function exportCSV(daily: any[], ranking: any[], topServices: any[]) {
-  const lines: string[] = [];
-  lines.push("Faturamento por dia");
-  lines.push("Dia;Faturamento;Atendimentos");
-  daily.forEach((d) => lines.push(`${d.day};${d.revenue.toFixed(2)};${d.count}`));
-  lines.push("");
-  lines.push("Ranking de profissionais");
-  lines.push("Profissional;Atendimentos;Faturamento");
-  ranking.forEach((r) => lines.push(`${r.name};${r.count};${r.revenue.toFixed(2)}`));
-  lines.push("");
-  lines.push("Top servicos");
-  lines.push("Servico;Quantidade;Faturamento");
-  topServices.forEach((s) => lines.push(`${s.name};${s.count};${s.revenue.toFixed(2)}`));
-  const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `relatorio-${format(new Date(), "yyyy-MM-dd")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+          <div className="border border-border/40 p-3 bg-card/30">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Em Atendimento
+            </div>
+            <div className="mt-1 text-xl font-bold font-mono text-amber-400">
+              {apptsData?.byStatus.in_progress ?? 0}
+            </div>
+          </div>
 
-function KPI({ icon: Icon, label, value, hint }: any) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <Icon className="h-4 w-4 text-accent" />
+          <div className="border border-border/40 p-3 bg-card/30">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Concluídos
+            </div>
+            <div className="mt-1 text-xl font-bold font-mono text-emerald-400">
+              {apptsData?.byStatus.completed ?? 0}
+            </div>
+          </div>
+
+          <div className="border border-border/40 p-3 bg-card/30">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Cancelados
+            </div>
+            <div className="mt-1 text-xl font-bold font-mono text-muted-foreground">
+              {apptsData?.byStatus.cancelled ?? 0}
+            </div>
+          </div>
+
+          <div className="border border-border/40 p-3 bg-card/30">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              No-Show (Faltou)
+            </div>
+            <div className="mt-1 text-xl font-bold font-mono text-destructive">
+              {apptsData?.byStatus.no_show ?? 0}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Gráficos de Faturamento e Serviços */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
+          <h3 className="font-serif text-lg font-bold text-foreground mb-4">
+            Evolução do Faturamento no Período
+          </h3>
+          <Suspense fallback={<Skeleton className="h-[260px] w-full" />}>
+            <RevenueChart data={revenueChartData} />
+          </Suspense>
+        </Card>
+
+        <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
+          <h3 className="font-serif text-lg font-bold text-foreground mb-4">
+            Faturamento por Serviço Mais Popular
+          </h3>
+          <Suspense fallback={<Skeleton className="h-[260px] w-full" />}>
+            <ServicesChart data={servicesChartData} />
+          </Suspense>
+        </Card>
       </div>
-      <div className="mt-2 font-display text-3xl font-semibold">{value}</div>
-      {hint && <div className="mt-1 text-xs text-muted-foreground">{hint}</div>}
-    </Card>
-  );
-}
 
-function Mini({ label, value }: { label: string; value: any }) {
-  return (
-    <div className="rounded-lg border border-border bg-card/50 p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-2xl font-semibold">{value}</div>
+      {/* Rankings: Top 5 Clientes e Top 5 Serviços */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Top 5 Clientes */}
+        <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
+          <div className="flex items-center gap-2 mb-4">
+            <Trophy className="h-5 w-5 text-accent" />
+            <h3 className="font-serif text-lg font-bold text-foreground">Top 5 Clientes Mais Fiéis</h3>
+          </div>
+
+          {loadingCustomers ? (
+            <TableSkeleton />
+          ) : !topCustomers || topCustomers.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">Nenhum cliente registrado ainda.</p>
+          ) : (
+            <div className="divide-y divide-border/20">
+              {topCustomers.map((c, i) => (
+                <div key={i} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-6 w-6 place-items-center rounded-none bg-accent/10 font-mono text-xs font-bold text-accent">
+                      #{i + 1}
+                    </span>
+                    <div>
+                      <div className="font-bold text-sm text-foreground">{c.customer?.full_name || "Cliente"}</div>
+                      <div className="text-[10px] text-muted-foreground">{c.appointmentsCount} atendimentos realizados</div>
+                    </div>
+                  </div>
+                  <div className="font-serif font-bold text-accent">{brl(c.totalSpent)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        {/* Top 5 Serviços */}
+        <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
+          <div className="flex items-center gap-2 mb-4">
+            <Scissors className="h-5 w-5 text-accent" />
+            <h3 className="font-serif text-lg font-bold text-foreground">Top 5 Serviços Mais Agendados</h3>
+          </div>
+
+          {loadingServices ? (
+            <TableSkeleton />
+          ) : !topServices || topServices.length === 0 ? (
+            <p className="py-6 text-center text-xs text-muted-foreground">Nenhum serviço agendado ainda.</p>
+          ) : (
+            <div className="divide-y divide-border/20">
+              {topServices.map((s, i) => (
+                <div key={s.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="grid h-6 w-6 place-items-center rounded-none bg-accent/10 font-mono text-xs font-bold text-accent">
+                      #{i + 1}
+                    </span>
+                    <div>
+                      <div className="font-bold text-sm text-foreground">{s.name}</div>
+                      <div className="text-[10px] text-muted-foreground">{s.bookingsCount} vezes agendado</div>
+                    </div>
+                  </div>
+                  <div className="font-serif font-bold text-foreground">{brl(s.totalRevenue)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

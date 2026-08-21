@@ -135,6 +135,21 @@ export const couponService = {
   },
 
   /**
+   * Atualiza um cupom de desconto existente
+   */
+  async updateCoupon(id: string, data: Partial<Coupon>): Promise<Coupon> {
+    const { data: updated, error } = await supabase
+      .from("coupons")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updated;
+  },
+
+  /**
    * Exclui ou desativa um cupom
    */
   async deleteCoupon(id: string) {

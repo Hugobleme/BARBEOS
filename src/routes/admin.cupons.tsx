@@ -1,230 +1,400 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useCurrentShopId } from "@/hooks/use-current-shop";
+import { useCurrentShop } from "@/hooks/use-current-shop";
+import { couponService, Coupon } from "@/services/coupon.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { EmptyState, TableSkeleton } from "@/components/site/LoadingState";
-import { TicketPercent, Plus, Trash2, Pencil } from "lucide-react";
+import { TicketPercent, Plus, Trash2, Pencil, ShieldAlert, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/admin/cupons")({
   head: () => ({ meta: [{ title: "Cupons — BarberOS" }, { name: "robots", content: "noindex,nofollow" }] }),
   component: Page,
 });
 
-type Coupon = {
-  id: string; code: string; kind: "percent"|"fixed"|"first_visit"; value: number;
-  min_amount: number; valid_from: string | null; valid_until: string | null;
-  usage_limit: number | null; used_count: number; active: boolean;
-};
-
 function Page() {
-  const shopId = useCurrentShopId();
-  const { data, isLoading, refetch } = useQuery({
-    queryKey: ["coupons", shopId], enabled: !!shopId,
-    queryFn: async () => (await supabase.from("coupons" as any).select("*")
-      .eq("barbershop_id", shopId).order("created_at", { ascending: false })).data as Coupon[] | null,
-  });
-  const [editing, setEditing] = useState<Coupon | null>(null);
-  const [open, setOpen] = useState(false);
+  const { shopId, shop } = useCurrentShop();
+  const qc = useQueryClient();
+  const canManage = shop?.role === "owner" || shop?.role === "admin";
 
-  async function remove(id: string) {
-    if (!confirm("Excluir este cupom?")) return;
-    const { error } = await supabase.from("coupons" as any).delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Cupom excluído");
-    refetch();
+  const { data: coupons, isLoading, refetch } = useQuery({
+    queryKey: ["admin-coupons", shopId],
+    enabled: !!shopId,
+    queryFn: () => couponService.getCoupons(shopId!),
+  });
+
+  const [open, setOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [form, setForm] = useState({
+    code: "",
+    kind: "percent" as "percent" | "fixed",
+    value: 10,
+    min_amount: 0,
+    valid_until: "",
+    usage_limit: "",
+    active: true,
+  });
+
+  function openNew() {
+    if (!canManage) {
+      toast.error("Permissão insuficiente para criar cupons.");
+      return;
+    }
+    setEditingCoupon(null);
+    setForm({
+      code: "",
+      kind: "percent",
+      value: 10,
+      min_amount: 0,
+      valid_until: "",
+      usage_limit: "",
+      active: true,
+    });
+    setOpen(true);
   }
-  async function toggleActive(c: Coupon) {
-    const { error } = await supabase.from("coupons" as any).update({ active: !c.active }).eq("id", c.id);
-    if (error) return toast.error(error.message);
-    refetch();
+
+  function openEdit(c: Coupon) {
+    if (!canManage) {
+      toast.error("Permissão insuficiente para editar cupons.");
+      return;
+    }
+    setEditingCoupon(c);
+    setForm({
+      code: c.code,
+      kind: c.kind === "fixed" ? "fixed" : "percent",
+      value: Number(c.value),
+      min_amount: Number(c.min_amount || 0),
+      valid_until: c.valid_until ? c.valid_until.split("T")[0] : "",
+      usage_limit: c.usage_limit ? String(c.usage_limit) : "",
+      active: c.active,
+    });
+    setOpen(true);
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    if (!form.code.trim()) return toast.error("O código do cupom é obrigatório.");
+    if (form.value <= 0) return toast.error("O valor do desconto deve ser maior que 0.");
+    if (form.kind === "percent" && form.value > 100) return toast.error("O percentual de desconto não pode exceder 100%.");
+
+    setBusy(true);
+    try {
+      if (editingCoupon) {
+        await couponService.updateCoupon(editingCoupon.id, {
+          code: form.code.toUpperCase().trim(),
+          kind: form.kind,
+          value: Number(form.value),
+          min_amount: Number(form.min_amount) || 0,
+          valid_until: form.valid_until ? new Date(form.valid_until).toISOString() : null,
+          usage_limit: form.usage_limit ? Number(form.usage_limit) : null,
+          active: form.active,
+        });
+        toast.success("Cupom atualizado com sucesso!");
+      } else {
+        await couponService.createCoupon({
+          barbershop_id: shopId!,
+          code: form.code.toUpperCase().trim(),
+          kind: form.kind,
+          value: Number(form.value),
+          min_amount: Number(form.min_amount) || 0,
+          valid_until: form.valid_until ? new Date(form.valid_until).toISOString() : null,
+          usage_limit: form.usage_limit ? Number(form.usage_limit) : null,
+        });
+        toast.success("Cupom criado com sucesso!");
+      }
+      setOpen(false);
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar cupom.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(c: Coupon) {
+    if (!canManage) {
+      toast.error("Permissão insuficiente para excluir cupons.");
+      return;
+    }
+    if (!confirm(`Tem certeza que deseja excluir o cupom "${c.code}"?`)) return;
+
+    try {
+      await couponService.deleteCoupon(c.id);
+      toast.success("Cupom excluído com sucesso!");
+      refetch();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao excluir cupom.");
+    }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Cupons</h1>
-          <p className="text-muted-foreground">Crie códigos promocionais para o PDV e o agendamento.</p>
+          <h1 className="font-display text-3xl font-bold">Cupons de Desconto</h1>
+          <p className="text-muted-foreground">
+            Crie campanhas promocionais para uso no PDV e agendamento online.
+          </p>
         </div>
-        <Dialog open={open} onOpenChange={(o)=>{ setOpen(o); if (!o) setEditing(null); }}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditing(null)}><Plus className="mr-2 h-4 w-4"/>Novo cupom</Button>
-          </DialogTrigger>
-          <CouponDialog shopId={shopId} editing={editing} onClose={() => { setOpen(false); setEditing(null); refetch(); }} />
-        </Dialog>
+
+        {canManage ? (
+          <Button
+            onClick={openNew}
+            className="rounded-none bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
+          </Button>
+        ) : (
+          <Badge variant="outline" className="flex items-center gap-1.5 rounded-none text-muted-foreground">
+            <ShieldAlert className="h-3.5 w-3.5" /> Modo somente leitura
+          </Badge>
+        )}
       </div>
 
+      {/* Modal de Criação / Edição */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="rounded-none border-border sm:max-w-md">
+          <form onSubmit={handleSave}>
+            <DialogHeader>
+              <DialogTitle className="font-serif text-2xl">
+                {editingCoupon ? "Editar cupom" : "Novo cupom de desconto"}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="coupon_code">Código do Cupom *</Label>
+                <Input
+                  id="coupon_code"
+                  value={form.code}
+                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                  placeholder="EX: PROMO10, CLIENTEVIP"
+                  className="rounded-none font-mono uppercase font-bold"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Tipo de Desconto</Label>
+                  <Select
+                    value={form.kind}
+                    onValueChange={(v: "percent" | "fixed") => setForm({ ...form, kind: v })}
+                  >
+                    <SelectTrigger className="rounded-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-none">
+                      <SelectItem value="percent">Porcentagem (%)</SelectItem>
+                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon_val">
+                    {form.kind === "percent" ? "Desconto (%) *" : "Desconto (R$) *"}
+                  </Label>
+                  <Input
+                    id="coupon_val"
+                    type="number"
+                    step={form.kind === "percent" ? "1" : "0.01"}
+                    min={1}
+                    max={form.kind === "percent" ? 100 : undefined}
+                    value={form.value}
+                    onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
+                    className="rounded-none font-bold"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon_valid">Válido até (opcional)</Label>
+                  <Input
+                    id="coupon_valid"
+                    type="date"
+                    value={form.valid_until}
+                    onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
+                    className="rounded-none text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="coupon_limit">Limite de Usos (opcional)</Label>
+                  <Input
+                    id="coupon_limit"
+                    type="number"
+                    min={1}
+                    value={form.usage_limit}
+                    onChange={(e) => setForm({ ...form, usage_limit: e.target.value })}
+                    placeholder="Sem limite"
+                    className="rounded-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="coupon_min">Valor mínimo do pedido (R$)</Label>
+                <Input
+                  id="coupon_min"
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  value={form.min_amount}
+                  onChange={(e) => setForm({ ...form, min_amount: Number(e.target.value) })}
+                  placeholder="0.00"
+                  className="rounded-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                <Label htmlFor="coupon_active" className="cursor-pointer">
+                  Cupom ativo para uso
+                </Label>
+                <Switch
+                  id="coupon_active"
+                  checked={form.active}
+                  onCheckedChange={(v) => setForm({ ...form, active: v })}
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-none">
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={busy}
+                className="rounded-none bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
+              >
+                {busy ? "Salvando..." : "Salvar cupom"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tabela de Cupons */}
       {isLoading ? (
         <TableSkeleton />
-      ) : !data || data.length === 0 ? (
-        <EmptyState icon={TicketPercent} title="Nenhum cupom cadastrado" description="Crie um cupom para começar a oferecer descontos." />
+      ) : !coupons || coupons.length === 0 ? (
+        <EmptyState
+          icon={TicketPercent}
+          title="Nenhum cupom cadastrado"
+          description="Crie o primeiro cupom promocional para oferecer descontos aos seus clientes."
+          action={
+            canManage ? (
+              <Button onClick={openNew} className="rounded-none bg-accent text-accent-foreground">
+                <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
-        <Card className="overflow-hidden p-0 border-none bg-card/50 shadow-xl shadow-black/5 backdrop-blur-md">
+        <Card className="overflow-hidden rounded-none border border-border bg-card/40 backdrop-blur-md">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border/40 bg-muted/40 text-left text-xs uppercase tracking-widest text-muted-foreground/60">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-border/60 bg-background/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
                 <tr>
-                  <th className="px-6 py-4 font-bold">Código</th>
-                  <th className="px-6 py-4 font-bold">Tipo</th>
-                  <th className="px-6 py-4 font-bold">Valor</th>
-                  <th className="px-6 py-4 font-bold">Mínimo</th>
-                  <th className="px-6 py-4 font-bold">Validade</th>
-                  <th className="px-6 py-4 font-bold">Uso</th>
-                  <th className="px-6 py-4 font-bold">Ativo</th>
-                  <th className="px-6 py-4 text-right font-bold">Ações</th>
+                  <th className="px-6 py-4">Código</th>
+                  <th className="px-6 py-4">Tipo</th>
+                  <th className="px-6 py-4">Desconto</th>
+                  <th className="px-6 py-4">Validade</th>
+                  <th className="px-6 py-4">Utilizações</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/30">
-                {data.map(c => (
-                  <tr key={c.id} className="transition-colors hover:bg-black/5">
-                    <td className="px-6 py-4">
-                      <span className="font-mono text-base font-black text-accent">{c.code}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Badge variant="outline" className="bg-muted/30 font-bold uppercase tracking-tight text-[10px]">
-                        {c.kind === "percent" ? "Percentual" : c.kind === "fixed" ? "Valor fixo" : "1ª visita"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 font-bold text-foreground">
-                      {c.kind === "percent" ? `${c.value}%` : brl(Number(c.value))}
-                    </td>
-                    <td className="px-6 py-4 text-muted-foreground font-medium">
-                      {Number(c.min_amount) > 0 ? brl(Number(c.min_amount)) : "—"}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-0.5 text-[10px] font-bold uppercase tracking-tight text-muted-foreground/70">
-                        {c.valid_from && <span>De {new Date(c.valid_from).toLocaleDateString("pt-BR")}</span>}
-                        {c.valid_until && <span>Até {new Date(c.valid_until).toLocaleDateString("pt-BR")}</span>}
-                        {!c.valid_from && !c.valid_until && <span className="text-muted-foreground/30">—</span>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-foreground">{c.used_count}</span>
-                        {c.usage_limit && <span className="text-muted-foreground/40 text-xs">/ {c.usage_limit}</span>}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Switch checked={c.active} onCheckedChange={() => toggleActive(c)} className="data-[state=checked]:bg-accent" />
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => { setEditing(c); setOpen(true); }} className="h-9 w-9 rounded-xl hover:bg-muted/50">
-                          <Pencil className="h-4 w-4 text-muted-foreground"/>
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => remove(c.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive">
-                          <Trash2 className="h-4 w-4"/>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+              <tbody className="divide-y divide-border/20">
+                {coupons.map((c) => {
+                  const isExpired = c.valid_until && new Date(c.valid_until) < new Date();
+
+                  return (
+                    <tr key={c.id} className="transition-colors hover:bg-card/80">
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-base font-bold text-accent">{c.code}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="rounded-none text-[10px] uppercase border-border/60">
+                          {c.kind === "percent" ? "Percentual" : "Valor fixo"}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-foreground">
+                        {c.kind === "percent" ? `${c.value}%` : brl(Number(c.value))}
+                      </td>
+                      <td className="px-6 py-4 text-xs text-muted-foreground">
+                        {c.valid_until ? (
+                          <span className={isExpired ? "text-destructive font-bold" : ""}>
+                            {format(new Date(c.valid_until), "dd/MM/yyyy", { locale: ptBR })}
+                            {isExpired && " (Expirado)"}
+                          </span>
+                        ) : (
+                          "Sem validade"
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-mono">
+                        <span className="font-bold text-foreground">{c.used_count || 0}</span>
+                        {c.usage_limit ? ` / ${c.usage_limit}` : " usos"}
+                      </td>
+                      <td className="px-6 py-4">
+                        {c.active && !isExpired ? (
+                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
+                            Ativo
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
+                            Inativo
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {canManage ? (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openEdit(c)}
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDelete(c)}
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground/40">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </Card>
       )}
     </div>
-  );
-}
-
-function CouponDialog({ shopId, editing, onClose }: { shopId: string | null; editing: Coupon | null; onClose: () => void }) {
-  const [f, setF] = useState({
-    code: editing?.code ?? "",
-    kind: (editing?.kind ?? "percent") as "percent"|"fixed"|"first_visit",
-    value: editing ? String(editing.value) : "",
-    min_amount: editing && Number(editing.min_amount) > 0 ? String(editing.min_amount) : "",
-    valid_from: editing?.valid_from ? editing.valid_from.slice(0,10) : "",
-    valid_until: editing?.valid_until ? editing.valid_until.slice(0,10) : "",
-    usage_limit: editing?.usage_limit ? String(editing.usage_limit) : "",
-  });
-  const [busy, setBusy] = useState(false);
-
-  async function save() {
-    if (!shopId) return;
-    if (!f.code.trim()) return toast.error("Informe o código");
-    if (!f.value || Number(f.value) <= 0) return toast.error("Informe o valor");
-    setBusy(true);
-    const payload: any = {
-      barbershop_id: shopId,
-      code: f.code.trim().toUpperCase(),
-      kind: f.kind,
-      value: Number(f.value),
-      min_amount: f.min_amount ? Number(f.min_amount) : 0,
-      valid_from: f.valid_from ? new Date(f.valid_from).toISOString() : null,
-      valid_until: f.valid_until ? new Date(`${f.valid_until}T23:59:59`).toISOString() : null,
-      usage_limit: f.usage_limit ? Number(f.usage_limit) : null,
-    };
-    const { error } = editing
-      ? await supabase.from("coupons" as any).update(payload).eq("id", editing.id)
-      : await supabase.from("coupons" as any).insert(payload);
-    setBusy(false);
-    if (error) return toast.error(error.message);
-    toast.success(editing ? "Cupom atualizado" : "Cupom criado");
-    onClose();
-  }
-
-  return (
-    <DialogContent>
-      <DialogHeader><DialogTitle>{editing ? "Editar cupom" : "Novo cupom"}</DialogTitle></DialogHeader>
-      <div className="grid gap-4">
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <Label>Código</Label>
-            <Input value={f.code} onChange={e=>setF({...f, code: e.target.value.toUpperCase()})} placeholder="PROMO10"/>
-          </div>
-          <div>
-            <Label>Tipo</Label>
-            <Select value={f.kind} onValueChange={(v:any) => setF({...f, kind: v})}>
-              <SelectTrigger><SelectValue/></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="percent">Percentual (%)</SelectItem>
-                <SelectItem value="fixed">Valor fixo (R$)</SelectItem>
-                <SelectItem value="first_visit">1ª visita (% sobre total)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <div>
-            <Label>{f.kind === "fixed" ? "Valor (R$)" : "Percentual (%)"}</Label>
-            <Input type="number" step="0.01" value={f.value} onChange={e=>setF({...f, value: e.target.value})}/>
-          </div>
-          <div>
-            <Label>Valor mínimo (R$)</Label>
-            <Input type="number" step="0.01" value={f.min_amount} onChange={e=>setF({...f, min_amount: e.target.value})} placeholder="Opcional"/>
-          </div>
-        </div>
-        <div className="grid gap-2 sm:grid-cols-3">
-          <div>
-            <Label>Válido de</Label>
-            <Input type="date" value={f.valid_from} onChange={e=>setF({...f, valid_from: e.target.value})}/>
-          </div>
-          <div>
-            <Label>Válido até</Label>
-            <Input type="date" value={f.valid_until} onChange={e=>setF({...f, valid_until: e.target.value})}/>
-          </div>
-          <div>
-            <Label>Limite de uso</Label>
-            <Input type="number" value={f.usage_limit} onChange={e=>setF({...f, usage_limit: e.target.value})} placeholder="Ilimitado"/>
-          </div>
-        </div>
-      </div>
-      <DialogFooter>
-        <Button variant="ghost" onClick={onClose}>Cancelar</Button>
-        <Button onClick={save} disabled={busy}>{busy ? "Salvando…" : "Salvar"}</Button>
-      </DialogFooter>
-    </DialogContent>
   );
 }

@@ -1,8 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
-export type LoyaltyBalance = Database["public"]["Tables"]["loyalty_balances"]["Row"];
+export type LoyaltyBalance = Database["public"]["Tables"]["loyalty_balances"]["Row"] & {
+  customer?: { id: string; full_name: string; phone: string | null } | null;
+};
 export type LoyaltyTransaction = Database["public"]["Tables"]["loyalty_transactions"]["Row"];
+export type Reward = Database["public"]["Tables"]["packages"]["Row"];
 
 export const loyaltyService = {
   /**
@@ -20,7 +23,22 @@ export const loyaltyService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data as LoyaltyBalance[]) ?? [];
+    return (data as any) ?? [];
+  },
+
+  /**
+   * Lista todos os clientes com saldo de pontos na barbearia
+   */
+  async getCustomersWithPoints(barbershopId: string): Promise<LoyaltyBalance[]> {
+    const { data, error } = await supabase
+      .from("loyalty_balances")
+      .select("*, customer:customers(id, full_name, phone)")
+      .eq("barbershop_id", barbershopId)
+      .gt("points", 0)
+      .order("points", { ascending: false });
+
+    if (error) throw error;
+    return (data as any) ?? [];
   },
 
   /**
@@ -36,7 +54,6 @@ export const loyaltyService = {
   }) {
     const { customerId, points, reason, barbershopId, appointmentId, createdBy } = params;
 
-    // 1. Obter ou criar saldo
     const { data: balance } = await supabase
       .from("loyalty_balances")
       .select("id, points, lifetime_points")
@@ -69,7 +86,6 @@ export const loyaltyService = {
         });
     }
 
-    // 2. Registrar transação no extrato
     const { data: tx, error: txErr } = await supabase
       .from("loyalty_transactions")
       .insert({
@@ -145,14 +161,68 @@ export const loyaltyService = {
   /**
    * Obtém recompensas/benefícios disponíveis na barbearia
    */
-  async getRewards(barbershopId: string) {
+  async getRewards(barbershopId: string): Promise<Reward[]> {
     const { data, error } = await supabase
       .from("packages")
       .select("*")
       .eq("barbershop_id", barbershopId)
-      .eq("active", true);
+      .order("price");
 
     if (error) throw error;
-    return data ?? [];
+    return (data as Reward[]) ?? [];
+  },
+
+  /**
+   * Cria uma nova recompensa de fidelidade
+   */
+  async createReward(data: {
+    barbershop_id: string;
+    name: string;
+    description?: string | null;
+    points_required: number;
+    active?: boolean;
+  }): Promise<Reward> {
+    const { data: reward, error } = await supabase
+      .from("packages")
+      .insert({
+        barbershop_id: data.barbershop_id,
+        name: data.name.trim(),
+        description: data.description?.trim() || null,
+        price: 0,
+        sessions_total: data.points_required,
+        active: data.active ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return reward;
+  },
+
+  /**
+   * Atualiza uma recompensa
+   */
+  async updateReward(id: string, data: Partial<Reward>): Promise<Reward> {
+    const { data: updated, error } = await supabase
+      .from("packages")
+      .update(data)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return updated;
+  },
+
+  /**
+   * Exclui uma recompensa
+   */
+  async deleteReward(id: string) {
+    const { error } = await supabase
+      .from("packages")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
   },
 };
