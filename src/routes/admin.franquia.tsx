@@ -1,21 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShop } from "@/hooks/use-current-shop";
+import { useAuth } from "@/hooks/use-auth";
+import { barbershopService, Barbershop } from "@/services/barbershop.service";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { brl } from "@/lib/format";
-import {
-  startOfDay,
-  endOfDay,
-  startOfMonth,
-  endOfMonth,
-  format,
-  subDays,
-  eachDayOfInterval,
-} from "date-fns";
+import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Building2,
@@ -24,79 +21,71 @@ import {
   TrendingUp,
   Users,
   ArrowRight,
+  Plus,
+  MapPin,
+  Phone,
+  CheckCircle,
+  ExternalLink,
 } from "lucide-react";
 import { KPISkeleton, CardGridSkeleton } from "@/components/site/LoadingState";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
+import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/franquia")({
-  head: () => ({ meta: [{ title: "Franquia — BarberOS" }] }),
-  component: Page,
+  head: () => ({ meta: [{ title: "Franquia & Múltiplas Unidades — BarberOS" }] }),
+  component: FranquiaPage,
 });
 
 type ShopStats = {
   id: string;
   name: string;
+  slug: string;
   role: string;
-  todayCount: number;
+  active: boolean;
+  address?: any;
+  phone?: string;
   monthRevenue: number;
   monthCount: number;
   avgTicket: number;
   customers: number;
 };
 
-type RangeKey = "7d" | "30d" | "90d";
-const RANGES: { key: RangeKey; label: string; days: number }[] = [
-  { key: "7d", label: "Últimos 7 dias", days: 7 },
-  { key: "30d", label: "Últimos 30 dias", days: 30 },
-  { key: "90d", label: "Últimos 90 dias", days: 90 },
-];
-
-// Cores cíclicas usando tokens HSL — fallback para paletas grandes.
 const SERIES_COLORS = [
   "hsl(var(--accent))",
   "hsl(var(--primary))",
-  "hsl(var(--chart-3, 200 70% 50%))",
-  "hsl(var(--chart-4, 30 80% 55%))",
-  "hsl(var(--chart-5, 280 60% 60%))",
-  "hsl(var(--chart-1, 160 60% 45%))",
+  "#3b82f6",
+  "#10b981",
+  "#8b5cf6",
+  "#f59e0b",
 ];
 
-function Page() {
-  const { shops, setShopId } = useCurrentShop();
-  const ownedShops = shops.filter((s) => s.role === "owner");
-  const [range, setRange] = useState<RangeKey>("30d");
-  const days = RANGES.find((r) => r.key === range)!.days;
+function FranquiaPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { shopId: currentShopId, setShopId } = useCurrentShop();
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ["franquia-stats", ownedShops.map((s) => s.id).join(",")],
-    enabled: ownedShops.length > 0,
+  // Consulta: Todas as Barbearias do Dono
+  const { data: ownedShops, isLoading: loadingShops, refetch: refetchOwned } = useQuery({
+    queryKey: ["admin-owned-barbershops", user?.id],
+    enabled: !!user?.id,
+    queryFn: () => barbershopService.getBarbershopsByOwner(user!.id),
+  });
+
+  const shopIds = useMemo(() => (ownedShops ?? []).map((s) => s.id), [ownedShops]);
+
+  // Consulta de Estatísticas por Unidade
+  const { data: stats, isLoading: loadingStats } = useQuery({
+    queryKey: ["franquia-shop-stats", shopIds.join(",")],
+    enabled: shopIds.length > 0,
     queryFn: async (): Promise<ShopStats[]> => {
       const now = new Date();
-      const todayStart = startOfDay(now).toISOString();
-      const todayEnd = endOfDay(now).toISOString();
       const monthStart = startOfMonth(now).toISOString();
       const monthEnd = endOfMonth(now).toISOString();
 
       return Promise.all(
-        ownedShops.map(async (s) => {
-          const [todayRes, monthRes, customersRes] = await Promise.all([
-            supabase
-              .from("appointments")
-              .select("id", { count: "exact", head: true })
-              .eq("barbershop_id", s.id)
-              .gte("scheduled_start", todayStart)
-              .lte("scheduled_start", todayEnd),
+        (ownedShops ?? []).map(async (s) => {
+          const [apptsRes, customersRes] = await Promise.all([
             supabase
               .from("appointments")
               .select("total_amount, status")
@@ -108,410 +97,383 @@ function Page() {
               .select("id", { count: "exact", head: true })
               .eq("barbershop_id", s.id),
           ]);
-          const completed = (monthRes.data ?? []).filter(
-            (a: any) => a.status === "completed",
-          );
-          const revenue = completed.reduce(
-            (acc: number, a: any) => acc + Number(a.total_amount),
-            0,
-          );
+
+          const completed = (apptsRes.data ?? []).filter((a: any) => a.status === "completed");
+          const monthRevenue = completed.reduce((acc: number, a: any) => acc + Number(a.total_amount || 0), 0);
+          const monthCount = completed.length;
+          const avgTicket = monthCount > 0 ? monthRevenue / monthCount : 0;
+          const contacts = (s.contacts as any) || {};
+
           return {
             id: s.id,
             name: s.name,
-            role: s.role,
-            todayCount: todayRes.count ?? 0,
-            monthRevenue: revenue,
-            monthCount: completed.length,
-            avgTicket: completed.length ? revenue / completed.length : 0,
+            slug: s.slug,
+            role: "owner",
+            active: s.active,
+            address: s.address,
+            phone: contacts.phone || contacts.whatsapp || "",
+            monthRevenue,
+            monthCount,
+            avgTicket,
             customers: customersRes.count ?? 0,
           };
-        }),
+        })
       );
     },
   });
 
-  const { data: trend, isLoading: trendLoading } = useQuery({
-    queryKey: ["franquia-trend", days, ownedShops.map((s) => s.id).join(",")],
-    enabled: ownedShops.length > 1,
-    queryFn: async () => {
-      const end = endOfDay(new Date());
-      const start = startOfDay(subDays(end, days - 1));
-      const ids = ownedShops.map((s) => s.id);
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("barbershop_id, scheduled_start, total_amount, status")
-        .in("barbershop_id", ids)
-        .gte("scheduled_start", start.toISOString())
-        .lte("scheduled_start", end.toISOString());
-      if (error) throw error;
-      return { rows: data ?? [], start, end };
-    },
-  });
-
-  const { revenueSeries, countSeries } = useMemo(() => {
-    if (!trend) return { revenueSeries: [], countSeries: [] };
-    const days = eachDayOfInterval({ start: trend.start, end: trend.end });
-    const empty = () =>
-      Object.fromEntries(ownedShops.map((s) => [s.name, 0])) as Record<
-        string,
-        number
-      >;
-    const revByDay = new Map<string, Record<string, number>>();
-    const cntByDay = new Map<string, Record<string, number>>();
-    days.forEach((d) => {
-      const k = format(d, "yyyy-MM-dd");
-      revByDay.set(k, empty());
-      cntByDay.set(k, empty());
-    });
-    const nameById = new Map(ownedShops.map((s) => [s.id, s.name]));
-    for (const r of trend.rows as any[]) {
-      const k = format(new Date(r.scheduled_start), "yyyy-MM-dd");
-      const name = nameById.get(r.barbershop_id);
-      if (!name || !revByDay.has(k)) continue;
-      cntByDay.get(k)![name] += 1;
-      if (r.status === "completed") {
-        revByDay.get(k)![name] += Number(r.total_amount);
-      }
-    }
-    const fmt = (d: Date) =>
-      format(d, days.length > 31 ? "dd/MM" : "dd/MM", { locale: ptBR });
-    return {
-      revenueSeries: days.map((d) => ({
-        date: fmt(d),
-        ...revByDay.get(format(d, "yyyy-MM-dd"))!,
-      })),
-      countSeries: days.map((d) => ({
-        date: fmt(d),
-        ...cntByDay.get(format(d, "yyyy-MM-dd"))!,
-      })),
-    };
-  }, [trend, ownedShops]);
-
-  const totals = (stats ?? []).reduce(
-    (acc, s) => ({
-      today: acc.today + s.todayCount,
-      revenue: acc.revenue + s.monthRevenue,
-      count: acc.count + s.monthCount,
-      customers: acc.customers + s.customers,
-    }),
-    { today: 0, revenue: 0, count: 0, customers: 0 },
-  );
-  const avgTicket = totals.count ? totals.revenue / totals.count : 0;
-  const best = (stats ?? []).slice().sort((a, b) => b.monthRevenue - a.monthRevenue)[0];
-
-  if (ownedShops.length < 2) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Franquia</h1>
-          <p className="text-muted-foreground">
-            Painel consolidado para donos de várias barbearias.
-          </p>
-        </div>
-        <Card className="grid place-items-center gap-3 p-12 text-center">
-          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-accent/15 text-accent">
-            <Building2 className="h-6 w-6" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-display text-lg font-semibold">
-              Você ainda gerencia uma única unidade
-            </h3>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Quando você for dono de duas ou mais barbearias, esta página mostra
-              KPIs comparativos, gráficos de tendência e melhor unidade do mês.
-            </p>
-          </div>
-        </Card>
-      </div>
+  // Métricas Consolidadas Totais
+  const totals = useMemo(() => {
+    return (stats ?? []).reduce(
+      (acc, s) => ({
+        revenue: acc.revenue + s.monthRevenue,
+        count: acc.count + s.monthCount,
+        customers: acc.customers + s.customers,
+      }),
+      { revenue: 0, count: 0, customers: 0 }
     );
+  }, [stats]);
+
+  const bestUnit = useMemo(() => {
+    if (!stats || !stats.length) return null;
+    return [...stats].sort((a, b) => b.monthRevenue - a.monthRevenue)[0];
+  }, [stats]);
+
+  function handleSelectShop(id: string) {
+    setShopId(id);
+    toast.success("Unidade ativa alterada!");
+    navigate({ to: "/admin" });
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <div className="space-y-8 pb-12">
+      {/* Cabeçalho */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold">Franquia</h1>
+          <h1 className="font-display text-3xl font-bold">Painel da Franquia</h1>
           <p className="text-muted-foreground">
-            Visão consolidada de {ownedShops.length} unidades ·{" "}
-            {format(new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
+            Gerencie todas as suas filiais e barbearias em um único lugar com visão consolidada.
           </p>
         </div>
-        <div className="inline-flex rounded-lg border border-border bg-card p-1">
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setRange(r.key)}
-              className={`rounded-md px-3 py-1.5 text-sm transition ${
-                range === r.key
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+
+        <Button
+          onClick={() => setCreateModalOpen(true)}
+          className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" /> Nova Unidade
+        </Button>
       </div>
 
-      {isLoading ? (
-        <KPISkeleton />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KPI
-            icon={Calendar}
-            label="Agendamentos hoje"
-            value={totals.today}
-            sub={`em ${ownedShops.length} unidades`}
-          />
-          <KPI
-            icon={TrendingUp}
-            label="Atendimentos no mês"
-            value={totals.count}
-          />
-          <KPI
-            icon={DollarSign}
-            label="Faturamento do mês"
-            value={brl(totals.revenue)}
-            sub={`Ticket médio ${brl(avgTicket)}`}
-          />
-          <KPI icon={Users} label="Total de clientes" value={totals.customers} />
-        </div>
-      )}
-
-      {best && best.monthRevenue > 0 && (
-        <Card className="flex flex-col gap-2 border-accent/40 bg-accent/5 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/20 text-accent">
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                Unidade destaque do mês
+      {/* Resumo Consolidado (se houver mais de 1 unidade) */}
+      {(ownedShops?.length ?? 0) > 1 && (
+        <>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Faturamento da Rede (Mês)
+                </span>
+                <DollarSign className="h-4 w-4 text-accent" />
               </div>
-              <div className="font-display text-lg font-semibold">{best.name}</div>
-            </div>
+              <div className="mt-2 font-serif text-3xl font-bold text-accent">{brl(totals.revenue)}</div>
+              <p className="mt-1 text-[10px] text-muted-foreground">{ownedShops?.length} unidades ativas</p>
+            </Card>
+
+            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Atendimentos Concluídos
+                </span>
+                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              </div>
+              <div className="mt-2 font-serif text-3xl font-bold text-foreground">{totals.count}</div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Volume total no mês corrente</p>
+            </Card>
+
+            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                  Base Total de Clientes
+                </span>
+                <Users className="h-4 w-4 text-blue-400" />
+              </div>
+              <div className="mt-2 font-serif text-3xl font-bold text-foreground">{totals.customers}</div>
+              <p className="mt-1 text-[10px] text-muted-foreground">Cadastros somados de todas as lojas</p>
+            </Card>
           </div>
-          <div className="text-right">
-            <div className="font-display text-2xl font-semibold">
-              {brl(best.monthRevenue)}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              {best.monthCount} atendimentos
-            </div>
-          </div>
-        </Card>
+
+          {bestUnit && bestUnit.monthRevenue > 0 && (
+            <Card className="flex flex-col gap-3 rounded-none border border-accent/40 bg-accent/5 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center bg-accent text-accent-foreground font-serif font-bold text-lg">
+                  🏆
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-widest text-accent font-bold">
+                    Unidade Destaque do Mês
+                  </div>
+                  <div className="font-serif text-xl font-bold text-foreground">{bestUnit.name}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="font-serif text-2xl font-bold text-accent">{brl(bestUnit.monthRevenue)}</div>
+                <div className="text-xs text-muted-foreground">{bestUnit.monthCount} atendimentos realizados</div>
+              </div>
+            </Card>
+          )}
+        </>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartCard
-          title="Tendência de faturamento"
-          subtitle={`Receita diária por unidade — ${RANGES.find((r) => r.key === range)!.label.toLowerCase()}`}
-          loading={trendLoading}
-        >
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={revenueSeries} margin={{ left: -10, right: 8, top: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="date"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`)}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-                formatter={(v: any) => brl(Number(v))}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {ownedShops.map((s, i) => (
-                <Line
-                  key={s.id}
-                  type="monotone"
-                  dataKey={s.name}
-                  stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartCard>
+      {/* Grid de Unidades */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between border-b border-border/40 pb-3">
+          <h2 className="font-serif text-2xl font-bold">Suas Unidades Cadastradas</h2>
+          <Badge variant="outline" className="rounded-none text-xs font-mono text-accent">
+            {ownedShops?.length ?? 0} {ownedShops?.length === 1 ? "unidade" : "unidades"}
+          </Badge>
+        </div>
 
-        <ChartCard
-          title="Atendimentos por unidade"
-          subtitle="Volume diário de agendamentos"
-          loading={trendLoading}
-        >
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={countSeries} margin={{ left: -10, right: 8, top: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis
-                dataKey="date"
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                stroke="hsl(var(--muted-foreground))"
-                fontSize={11}
-                tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
-              />
-              <Tooltip
-                contentStyle={{
-                  background: "hsl(var(--popover))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {ownedShops.map((s, i) => (
-                <Bar
-                  key={s.id}
-                  dataKey={s.name}
-                  stackId="a"
-                  fill={SERIES_COLORS[i % SERIES_COLORS.length]}
-                  radius={[2, 2, 0, 0]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      <div>
-        <h2 className="mb-3 font-display text-xl font-semibold">
-          Comparativo por unidade
-        </h2>
-        {isLoading ? (
-          <CardGridSkeleton count={ownedShops.length} />
+        {loadingShops || loadingStats ? (
+          <CardGridSkeleton count={3} />
+        ) : !stats || stats.length === 0 ? (
+          <Card className="p-12 text-center rounded-none border border-border">
+            <Building2 className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
+            <h3 className="font-serif text-lg font-bold">Nenhuma unidade cadastrada</h3>
+            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+              Clique em "Nova Unidade" para cadastrar sua barbearia ou adicionar uma nova filial à sua rede.
+            </p>
+          </Card>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {(stats ?? []).map((s) => {
-              const sharePct = totals.revenue
-                ? Math.round((s.monthRevenue / totals.revenue) * 100)
-                : 0;
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {stats.map((s) => {
+              const isCurrent = s.id === currentShopId;
+              const addr = s.address || {};
+              const cityState = [addr.neighborhood || addr.district, addr.city, addr.state].filter(Boolean).join(" · ");
+
               return (
-                <Card key={s.id} className="flex flex-col gap-4 p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent/15 text-accent">
-                      <Building2 className="h-5 w-5" />
+                <Card
+                  key={s.id}
+                  className={`flex flex-col justify-between rounded-none border p-6 backdrop-blur-md transition-all ${
+                    isCurrent ? "border-accent bg-card shadow-lg shadow-accent/5" : "border-border bg-card/40 hover:border-border/80"
+                  }`}
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="font-serif text-xl font-bold text-foreground">{s.name}</h3>
+                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                          <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
+                          {cityState || "Endereço não configurado"}
+                        </p>
+                        {s.phone && (
+                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            {s.phone}
+                          </p>
+                        )}
+                      </div>
+
+                      {isCurrent ? (
+                        <Badge className="rounded-none bg-accent text-accent-foreground text-[10px] font-bold uppercase">
+                          Ativa
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="rounded-none text-[10px] uppercase border-border/60">
+                          Filial
+                        </Badge>
+                      )}
                     </div>
-                    <Badge variant="secondary">{sharePct}% do faturamento</Badge>
-                  </div>
-                  <div>
-                    <div className="font-display text-lg font-semibold">{s.name}</div>
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">
-                      {s.role}
+
+                    <div className="grid grid-cols-2 gap-3 border-y border-border/40 py-3 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase text-muted-foreground">Faturamento (Mês)</span>
+                        <div className="font-serif text-lg font-bold text-accent">{brl(s.monthRevenue)}</div>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase text-muted-foreground">Atendimentos</span>
+                        <div className="font-serif text-lg font-bold text-foreground">{s.monthCount}</div>
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <Stat label="Hoje" value={s.todayCount} />
-                    <Stat label="Mês" value={s.monthCount} />
-                    <Stat label="Faturamento" value={brl(s.monthRevenue)} />
-                    <Stat label="Ticket médio" value={brl(s.avgTicket)} />
+
+                  <div className="mt-6 flex items-center justify-between gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => handleSelectShop(s.id)}
+                      className={`w-full rounded-none text-xs uppercase font-bold tracking-wider ${
+                        isCurrent
+                          ? "bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
+                          : "bg-card border border-border hover:bg-accent hover:text-accent-foreground"
+                      }`}
+                    >
+                      {isCurrent ? "Painel Aberto" : "Gerenciar Unidade"}
+                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full bg-accent transition-all"
-                      style={{ width: `${sharePct}%` }}
-                    />
-                  </div>
-                  <Button
-                    asChild
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setShopId(s.id)}
-                  >
-                    <Link to="/admin">
-                      Abrir painel
-                      <ArrowRight className="ml-1 h-3.5 w-3.5" />
-                    </Link>
-                  </Button>
                 </Card>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Modal: Nova Unidade */}
+      <CreateShopModal
+        open={createModalOpen}
+        onOpenChange={setCreateModalOpen}
+        ownerId={user?.id || ""}
+        onSuccess={() => {
+          setCreateModalOpen(false);
+          refetchOwned();
+        }}
+      />
     </div>
   );
 }
 
-function ChartCard({
-  title,
-  subtitle,
-  loading,
-  children,
+function CreateShopModal({
+  open,
+  onOpenChange,
+  ownerId,
+  onSuccess,
 }: {
-  title: string;
-  subtitle?: string;
-  loading?: boolean;
-  children: React.ReactNode;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  ownerId: string;
+  onSuccess: () => void;
 }) {
-  return (
-    <Card className="p-5">
-      <div className="mb-4">
-        <h3 className="font-display text-lg font-semibold">{title}</h3>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        )}
-      </div>
-      {loading ? (
-        <div className="grid h-[280px] place-items-center text-sm text-muted-foreground">
-          Carregando dados…
-        </div>
-      ) : (
-        children
-      )}
-    </Card>
-  );
-}
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [neighborhood, setNeighborhood] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("SP");
+  const [busy, setBusy] = useState(false);
 
-function KPI({
-  icon: Icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: any;
-  label: string;
-  value: any;
-  sub?: string;
-}) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">{label}</span>
-        <Icon className="h-4 w-4 text-accent" />
-      </div>
-      <div className="mt-2 font-display text-3xl font-semibold">{value}</div>
-      {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
-    </Card>
-  );
-}
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) return toast.error("Informe o nome da unidade.");
 
-function Stat({ label, value }: { label: string; value: any }) {
+    setBusy(true);
+    try {
+      await barbershopService.createBarbershop({
+        name: name.trim(),
+        ownerId,
+        phone: phone.trim() || undefined,
+        address: {
+          street: street.trim() || null,
+          neighborhood: neighborhood.trim() || null,
+          city: city.trim() || null,
+          state: state.trim().toUpperCase() || "SP",
+        },
+      });
+
+      toast.success("Nova unidade criada com sucesso!");
+      setName("");
+      setPhone("");
+      setStreet("");
+      setNeighborhood("");
+      setCity("");
+      onSuccess();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar nova unidade.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div>
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="font-semibold">{value}</div>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="rounded-none border-border sm:max-w-md">
+        <form onSubmit={handleCreate}>
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl">Cadastrar Nova Unidade</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4 text-xs">
+            <div className="space-y-1.5">
+              <Label htmlFor="sh_name">Nome da Unidade / Filial *</Label>
+              <Input
+                id="sh_name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex.: BarberOS — Unidade Jardins"
+                className="rounded-none"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="sh_phone">Telefone / WhatsApp</Label>
+              <Input
+                id="sh_phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="(11) 99999-0000"
+                className="rounded-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="sh_street">Rua / Endereço</Label>
+                <Input
+                  id="sh_street"
+                  value={street}
+                  onChange={(e) => setStreet(e.target.value)}
+                  placeholder="Rua Oscar Freire"
+                  className="rounded-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="sh_neigh">Bairro</Label>
+                <Input
+                  id="sh_neigh"
+                  value={neighborhood}
+                  onChange={(e) => setNeighborhood(e.target.value)}
+                  placeholder="Jardins"
+                  className="rounded-none"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="sh_city">Cidade</Label>
+                <Input
+                  id="sh_city"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="São Paulo"
+                  className="rounded-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="sh_uf">UF</Label>
+                <Input
+                  id="sh_uf"
+                  maxLength={2}
+                  value={state}
+                  onChange={(e) => setState(e.target.value.toUpperCase())}
+                  placeholder="SP"
+                  className="rounded-none uppercase font-mono"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-none">
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={busy} className="rounded-none bg-accent text-accent-foreground">
+              {busy ? "Criando..." : "Criar Unidade"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -96,6 +96,72 @@ export const barbershopService = {
     return data;
   },
 
+  async createBarbershop(data: {
+    name: string;
+    slug?: string;
+    description?: string | null;
+    logo_url?: string | null;
+    banner_url?: string | null;
+    address?: any;
+    contacts?: any;
+    phone?: string;
+    social?: any;
+    settings?: any;
+    ownerId?: string;
+    userId?: string;
+  }) {
+    const owner = data.ownerId || data.userId;
+    const generatedSlug =
+      data.slug ||
+      data.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") +
+        "-" +
+        Math.floor(Math.random() * 1000);
+
+    const contacts = data.contacts || (data.phone ? { phone: data.phone, whatsapp: data.phone } : null);
+
+    const { data: shop, error } = await supabase
+      .from("barbershops")
+      .insert({
+        name: data.name,
+        slug: generatedSlug,
+        description: data.description || null,
+        logo_url: data.logo_url || null,
+        banner_url: data.banner_url || null,
+        contacts,
+        address: data.address || null,
+        social: data.social || null,
+        settings: data.settings || null,
+        active: true,
+      })
+      .select()
+      .single();
+
+    if (error || !shop) throw error || new Error("Erro ao criar barbearia");
+
+    if (owner) {
+      await this.addMember(shop.id, owner, "owner");
+    }
+
+    return shop;
+  },
+
+  async getBarbershopsByOwner(userId: string): Promise<Barbershop[]> {
+    const { data, error } = await supabase
+      .from("barbershop_members")
+      .select("barbershop:barbershops(*)")
+      .eq("profile_id", userId)
+      .eq("role", "owner")
+      .eq("active", true);
+
+    if (error) throw error;
+    return (data ?? []).map((d: any) => d.barbershop).filter(Boolean);
+  },
+
   /**
    * Lista barbearias com filtros de busca, localização, avaliação e paginação
    */
@@ -397,37 +463,6 @@ export const barbershopService = {
       .eq("id", id);
 
     if (error) throw error;
-  },
-
-  /**
-   * Criação completa de barbearia com dados estendidos
-   */
-  async createBarbershop(data: {
-    name: string;
-    slug: string;
-    description?: string | null;
-    logo_url?: string | null;
-    banner_url?: string | null;
-    address?: any;
-    contacts?: any;
-    social?: any;
-    settings?: any;
-    userId?: string;
-  }) {
-    const { userId, ...shopData } = data;
-    const { data: shop, error } = await supabase
-      .from("barbershops")
-      .insert(shopData)
-      .select()
-      .single();
-
-    if (error) throw error;
-
-    if (userId) {
-      await this.addMember(shop.id, userId, "owner");
-    }
-
-    return shop;
   },
 
   /**
