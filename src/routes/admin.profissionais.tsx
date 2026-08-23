@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -266,7 +266,10 @@ function Page() {
               >
                 <div className="space-y-4">
                   <div className="flex items-center gap-4">
-                    <Avatar className="h-14 w-14 rounded-none border border-accent/20">
+                    <Avatar className="h-14 w-14 shrink-0 rounded-none border border-accent/20">
+                      {p.avatar_url && (
+                        <AvatarImage src={p.avatar_url} alt={p.display_name} className="object-cover" />
+                      )}
                       <AvatarFallback className="rounded-none bg-accent/10 font-serif text-lg font-bold text-accent">
                         {p.display_name
                           .split(" ")

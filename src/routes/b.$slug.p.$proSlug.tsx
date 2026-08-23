@@ -218,12 +218,12 @@ function ProPage() {
             <p className="mt-2 text-muted-foreground">Trabalhos recentes de {pro.display_name.split(" ")[0]}.</p>
             <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {portfolio.map((p: any) => (
-                <figure key={p.id} className="group relative overflow-hidden rounded-2xl border border-border">
+                <figure key={p.id} className="group relative aspect-square w-full max-w-full overflow-hidden rounded-2xl border border-border">
                   <img
                     src={p.image_url}
                     alt={p.caption ?? "Trabalho realizado"}
                     loading="lazy"
-                    className="aspect-square w-full object-cover transition duration-500 group-hover:scale-105"
+                    className="h-full w-full max-w-full object-cover transition duration-500 group-hover:scale-105"
                   />
                   {p.caption && (
                     <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-xs text-white opacity-0 transition group-hover:opacity-100">

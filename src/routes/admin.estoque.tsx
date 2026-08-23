@@ -209,9 +209,20 @@ function ProductsList({
               className="flex flex-col gap-4 border border-border bg-card/50 p-5 rounded-none backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex items-center gap-4">
-                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-none bg-accent/10 text-accent">
-                  <Package className="h-6 w-6" />
-                </div>
+                {(p as any).image_url || (p as any).photo_url ? (
+                  <div className="h-12 w-12 shrink-0 aspect-square overflow-hidden border border-border/60">
+                    <img
+                      src={(p as any).image_url || (p as any).photo_url}
+                      alt={p.name}
+                      loading="lazy"
+                      className="h-full w-full object-cover max-w-full"
+                    />
+                  </div>
+                ) : (
+                  <div className="grid h-12 w-12 shrink-0 place-items-center rounded-none bg-accent/10 text-accent">
+                    <Package className="h-6 w-6" />
+                  </div>
+                )}
 
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">

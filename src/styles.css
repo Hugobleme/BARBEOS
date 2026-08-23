@@ -149,6 +149,19 @@
     letter-spacing: -0.02em; 
     font-weight: 700;
   }
+
+  /* Prevent image overflow */
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Fix for mobile Safari and high-DPI displays */
+  @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    img {
+      image-rendering: -webkit-optimize-contrast;
+    }
+  }
 }
 
 @layer components {

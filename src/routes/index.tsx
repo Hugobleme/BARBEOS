@@ -13,6 +13,7 @@ import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Search, Sparkles,
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { AuroraFab } from "@/components/aurora/AuroraFab";
 import { OptimizedImage } from "@/components/OptimizedImage";
+import { Image } from "@/components/Image";
 import heroImage from "@/assets/hero-barbershop.jpg";
 import { z } from "zod";
 
@@ -315,26 +316,39 @@ function Landing() {
                 return (
                   <article
                     key={shop.id}
-                    className="group relative flex flex-col border border-border bg-background/60 p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
+                    className="group relative flex flex-col justify-between overflow-hidden border border-border bg-background/60 p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <h3 className="font-serif text-2xl font-bold transition-colors group-hover:text-accent">
-                          {shop.name}
-                        </h3>
-                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <MapPin className="h-3.5 w-3.5 text-accent" />
-                          {cityState}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent">
-                        Destaque
-                      </Badge>
-                    </div>
+                    <div>
+                      {shop.banner_url && (
+                        <div className="mb-4 aspect-video w-full overflow-hidden border border-border/40 max-w-full">
+                          <Image
+                            src={shop.banner_url}
+                            alt={shop.name}
+                            aspectRatio="video"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        </div>
+                      )}
 
-                    <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                      {shop.description || "Atendimento premium com os melhores profissionais da região."}
-                    </p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <h3 className="font-serif text-2xl font-bold transition-colors group-hover:text-accent">
+                            {shop.name}
+                          </h3>
+                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
+                            <span className="truncate">{cityState}</span>
+                          </p>
+                        </div>
+                        <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent shrink-0">
+                          Destaque
+                        </Badge>
+                      </div>
+
+                      <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
+                        {shop.description || "Atendimento premium com os melhores profissionais da região."}
+                      </p>
+                    </div>
 
                     <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
                       <div className="flex items-center gap-1.5">

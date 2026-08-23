@@ -103,10 +103,15 @@ function ShopPage() {
   return (
     <PublicLayout>
       {/* 1. Header Hero */}
-      <header className="relative border-b border-border/60 bg-card/30">
+      <header className="relative overflow-hidden border-b border-border/60 bg-card/30">
         {shop.banner_url && (
-          <div className="absolute inset-0 -z-10 opacity-20">
-            <img src={shop.banner_url} alt="" className="h-full w-full object-cover blur-sm" />
+          <div className="absolute inset-0 -z-10 overflow-hidden opacity-20">
+            <img
+              src={shop.banner_url}
+              alt=""
+              loading="lazy"
+              className="h-full w-full max-w-full object-cover blur-sm"
+            />
             <div className="absolute inset-0 bg-background/80" />
           </div>
         )}
@@ -114,6 +119,16 @@ function ShopPage() {
         <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             <div className="space-y-4 max-w-2xl">
+              {shop.logo_url && (
+                <div className="mb-2 max-w-[120px] overflow-hidden md:max-w-[150px]">
+                  <img
+                    src={shop.logo_url}
+                    alt={`Logo ${shop.name}`}
+                    loading="lazy"
+                    className="h-auto w-full max-w-full object-contain"
+                  />
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/10 text-accent">
                   Barbearia Parceira
@@ -167,7 +182,7 @@ function ShopPage() {
       </header>
 
       {/* 2. Galeria de Fotos */}
-      <section className="border-b border-border/60 bg-background py-14">
+      <section className="overflow-hidden border-b border-border/60 bg-background py-14">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mb-6 flex items-center justify-between">
             <h2 className="font-serif text-2xl font-bold">Galeria de fotos</h2>
@@ -176,11 +191,12 @@ function ShopPage() {
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {galleryImages.slice(0, 4).map((imgUrl: string, idx: number) => (
-              <div key={idx} className="group relative aspect-[4/3] overflow-hidden border border-border bg-card">
+              <div key={idx} className="group relative aspect-[4/3] sm:aspect-square overflow-hidden border border-border bg-card max-w-full">
                 <img
                   src={imgUrl}
                   alt={`Ambiente da barbearia ${idx + 1}`}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                  className="h-full w-full max-w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
               </div>
             ))}

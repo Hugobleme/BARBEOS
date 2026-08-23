@@ -226,15 +226,16 @@ function Directory() {
                 return (
                   <article
                     key={shop.id}
-                    className="group relative flex flex-col justify-between border border-border bg-background p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
+                    className="group relative flex flex-col justify-between overflow-hidden border border-border bg-background p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
                   >
                     <div>
                       {shop.banner_url && (
-                        <div className="mb-4 aspect-video overflow-hidden border border-border/40">
+                        <div className="mb-4 aspect-[4/3] w-full max-w-full overflow-hidden border border-border/40">
                           <img
                             src={shop.banner_url}
                             alt={shop.name}
-                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            loading="lazy"
+                            className="h-full w-full max-w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
                         </div>
                       )}

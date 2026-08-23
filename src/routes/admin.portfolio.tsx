@@ -181,17 +181,17 @@ function PortfolioPage() {
           description="Adicione fotos de alta resolução dos seus melhores cortes para atrair novos clientes."
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {filtered.map((it) => (
             <Card
               key={it.id}
-              className="group relative aspect-square overflow-hidden rounded-none border border-border bg-card/60 transition-all hover:border-accent shadow-md"
+              className="group relative aspect-square w-full max-w-full overflow-hidden rounded-none border border-border bg-card/60 transition-all hover:border-accent shadow-md"
             >
               <img
                 src={it.image_url}
                 alt={it.caption || "Corte BarberOS"}
                 loading="lazy"
-                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                className="h-full w-full max-w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
 
               {/* Gradient Overlay */}

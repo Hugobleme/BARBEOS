@@ -51,7 +51,7 @@ export function OptimizedImage({
         src={imageSrc}
         alt={alt}
         className={cn(
-          "h-full w-full object-cover transition-all duration-700",
+          "h-full w-full object-cover max-w-full transition-all duration-700",
           loaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
           imageClassName
         )}
@@ -60,7 +60,7 @@ export function OptimizedImage({
           setError(true);
           setLoaded(true);
         }}
-        loading="eager"
+        loading={props.loading || "lazy"}
         decoding="async"
         {...props}
       />
