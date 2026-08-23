@@ -112,7 +112,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration failed: ', err));
+              navigator.serviceWorker.register('/sw.js').then((reg) => {
+                if (reg) reg.update();
+              }).catch((err) => {
+                console.warn('SW registration info: ', err);
+              });
             });
           }
         `,
