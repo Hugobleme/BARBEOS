@@ -110,14 +110,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       {
         children: `
+          // FORÇAR LIMPEZA DE CACHE E SERVICE WORKER ANTIGO
           if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-              navigator.serviceWorker.register('/sw.js').then((reg) => {
-                if (reg) reg.update();
-              }).catch((err) => {
-                console.warn('SW registration info: ', err);
-              });
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+              for(let registration of registrations) {
+                registration.unregister();
+                console.log('Service Worker desregistrado para limpar cache.');
+              }
             });
+          }
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) {
+                caches.delete(name);
+                console.log('Cache deletado: ', name);
+              }
+            });
+          }
+          // Recarregar a página uma única vez se acabamos de limpar
+          if (!sessionStorage.getItem('cache_cleared_v1')) {
+            sessionStorage.setItem('cache_cleared_v1', 'true');
+            window.location.reload(true);
           }
         `,
       }
