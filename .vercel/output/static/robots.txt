@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /login
+Disallow: /cadastro
+Disallow: /recuperar-senha
+Disallow: /minha-conta
+Disallow: /avaliar
+Disallow: /convite
+
+Sitemap: /sitemap.xml
