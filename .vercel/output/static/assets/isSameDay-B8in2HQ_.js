@@ -1,0 +1,1 @@
+import{g as s}from"./index-Bk0XQLWI.js";import{n as i,o as t}from"./format-8ztBCOSj.js";const c=[["path",{d:"m15 18-6-6 6-6",key:"1wnfg3"}]],d=s("chevron-left",c);function h(e,o,a){const[n,r]=i(a?.in,e,o);return+t(n)==+t(r)}export{d as C,h as i};
