@@ -159,13 +159,13 @@ function AdminShell() {
           navItems={NAV}
         />
         
-        <main className="flex-1 p-3 pb-28 md:p-8 md:pb-8">
+        <main className="flex-1 p-3 pb-28 md:p-8 md:pb-8 w-full min-w-0 overflow-x-hidden">
           <motion.div
             key={loc.pathname}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="mx-auto max-w-7xl"
+            className="mx-auto w-full max-w-7xl"
           >
             <Outlet />
           </motion.div>

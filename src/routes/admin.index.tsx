@@ -53,6 +53,7 @@ function Dashboard() {
   const { data: todayAppointments, isLoading: loadingTodayAppts } = useQuery({
     queryKey: ["admin-today-appts", shopId],
     enabled: !!shopId,
+    staleTime: 60 * 1000,
     queryFn: () => appointmentService.getTodayAppointments(shopId!),
   });
 
@@ -60,6 +61,7 @@ function Dashboard() {
   const { data: todayRevenueReport, isLoading: loadingTodayRev } = useQuery({
     queryKey: ["admin-today-revenue", shopId],
     enabled: !!shopId,
+    staleTime: 60 * 1000,
     queryFn: () => reportService.getRevenueReport(shopId!, startToday, endToday),
   });
 
@@ -67,6 +69,7 @@ function Dashboard() {
   const { data: nextAppointments, isLoading: loadingNextAppts } = useQuery({
     queryKey: ["admin-next-appts", shopId],
     enabled: !!shopId,
+    staleTime: 30 * 1000,
     queryFn: () => appointmentService.getNextAppointments(shopId!, 5),
   });
 
@@ -74,6 +77,7 @@ function Dashboard() {
   const { data: weekRevenueReport } = useQuery({
     queryKey: ["admin-week-revenue", shopId],
     enabled: !!shopId,
+    staleTime: 5 * 60 * 1000,
     queryFn: () => reportService.getRevenueReport(shopId!, start7DaysAgo, endToday),
   });
 
@@ -222,7 +226,7 @@ function Dashboard() {
       {/* Grid Principal: Gráfico de Faturamento & Próximos Agendamentos */}
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         {/* Gráfico de Evolução */}
-        <motion.div variants={itemAnim}>
+        <motion.div variants={itemAnim} className="min-w-0">
           <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
             <div className="flex items-center justify-between border-b border-border/40 pb-4">
               <div>
@@ -296,23 +300,23 @@ function Dashboard() {
 
                   return (
                     <div key={a.id} className="flex items-center justify-between py-3.5 hover:bg-card/40 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="flex flex-col items-center justify-center border border-accent/30 bg-accent/10 px-2.5 py-1 text-center">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex flex-col items-center justify-center border border-accent/30 bg-accent/10 px-2.5 py-1 text-center shrink-0">
                           <span className="font-mono text-xs font-bold text-accent">
                             {format(new Date(a.scheduled_start), "HH:mm")}
                           </span>
                         </div>
-                        <div>
-                          <div className="font-serif font-bold text-sm text-foreground">
+                        <div className="min-w-0">
+                          <div className="font-serif font-bold text-sm text-foreground truncate">
                             {a.customer?.full_name || "Cliente"}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-[10px] text-muted-foreground truncate">
                             {a.professional?.display_name || "Qualquer barbeiro"}
                           </div>
                         </div>
                       </div>
 
-                      <div className="text-right">
+                      <div className="text-right shrink-0 ml-2">
                         <div className="font-mono font-bold text-xs text-accent">{brl(Number(a.total_amount || 0))}</div>
                         <Badge variant="outline" className={`mt-1 rounded-none text-[8px] font-bold uppercase ${st.className}`}>
                           {st.label}
