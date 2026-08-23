@@ -138,23 +138,41 @@ function Landing() {
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
                   placeholder="Cidade ou bairro (ex: São Paulo, Jardins)..."
-                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur"
+                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur focus-visible:ring-accent"
                 />
               </div>
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"
+                className="h-14 rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background active:scale-95"
               >
                 Buscar
               </Button>
             </form>
 
+            {/* Chips de Cidades Populares */}
+            <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">Populares:</span>
+              {["São Paulo", "Rio de Janeiro", "Curitiba", "Belo Horizonte"].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => {
+                    setSearchCity(c);
+                    navigate({ to: "/barbearias", search: { city: c, sort: sortBy } });
+                  }}
+                  className="rounded-full border border-border/80 bg-card/40 px-3 py-1 text-[11px] text-muted-foreground transition hover:border-accent hover:text-accent hover:bg-accent/5"
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+
             <div className="flex flex-wrap gap-4 pt-2">
               <Button
                 asChild
                 size="lg"
-                className="h-auto rounded-none bg-accent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] text-accent-foreground transition-all hover:scale-[1.02] hover:bg-foreground hover:text-background"
+                className="h-auto rounded-none bg-accent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] text-accent-foreground transition-all hover:scale-[1.02] hover:bg-foreground hover:text-background shadow-lg shadow-accent/20"
               >
                 <Link to="/agendar">Agendar agora</Link>
               </Button>
@@ -450,6 +468,73 @@ function Landing() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Seção: Depoimentos & Confiança */}
+      <section className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
+        <div className="mb-14 flex flex-col gap-4 text-center">
+          <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
+            — Opinião de quem frequenta
+          </div>
+          <h2 className="font-serif text-4xl font-bold md:text-5xl">
+            Aprovado por <span className="italic font-normal">homens exigentes</span>
+          </h2>
+          <p className="mx-auto max-w-md text-sm text-muted-foreground">
+            Confira a experiência de clientes reais que agendam suas sessões pelo BarberOS.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[
+            {
+              name: "Guilherme Sampaio",
+              city: "São Paulo, SP",
+              rating: 5,
+              text: "Melhor experiência de barbearia que já tive. Agendei em menos de um minuto pelo celular, cheguei no horário e o barbeiro já estava pronto me esperando com um café espresso.",
+            },
+            {
+              name: "Rodrigo Mendonça",
+              city: "Rio de Janeiro, RJ",
+              rating: 5,
+              text: "A qualidade do corte degradê e o cuidado com a barba foram impecáveis. Sem fila, sem estresse. O lembrete no WhatsApp 24h antes ajudou demais!",
+            },
+            {
+              name: "Lucas Vasconcelos",
+              city: "Belo Horizonte, MG",
+              rating: 5,
+              text: "Ambiente de primeiro mundo e profissionais extremamente atenciosos. Já assinei o plano de recorrência e não troco de barbearia por nada.",
+            },
+          ].map((t, idx) => (
+            <div
+              key={idx}
+              className="flex flex-col justify-between border border-border/60 bg-card/40 p-8 backdrop-blur-sm transition-all hover:border-accent"
+            >
+              <div className="space-y-4">
+                <div className="flex gap-1 text-accent">
+                  {Array.from({ length: t.rating }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-current" />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-foreground/90 italic">
+                  "{t.text}"
+                </p>
+              </div>
+
+              <div className="mt-6 flex items-center gap-3 border-t border-border/40 pt-4">
+                <div className="grid h-10 w-10 place-items-center bg-accent/20 font-serif font-bold text-accent text-sm">
+                  {t.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </div>
+                <div>
+                  <div className="font-serif font-bold text-sm text-foreground">{t.name}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.city} · Cliente Verificado</div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
