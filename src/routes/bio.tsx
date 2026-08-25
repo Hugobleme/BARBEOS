@@ -48,7 +48,7 @@ function BioPage() {
       {/* Links Area */}
       <div className="w-full max-w-sm flex flex-col gap-4">
         <Button asChild size="lg" className="h-14 w-full rounded-none bg-accent text-accent-foreground hover:bg-accent/90 justify-start px-6 transition-transform hover:scale-[1.02]">
-          <Link to="/agendar">
+          <Link to="/barbearias">
             <CalendarCheck className="mr-4 h-5 w-5" />
             Agendar Horário
           </Link>

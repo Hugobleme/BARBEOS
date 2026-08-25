@@ -89,7 +89,7 @@ function Page() {
                 variant="outline"
                 className="mt-auto h-auto rounded-none border-border bg-transparent py-4 text-[11px] font-bold uppercase tracking-[0.2em] hover:border-accent hover:bg-transparent hover:text-accent"
               >
-                <Link to="/agendar">
+                <Link to="/barbearias">
                   Agendar com {p.display_name.split(" ")[0]}
                   <ArrowRight className="ml-2 h-3.5 w-3.5" />
                 </Link>

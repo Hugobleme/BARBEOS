@@ -6,7 +6,7 @@ import { NewShopDialog } from "./NewShopDialog";
 import { motion } from "framer-motion";
 import { CommandMenu } from "./CommandMenu";
 import { NotificationCenter } from "./NotificationCenter";
-import { useLocation } from "@tanstack/react-router";
+import { useLocation, Link } from "@tanstack/react-router";
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
 
 
@@ -75,9 +75,11 @@ export function AdminHeader({
         <div className="hidden lg:block">
           <Breadcrumb>
             <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href="/admin">Admin</BreadcrumbLink>
-              </BreadcrumbItem>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to="/admin">Admin</Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
               {pathSegments.slice(1).map((seg, i) => (
                 <React.Fragment key={seg}>
                   <BreadcrumbSeparator />

@@ -77,12 +77,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           >
             Tentar novamente
           </button>
-          <a
-            href="/"
+          <Link
+            to="/"
             className="inline-flex items-center justify-center rounded-none border border-border bg-card px-5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             Início
-          </a>
+          </Link>
         </div>
       </div>
     </div>

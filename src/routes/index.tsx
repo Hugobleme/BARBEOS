@@ -428,7 +428,7 @@ function Landing() {
                   variant="outline"
                   className="h-11 w-11 rounded-full border-border bg-transparent transition-all group-hover:border-accent group-hover:bg-accent group-hover:text-accent-foreground"
                 >
-                  <Link to="/agendar" aria-label={`Agendar ${s.name}`}>
+                  <Link to="/barbearias" aria-label={`Agendar ${s.name}`}>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -597,7 +597,7 @@ function Landing() {
                 size="lg"
                 className="h-auto rounded-none bg-foreground px-12 py-5 text-[11px] font-black uppercase tracking-[0.4em] text-background transition-all hover:scale-105 hover:bg-accent hover:text-accent-foreground"
               >
-                <Link to="/agendar">Agendar agora</Link>
+                <Link to="/barbearias">Agendar agora</Link>
               </Button>
               <div className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 <Clock className="h-3 w-3" /> Confirmação instantânea

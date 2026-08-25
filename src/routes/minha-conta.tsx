@@ -232,7 +232,7 @@ function Page() {
             {upcoming.length === 0 && (
               <div className="border border-border/60 p-8 text-center text-sm text-muted-foreground">
                 Nada agendado.{" "}
-                <Link to="/agendar" className="font-medium text-accent hover:underline">
+                <Link to="/barbearias" className="font-medium text-accent hover:underline">
                   Reservar agora →
                 </Link>
               </div>
