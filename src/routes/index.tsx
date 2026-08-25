@@ -132,20 +132,20 @@ function Landing() {
             </p>
 
             {/* Caixa de Busca Rápida por Cidade/Bairro */}
-            <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row max-w-lg">
-              <div className="relative flex-1">
+            <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row max-w-lg w-full">
+              <div className="relative flex-1 w-full">
                 <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
                 <Input
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
                   placeholder="Cidade ou bairro (ex: São Paulo, Jardins)..."
-                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur focus-visible:ring-accent"
+                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur focus-visible:ring-accent w-full"
                 />
               </div>
               <Button
                 type="submit"
                 size="lg"
-                className="h-14 rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background active:scale-95"
+                className="h-14 min-h-11 w-full sm:w-auto rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background active:scale-95"
               >
                 Buscar
               </Button>
@@ -155,33 +155,30 @@ function Landing() {
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
               <span className="text-[10px] uppercase font-bold text-muted-foreground">Populares:</span>
               {["São Paulo", "Rio de Janeiro", "Curitiba", "Belo Horizonte"].map((c) => (
-                <button
+                <Link
                   key={c}
-                  type="button"
-                  onClick={() => {
-                    setSearchCity(c);
-                    navigate({ to: "/barbearias", search: { city: c, sort: sortBy } });
-                  }}
+                  to="/barbearias"
+                  search={{ city: c, sort: sortBy }}
                   className="rounded-full border border-border/80 bg-card/40 px-3 py-1 text-[11px] text-muted-foreground transition hover:border-accent hover:text-accent hover:bg-accent/5"
                 >
                   {c}
-                </button>
+                </Link>
               ))}
             </div>
 
-            <div className="flex flex-wrap gap-4 pt-2">
+            <div className="flex flex-col sm:flex-row gap-4 pt-2 w-full max-w-lg">
               <Button
                 asChild
                 size="lg"
-                className="h-auto rounded-none bg-accent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] text-accent-foreground transition-all hover:scale-[1.02] hover:bg-foreground hover:text-background shadow-lg shadow-accent/20"
+                className="h-auto min-h-11 w-full sm:w-auto rounded-none bg-accent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] text-accent-foreground transition-all hover:scale-[1.02] hover:bg-foreground hover:text-background shadow-lg shadow-accent/20"
               >
-                <Link to="/agendar">Agendar agora</Link>
+                <Link to="/barbearias">Agendar agora</Link>
               </Button>
               <Button
                 asChild
                 size="lg"
                 variant="outline"
-                className="h-auto rounded-none border-border bg-transparent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] backdrop-blur-sm hover:border-accent hover:bg-transparent hover:text-accent"
+                className="h-auto min-h-11 w-full sm:w-auto rounded-none border-border bg-transparent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] backdrop-blur-sm hover:border-accent hover:bg-transparent hover:text-accent"
               >
                 <Link to="/barbearias">Ver barbearias</Link>
               </Button>
@@ -214,19 +211,16 @@ function Landing() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-72 w-72 rounded-full bg-accent/20 blur-[120px]" />
             <div className="pointer-events-none absolute -left-10 -bottom-10 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
 
-            <div className="group relative aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]">
-              <OptimizedImage
-                src="/hero-barbershop.jpg"
-                fallback="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=1200&q=85"
-                alt="Interior de barbearia luxuosa BarberOS"
-                aspectRatio="portrait"
-                fetchPriority="high"
-                loading="eager"
-                className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-105"
-              />
-
+            <div 
+              className="group relative min-h-[400px] sm:aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]"
+              style={{
+                backgroundImage: "url('/hero-barbershop.jpg')",
+                backgroundSize: "cover",
+                backgroundPosition: "center"
+              }}
+            >
               {/* Gradient overlay sutil para manter a imagem brilhante e visível */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none transition-opacity duration-1000 group-hover:opacity-90" />
 
               {/* Badge superior */}
               <div className="absolute left-6 top-6 z-20">

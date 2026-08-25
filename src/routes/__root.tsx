@@ -15,20 +15,33 @@ import { InstallAppButton } from "@/components/site/InstallAppButton";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 function NotFoundComponent() {
+  const loc = useRouterState({ select: (s) => s.location });
+  
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-serif font-bold text-accent">404</h1>
-        <h2 className="mt-4 font-serif text-2xl font-semibold text-foreground">Página não encontrada</h2>
+      <div className="max-w-[390px] w-full text-center sm:max-w-md">
+        <h1 className="text-6xl font-serif font-bold text-accent sm:text-7xl">404</h1>
+        <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           A página que você está procurando não existe ou foi movida.
         </p>
-        <div className="mt-6">
+        {import.meta.env.DEV && loc?.pathname && (
+          <p className="mt-2 font-mono text-[10px] text-muted-foreground/50 truncate">
+            Path: {loc.pathname}
+          </p>
+        )}
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-none bg-accent px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-colors hover:bg-foreground hover:text-background"
+            className="flex min-h-11 items-center justify-center rounded-none bg-accent px-6 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-colors hover:bg-foreground hover:text-background"
           >
             Voltar ao Início
+          </Link>
+          <Link
+            to="/barbearias"
+            className="flex min-h-11 items-center justify-center rounded-none border border-border px-6 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:border-accent hover:text-accent"
+          >
+            Encontrar Barbearia
           </Link>
         </div>
       </div>

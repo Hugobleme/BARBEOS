@@ -21,7 +21,8 @@ import { appointmentService } from "@/services/appointment.service";
 import { z } from "zod";
 
 const searchSchema = z.object({
-  shop: z.string().optional(),
+  barbershop: z.string().optional(),
+  service: z.string().optional(),
 });
 
 export const Route = createFileRoute("/agendar")({
@@ -79,7 +80,7 @@ function Stepper({ step }: { step: number }) {
 function Booking() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { shop: shopSlug } = Route.useSearch();
+  const { barbershop, service } = Route.useSearch();
   const [step, setStep] = useState(0);
   const [pickedServices, setPicked] = useState<Service[]>([]);
   const [proId, setProId] = useState<string | "any">("any");
@@ -89,13 +90,34 @@ function Booking() {
   const [submitting, setSubmitting] = useState(false);
   const [doneId, setDoneId] = useState<string | null>(null);
 
-  const { data: shopId = DEMO_BARBERSHOP_ID } = useQuery({
-    queryKey: ["resolve-shop", shopSlug],
+  // If no barbershop in URL, render the error state before fetching anything
+  if (!barbershop) {
+    return (
+      <PublicLayout>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center p-6 text-center">
+          <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-muted/40">
+            <Scissors className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="mt-6 font-serif text-3xl font-bold">Escolha uma barbearia para agendar</h1>
+          <p className="mt-2 max-w-md text-sm text-muted-foreground">
+            Para continuar, selecione uma barbearia.
+          </p>
+          <Button asChild className="mt-8 rounded-none bg-accent text-accent-foreground uppercase tracking-widest font-bold">
+            <Link to="/barbearias">Ver barbearias</Link>
+          </Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  const { data: shopId } = useQuery({
+    queryKey: ["resolve-shop", barbershop],
     queryFn: async () => {
-      if (!shopSlug) return DEMO_BARBERSHOP_ID;
-      const { data } = await supabase.from("barbershops").select("id").eq("slug", shopSlug).eq("active", true).maybeSingle();
-      return data?.id ?? DEMO_BARBERSHOP_ID;
+      const { data, error } = await supabase.from("barbershops").select("id").eq("slug", barbershop).eq("active", true).maybeSingle();
+      if (error || !data) throw new Error("Barbearia não encontrada.");
+      return data.id;
     },
+    retry: false,
   });
 
   useEffect(() => {
@@ -108,13 +130,23 @@ function Booking() {
 
   const { data: services = [] } = useQuery({
     queryKey: ["svc", shopId],
+    enabled: !!shopId,
     staleTime: 1000 * 60 * 30, // 30 minutes
-    queryFn: async () => ((await supabase.from("services").select("id, name, duration_min, price, description").eq("barbershop_id", shopId).eq("active", true).order("sort")).data ?? []) as Service[],
+    queryFn: async () => ((await supabase.from("services").select("id, name, duration_min, price, description").eq("barbershop_id", shopId || "").eq("active", true).order("sort")).data ?? []) as Service[],
   });
+
+  useEffect(() => {
+    if (service && services.length > 0 && pickedServices.length === 0) {
+      const s = services.find((sv) => sv.id === service);
+      if (s) setPicked([s]);
+    }
+  }, [service, services, pickedServices.length]);
+
   const { data: pros = [] } = useQuery({
     queryKey: ["pros-all", shopId],
+    enabled: !!shopId,
     staleTime: 1000 * 60 * 30, // 30 minutes
-    queryFn: async () => ((await supabase.from("professionals").select("id, display_name, specialties").eq("barbershop_id", shopId).eq("active", true)).data ?? []) as Pro[],
+    queryFn: async () => ((await supabase.from("professionals").select("id, display_name, specialties").eq("barbershop_id", shopId || "").eq("active", true)).data ?? []) as Pro[],
   });
   const { data: workingHours = [] } = useQuery({
     queryKey: ["wh", shopId, pros.map(p => p.id).join(",")],
@@ -223,7 +255,7 @@ function Booking() {
       const start = parse(time, "HH:mm", date);
 
       // Política anti no-show: antecedência mínima
-      const { data: shopCfg } = await supabase.from("barbershops").select("settings").eq("id", shopId).maybeSingle();
+      const { data: shopCfg } = await supabase.from("barbershops").select("settings").eq("id", shopId!).maybeSingle();
       const policy = (shopCfg?.settings as any)?.policy ?? {};
       const minLead = Number(policy.min_lead_hours ?? 0);
       if (minLead > 0) {
@@ -246,7 +278,7 @@ function Booking() {
 
       // Chama o serviço centralizado de agendamentos com validação de double-booking e persistência
       const appt = await appointmentService.createAppointment({
-        barbershopId: shopId,
+        barbershopId: shopId!,
         professionalId: slot.proId,
         services: pickedServices,
         scheduledStart: start,

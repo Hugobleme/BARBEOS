@@ -281,7 +281,7 @@ function Directory() {
                           size="sm"
                           className="rounded-none bg-accent text-[10px] font-bold uppercase tracking-wider text-accent-foreground hover:bg-foreground hover:text-background"
                         >
-                          <Link to="/agendar" search={{ shop: shop.slug }}>
+                          <Link to="/agendar" search={{ barbershop: shop.slug }}>
                             Agendar
                           </Link>
                         </Button>

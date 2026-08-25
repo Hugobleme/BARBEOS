@@ -172,7 +172,7 @@ function ProPage() {
               )}
               <div className="mt-6">
                 <Button asChild size="lg" className="h-12 px-6 text-base">
-                  <Link to="/agendar" search={{ shop: shop.slug, pro: pro.id } as any}>
+                  <Link to="/agendar" search={{ barbershop: shop.slug, pro: pro.id } as any}>
                     Agendar com {pro.display_name.split(" ")[0]}
                   </Link>
                 </Button>
@@ -201,7 +201,7 @@ function ProPage() {
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-xl font-semibold">{brl(Number(s.price))}</span>
                   <Button asChild size="sm">
-                    <Link to="/agendar" search={{ shop: shop.slug, service: s.id, pro: pro.id } as any}>Agendar</Link>
+                    <Link to="/agendar" search={{ barbershop: shop.slug, service: s.id, pro: pro.id } as any}>Agendar</Link>
                   </Button>
                 </div>
               </Card>
@@ -267,7 +267,7 @@ function ProPage() {
             Escolha um horário com {pro.display_name.split(" ")[0]} em poucos cliques.
           </p>
           <Button asChild size="lg" className="h-12 px-6 text-base">
-            <Link to="/agendar" search={{ shop: shop.slug, pro: pro.id } as any}>Agendar agora</Link>
+            <Link to="/agendar" search={{ barbershop: shop.slug, pro: pro.id } as any}>Agendar agora</Link>
           </Button>
         </Card>
       </section>

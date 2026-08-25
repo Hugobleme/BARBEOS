@@ -92,7 +92,7 @@ export function PublicHeader() {
             size="sm"
             className="rounded-none bg-accent text-accent-foreground text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] px-4 sm:px-6 hover:bg-foreground hover:text-background"
           >
-            <Link to="/agendar">Agendar</Link>
+            <Link to="/barbearias">Agendar</Link>
           </Button>
         </div>
       </div>

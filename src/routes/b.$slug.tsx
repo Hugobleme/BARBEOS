@@ -172,7 +172,7 @@ function ShopPage() {
                 size="lg"
                 className="h-auto rounded-none bg-accent px-10 py-5 text-xs font-bold uppercase tracking-[0.25em] text-accent-foreground hover:bg-foreground hover:text-background"
               >
-                <Link to="/agendar" search={{ shop: shop.slug }}>
+                <Link to="/agendar" search={{ barbershop: shop.slug }}>
                   Agendar horário
                 </Link>
               </Button>
@@ -228,7 +228,7 @@ function ShopPage() {
               <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
                 <span className="font-serif text-xl font-bold text-accent">{brl(Number(s.price))}</span>
                 <Button asChild size="sm" variant="outline" className="rounded-none text-xs uppercase tracking-wider">
-                  <Link to="/agendar" search={{ shop: shop.slug }}>
+                  <Link to="/agendar" search={{ barbershop: shop.slug, service: s.id }}>
                     Agendar
                   </Link>
                 </Button>
@@ -345,7 +345,7 @@ function ShopPage() {
                 size="lg"
                 className="mt-6 rounded-none bg-accent px-10 text-xs font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background"
               >
-                <Link to="/agendar" search={{ shop: shop.slug }}>
+                <Link to="/agendar" search={{ barbershop: shop.slug }}>
                   Agendar agora
                 </Link>
               </Button>
@@ -368,7 +368,7 @@ function ShopPage() {
             asChild
             className="flex-1 rounded-none bg-accent text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground"
           >
-            <Link to="/agendar" search={{ shop: shop.slug }}>
+            <Link to="/agendar" search={{ barbershop: shop.slug }}>
               Agendar horário
             </Link>
           </Button>
