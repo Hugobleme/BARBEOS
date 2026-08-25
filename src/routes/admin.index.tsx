@@ -52,7 +52,7 @@ function Dashboard() {
   // Consulta 1: Agendamentos de Hoje
   const { data: todayAppointments, isLoading: loadingTodayAppts } = useQuery({
     queryKey: ["admin-today-appts", shopId],
-    enabled: !!shopId,
+    enabled: Boolean(shopId),
     staleTime: 60 * 1000,
     queryFn: () => appointmentService.getTodayAppointments(shopId!),
   });
@@ -60,7 +60,7 @@ function Dashboard() {
   // Consulta 2: Relatório de Faturamento de Hoje
   const { data: todayRevenueReport, isLoading: loadingTodayRev } = useQuery({
     queryKey: ["admin-today-revenue", shopId],
-    enabled: !!shopId,
+    enabled: Boolean(shopId),
     staleTime: 60 * 1000,
     queryFn: () => reportService.getRevenueReport(shopId!, startToday, endToday),
   });
@@ -68,15 +68,15 @@ function Dashboard() {
   // Consulta 3: Próximos 5 Agendamentos
   const { data: nextAppointments, isLoading: loadingNextAppts } = useQuery({
     queryKey: ["admin-next-appts", shopId],
-    enabled: !!shopId,
+    enabled: Boolean(shopId),
     staleTime: 30 * 1000,
     queryFn: () => appointmentService.getNextAppointments(shopId!, 5),
   });
 
   // Consulta 4: Relatório dos Últimos 7 Dias (Para o gráfico de evolução)
-  const { data: weekRevenueReport } = useQuery({
+  const { data: weekRevenueReport, isLoading: loadingWeek } = useQuery({
     queryKey: ["admin-week-revenue", shopId],
-    enabled: !!shopId,
+    enabled: Boolean(shopId),
     staleTime: 5 * 60 * 1000,
     queryFn: () => reportService.getRevenueReport(shopId!, start7DaysAgo, endToday),
   });
@@ -113,6 +113,24 @@ function Dashboard() {
     hidden: { y: 15, opacity: 0 },
     show: { y: 0, opacity: 1 },
   };
+
+  // 1. Unauthorized State
+  if (!shopId) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center text-muted-foreground">
+        Nenhuma barbearia selecionada.
+      </div>
+    );
+  }
+
+  // 2. Loading State
+  if (loadingTodayAppts || loadingTodayRev || loadingNextAppts || loadingWeek) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8 pb-10">

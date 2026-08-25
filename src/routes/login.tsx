@@ -53,22 +53,22 @@ function LoginPage() {
     }
   }
 
-  // 1. Redirecionamento se já houver sessão
   useEffect(() => {
-    if (!authLoading && user) {
-      redirectBasedOnMembership(user.id);
-    }
-  }, [user, authLoading]);
-
-  // 2. Auth State Listener para login em tempo real ou OAuth
-  useEffect(() => {
+    // Apenas um listener global para capturar o login
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
+      // Evita redirecionar se estivermos no meio da requisição de login (loading = true)
+      if (session?.user && !loading && !redirectingRef.current) {
         redirectBasedOnMembership(session.user.id);
       }
     });
+
+    // Se já estiver logado (ex: recarregou a página), tenta redirecionar
+    if (!authLoading && user && !loading && !redirectingRef.current) {
+      redirectBasedOnMembership(user.id);
+    }
+
     return () => subscription.unsubscribe();
-  }, []);
+  }, [user, authLoading, loading]);
 
   function validateEmail(val: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);

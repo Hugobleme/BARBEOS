@@ -54,29 +54,29 @@ const NAV = [
 ] as const;
 
 function AdminLayout() {
-  const { user, loading } = useAuth();
   const nav = useNavigate();
+  const { user, loading } = useAuth();
 
-  useEffect(() => { if (!loading && !user) nav({ to: "/login" }); }, [loading, user, nav]);
-
-  const { data: memberships, refetch, isLoading } = useQuery({
+  const { data: memberships, isLoading: loadingMemberships } = useQuery({
     enabled: !!user,
     queryKey: ["memberships", user?.id],
     staleTime: 1000 * 60 * 10,
     queryFn: () => barbershopService.getMemberships(user!.id),
   });
 
-  async function claimDemo() {
-    try {
-      await barbershopService.claimDemo(user!.id, DEMO_BARBERSHOP_ID);
-      toast.success("Você agora é dono da BarberOS Demo!");
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao assumir demo");
+  useEffect(() => {
+    if (!loading && !user) {
+      nav({ to: "/login" });
     }
-  }
+  }, [loading, user, nav]);
 
-  if (loading || isLoading) {
+  useEffect(() => {
+    if (!loading && user && !loadingMemberships && memberships && memberships.length === 0) {
+      nav({ to: "/minha-conta" });
+    }
+  }, [loading, user, loadingMemberships, memberships, nav]);
+
+  if (loading || (user && loadingMemberships)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
@@ -87,27 +87,12 @@ function AdminLayout() {
     );
   }
 
-  if (!user) return null;
-
-  if (!memberships || memberships.length === 0) {
-    return (
-      <div className="grid min-h-screen place-items-center bg-background p-6">
-        <Card className="max-w-md p-8 text-center">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent/15 text-accent"><Scissors className="h-6 w-6"/></div>
-          <h1 className="mt-4 font-display text-2xl font-bold">Bem-vindo ao BarberOS</h1>
-          <p className="mt-2 text-sm text-muted-foreground">Você ainda não faz parte de nenhuma barbearia. Assuma a barbearia demo ou crie a sua.</p>
-          <div className="mt-6 grid gap-2">
-            <Button onClick={claimDemo}>Assumir BarberOS Demo</Button>
-            <NewShopDialog onCreated={refetch} trigger={<Button variant="outline">Criar minha barbearia</Button>} />
-          </div>
-          <Link to="/" className="mt-3 inline-block text-xs text-muted-foreground hover:underline">Voltar à home</Link>
-        </Card>
-      </div>
-    );
+  if (!user || !memberships || memberships.length === 0) {
+    return null; // Will redirect via useEffect
   }
 
   return (
-    <ShopProvider shops={memberships} refresh={refetch}>
+    <ShopProvider shops={memberships} refresh={() => {}}>
       <AdminShell />
     </ShopProvider>
   );

@@ -49,6 +49,11 @@ function NotFoundComponent() {
   );
 }
 
+function getReadableError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
@@ -62,9 +67,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-xs text-muted-foreground">
           Não se preocupe, tente recarregar ou voltar para a página inicial.
         </p>
-        {error?.message && (
-          <p className="mt-3 text-[11px] font-mono text-destructive/80 bg-destructive/10 p-2 text-left line-clamp-3">
-            {error.message}
+        {error && (
+          <p className="mt-3 text-[11px] font-mono text-destructive/80 bg-destructive/10 p-2 text-left overflow-auto max-h-32">
+            {getReadableError(error)}
           </p>
         )}
         <div className="mt-6 flex flex-wrap justify-center gap-3">
