@@ -99,11 +99,12 @@ function Page() {
     },
   });
 
+  const { queryClient } = Route.useRouteContext();
+
   if (loading || !user) return null;
   const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
   const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
 
-  const { queryClient } = Route.useRouteContext();
   async function cancel(id: string) {
     const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
     if (error) return toast.error(error.message);
