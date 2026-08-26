@@ -1,41 +1,32 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, useRef } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useCurrentShop } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { addDays, format, startOfWeek, endOfWeek, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as Cal,
-  List,
-  LayoutGrid,
-  Search,
-  Building2,
-  Clock,
-  User,
-  Phone,
-  Scissors,
-  CheckCircle2,
-  XCircle,
-  MoreVertical,
-} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerFooter } from "@/components/ui/drawer";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAppointments } from "@/hooks/queries/useAppointments";
+import { appointmentService } from "@/services/appointment.service";
 import { barbershopService } from "@/services/barbershop.service";
-import { cashService } from "@/services/cash.service";
 import { customerService } from "@/services/customer.service";
 import { CompletePaymentDialog } from "@/components/admin/agenda/CompletePaymentDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { brl, minutes } from "@/lib/format";
+import { brl } from "@/lib/format";
+import {
+  Calendar as Cal, ChevronLeft, ChevronRight, Clock, User, Scissors, XCircle, CheckCircle2,
+  CalendarClock, Smartphone, RefreshCcw, Search, UserPlus, Info, CalendarOff
+} from "lucide-react";
+import { format, addDays, subDays, startOfDay, endOfDay, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/admin/agenda")({
   component: Agenda,
@@ -43,480 +34,692 @@ export const Route = createFileRoute("/admin/agenda")({
 
 const STATUS_MAP = {
   scheduled: { label: "Agendado", className: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
-  in_progress: { label: "Em atendimento", className: "border-amber-500/30 bg-amber-500/10 text-amber-400 animate-pulse" },
+  in_progress: { label: "Confirmado", className: "border-amber-500/30 bg-amber-500/10 text-amber-400" },
   completed: { label: "Concluído", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
   cancelled: { label: "Cancelado", className: "border-border bg-muted/40 text-muted-foreground line-through" },
-  no_show: { label: "Faltou (No-Show)", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+  no_show: { label: "Falta", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 } as const;
 
 function Agenda() {
-  const { shopId, shops, setShopId } = useCurrentShop();
+  const { shopId, shop } = useCurrentShop();
   const { user } = useAuth();
-  const [date, setDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<"day" | "week">("day");
-  const [payAppt, setPayAppt] = useState<any>(null);
-  const [selectedAppt, setSelectedAppt] = useState<any>(null);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [proFilter, setProFilter] = useState("all");
-  const [sourceFilter, setSourceFilter] = useState("all");
-  const [search, setSearch] = useState("");
+  const queryClient = useQueryClient();
 
-  const { data: professionals } = useQuery({
-    queryKey: ["professionals", shopId],
-    enabled: !!shopId,
+  const [date, setDate] = useState(new Date());
+  const [proFilter, setProFilter] = useState("all");
+  const [selectedAppt, setSelectedAppt] = useState<any>(null);
+  const [payAppt, setPayAppt] = useState<any>(null);
+  const [newApptOpen, setNewApptOpen] = useState(false);
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
+
+  // Queries
+  const { data: professionals = [] } = useQuery({
+    queryKey: ["admin-pros", shopId],
+    enabled: Boolean(shopId),
     queryFn: () => barbershopService.getBarbers(shopId!),
   });
 
-  const { data: appointments, isLoading, refetch, updateStatus } = useAppointments(shopId, date, {
-    status: statusFilter,
-    professionalId: proFilter,
-    source: sourceFilter,
-    q: search,
+  const { data: services = [] } = useQuery({
+    queryKey: ["admin-services", shopId],
+    enabled: Boolean(shopId),
+    queryFn: () => barbershopService.getServices(shopId!),
   });
 
-  // Realtime updates
-  useEffect(() => {
-    if (!shopId) return;
-    const channel = supabase
-      .channel(`agenda:${shopId}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "appointments", filter: `barbershop_id=eq.${shopId}` },
-        () => refetch()
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [shopId, refetch]);
+  const { data: customersList = [] } = useQuery({
+    queryKey: ["admin-customers", shopId],
+    enabled: Boolean(shopId),
+    queryFn: async () => {
+      const res = await customerService.getCustomers(shopId!, { limit: 1000 });
+      return res.data || [];
+    },
+  });
 
-  async function handleSetStatus(id: string, status: any) {
-    try {
-      await updateStatus({ id, status });
+  const { data: appointments = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-agenda", shopId, date.toISOString()],
+    enabled: Boolean(shopId),
+    queryFn: async () => {
+      const start = startOfDay(date).toISOString();
+      const end = endOfDay(date).toISOString();
 
-      if (status === "no_show") {
-        const appt = appointments?.find((a) => a.id === id);
-        if (appt?.customer_id) {
-          const nextCount = await customerService.incrementNoShow(appt.customer_id);
-          toast.warning(`Falta registrada para o cliente (${nextCount} faltas no total).`);
-        }
-      } else {
-        toast.success("Status do agendamento atualizado!");
-      }
-      setSelectedAppt(null);
-      refetch();
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao atualizar status.");
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+          *,
+          customer:customers(full_name, phone),
+          professional:professionals(id, display_name),
+          services:appointment_services(service:services(name, price))
+        `)
+        .eq("barbershop_id", shopId!)
+        .gte("scheduled_start", start)
+        .lte("scheduled_start", end)
+        .order("scheduled_start", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: timeOffs = [] } = useQuery({
+    queryKey: ["admin-timeoffs", shopId, date.toISOString()],
+    enabled: Boolean(shopId),
+    queryFn: async () => {
+      const start = startOfDay(date).toISOString();
+      const end = endOfDay(date).toISOString();
+      // To get time-offs we need professional ids of this shop
+      const proIds = professionals.map(p => p.id);
+      if (proIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from("time_off")
+        .select("*, professional:professionals(display_name)")
+        .in("professional_id", proIds)
+        .gte("end_at", start)
+        .lte("start_at", end);
+      
+      if (error) throw error;
+      return data || [];
     }
-  }
+  });
 
-  // Dias da semana para visão semanal
-  const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(weekStart, i));
+  // Filtered timeline items
+  const timelineItems = useMemo(() => {
+    let items: any[] = [...appointments];
+    if (proFilter !== "all") {
+      items = items.filter(a => a.professional_id === proFilter);
+    }
+    
+    // Add time-offs as fake items to show in the list
+    const filteredTimeOffs = timeOffs.filter(t => proFilter === "all" || t.professional_id === proFilter);
+    
+    const combined = [
+      ...items.map(i => ({ type: "appointment", data: i, time: new Date(i.scheduled_start).getTime() })),
+      ...filteredTimeOffs.map(t => ({ type: "timeoff", data: t, time: new Date(t.start_at).getTime() }))
+    ];
+
+    return combined.sort((a, b) => a.time - b.time);
+  }, [appointments, timeOffs, proFilter]);
+
+  // Mutations
+  const updateStatusMut = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      await appointmentService.updateStatus(id, status as any);
+    },
+    onSuccess: () => {
+      toast.success("Status atualizado com sucesso!");
+      refetch();
+      setSelectedAppt(null);
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao atualizar status."),
+  });
+
+  const cancelMut = useMutation({
+    mutationFn: async (id: string) => {
+      await appointmentService.updateStatus(id, "cancelled");
+    },
+    onSuccess: () => {
+      toast.success("Agendamento cancelado!");
+      refetch();
+      setSelectedAppt(null);
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao cancelar."),
+  });
+
+  if (!shopId) return <div className="p-8 text-center text-muted-foreground">Selecione uma barbearia.</div>;
 
   return (
-    <div className="space-y-6">
-      {/* Topo / Título & Navegação de Datas */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight">Agenda</h1>
-            <p className="text-sm text-muted-foreground">
-              {format(date, "EEEE, d 'de' MMMM yyyy", { locale: ptBR })}
-            </p>
-          </div>
-          {shops.length > 1 && (
-            <div className="flex items-center gap-2 border border-border bg-card/60 px-3 py-1.5 backdrop-blur-md">
-              <Building2 className="h-4 w-4 text-accent" />
-              <Select value={shopId ?? undefined} onValueChange={setShopId}>
-                <SelectTrigger className="h-7 w-[160px] border-none bg-transparent p-0 text-xs font-bold focus:ring-0">
-                  <SelectValue placeholder="Barbearia" />
-                </SelectTrigger>
-                <SelectContent className="border-border">
-                  {shops.map((s) => (
-                    <SelectItem key={s.id} value={s.id} className="text-xs">
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-            <TabsList className="rounded-none border border-border bg-card/40">
-              <TabsTrigger value="day" className="rounded-none text-xs uppercase tracking-wider">
-                <LayoutGrid className="mr-1.5 h-3.5 w-3.5" /> Dia
-              </TabsTrigger>
-              <TabsTrigger value="week" className="rounded-none text-xs uppercase tracking-wider">
-                <Cal className="mr-1.5 h-3.5 w-3.5" /> Semana
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="flex items-center gap-1.5">
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-none h-9 w-9 border-border"
-              onClick={() => setDate((d) => addDays(d, viewMode === "week" ? -7 : -1))}
-            >
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-background">
+      
+      {/* 1. SCHEDULE HEADER */}
+      <div className="flex flex-col gap-4 border-b border-border/40 p-4 shrink-0 bg-card/40 backdrop-blur-md">
+        
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={() => setDate(subDays(date, 1))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-none h-9 text-xs uppercase font-bold"
-              onClick={() => setDate(new Date())}
-            >
-              Hoje
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-none h-9 w-9 border-border"
-              onClick={() => setDate((d) => addDays(d, viewMode === "week" ? 7 : 1))}
-            >
+            <div className="flex flex-col items-center min-w-[120px]">
+              <span className="font-semibold text-foreground capitalize">
+                {format(date, "EEEE", { locale: ptBR })}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {format(date, "dd 'de' MMM", { locale: ptBR })}
+              </span>
+            </div>
+            <Button variant="outline" size="icon" onClick={() => setDate(addDays(date, 1))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          <div className="flex items-center gap-2">
+            {!isSameDay(date, new Date()) && (
+              <Button variant="ghost" size="sm" onClick={() => setDate(new Date())} className="hidden sm:flex">
+                Hoje
+              </Button>
+            )}
+            <Button onClick={() => setNewApptOpen(true)} size="sm" className="bg-accent text-accent-foreground font-bold">
+              <CalendarClock className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Novo Agendamento</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Button
+            variant={proFilter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setProFilter("all")}
+            className="rounded-full shrink-0"
+          >
+            Todos
+          </Button>
+          {professionals.map(p => (
+            <Button
+              key={p.id}
+              variant={proFilter === p.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => setProFilter(p.id)}
+              className="rounded-full shrink-0"
+            >
+              {p.display_name}
+            </Button>
+          ))}
         </div>
       </div>
 
-      {/* Visão de Semana (Seletor rápido de dias) */}
-      {viewMode === "week" && (
-        <div className="grid grid-cols-7 gap-2 border border-border/80 bg-card/40 p-3">
-          {weekDays.map((d, idx) => {
-            const isSelected = isSameDay(d, date);
-            const isToday = isSameDay(d, new Date());
+      {/* 2. DAY VIEW */}
+      <ScrollArea className="flex-1 bg-background/50">
+        <div className="max-w-4xl mx-auto p-4 space-y-3 pb-24">
+          
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <Card key={i} className="h-20 animate-pulse bg-muted/30" />)}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center p-10 text-center gap-4">
+              <span className="text-muted-foreground">Erro ao carregar a agenda.</span>
+              <Button onClick={() => refetch()} variant="outline"><RefreshCcw className="h-4 w-4 mr-2" /> Tentar novamente</Button>
+            </div>
+          ) : timelineItems.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-16 text-center text-muted-foreground border border-dashed rounded-xl border-border/50">
+              <Cal className="h-10 w-10 mb-3 opacity-20" />
+              <p className="font-semibold text-foreground">Nenhum agendamento neste período.</p>
+              <p className="text-sm">Aproveite para criar novos agendamentos.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {timelineItems.map((item, i) => {
+                
+                if (item.type === "timeoff") {
+                  const t = item.data;
+                  return (
+                    <div key={`timeoff-${t.id}`} className="flex items-center gap-4 p-3 rounded-xl bg-destructive/5 border border-destructive/10 text-destructive/80 opacity-70">
+                      <CalendarOff className="h-5 w-5 shrink-0" />
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm">
+                          {format(new Date(t.start_at), "HH:mm")} - {format(new Date(t.end_at), "HH:mm")}
+                        </span>
+                        <span className="text-xs">{t.professional?.display_name} • Profissional indisponível</span>
+                        {t.reason && <span className="text-xs italic">Motivo: {t.reason}</span>}
+                      </div>
+                    </div>
+                  );
+                }
 
-            return (
-              <button
-                key={idx}
-                onClick={() => setDate(d)}
-                className={`flex flex-col items-center justify-center p-3 text-center transition-all ${
-                  isSelected
-                    ? "border border-accent bg-accent/15 text-accent font-bold"
-                    : isToday
-                    ? "border border-border bg-background text-foreground"
-                    : "hover:bg-card/80 text-muted-foreground"
-                }`}
-              >
-                <span className="text-[10px] uppercase tracking-widest">{format(d, "EEE", { locale: ptBR })}</span>
-                <span className="font-serif text-lg font-bold">{format(d, "dd")}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+                const a = item.data;
+                const st = STATUS_MAP[a.status as keyof typeof STATUS_MAP] || STATUS_MAP.scheduled;
+                const serviceNames = Array.isArray(a.services) ? a.services.map((s:any) => s.service?.name).filter(Boolean).join(", ") : "Serviço";
+                const isPast = new Date(a.scheduled_end) < new Date() && a.status === "scheduled";
 
-      {/* Filtros e Busca */}
-      <div className="flex flex-wrap items-center gap-3 border border-border/60 bg-card/40 p-4 backdrop-blur-md">
-        <div className="relative min-w-[240px] flex-[2]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            className="h-10 rounded-none border-border bg-background/50 pl-9 text-xs"
-            placeholder="Buscar por cliente ou telefone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-
-        <div className="min-w-[150px] flex-1">
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              <SelectItem value="all">Todos os status</SelectItem>
-              <SelectItem value="scheduled">Agendados</SelectItem>
-              <SelectItem value="in_progress">Em atendimento</SelectItem>
-              <SelectItem value="completed">Concluídos</SelectItem>
-              <SelectItem value="cancelled">Cancelados</SelectItem>
-              <SelectItem value="no_show">Faltas (No-Show)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-[150px] flex-1">
-          <Select value={proFilter} onValueChange={setProFilter}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Profissional" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              <SelectItem value="all">Todos profissionais</SelectItem>
-              {professionals?.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Modal / Dialog de Detalhes do Agendamento */}
-      <Dialog open={!!selectedAppt} onOpenChange={(open) => !open && setSelectedAppt(null)}>
-        <DialogContent className="rounded-none border-border sm:max-w-lg p-6">
-          {selectedAppt && (
-            <div className="space-y-6">
-              <DialogHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <DialogTitle className="font-serif text-2xl font-bold">
-                      Detalhes do Agendamento
-                    </DialogTitle>
-                    <DialogDescription className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <Clock className="h-3.5 w-3.5 text-accent" />
-                      {format(new Date(selectedAppt.scheduled_start), "HH:mm")} às{" "}
-                      {format(new Date(selectedAppt.scheduled_end), "HH:mm")} ·{" "}
-                      {format(new Date(selectedAppt.scheduled_start), "dd 'de' MMMM", { locale: ptBR })}
-                    </DialogDescription>
-                  </div>
-
-                  <Badge
-                    variant="outline"
-                    className={`rounded-none text-[10px] uppercase font-bold ${
-                      STATUS_MAP[selectedAppt.status as keyof typeof STATUS_MAP]?.className
-                    }`}
+                return (
+                  <Card
+                    key={a.id}
+                    onClick={() => setSelectedAppt(a)}
+                    className={`flex items-stretch overflow-hidden cursor-pointer transition-all hover:border-accent group ${isPast ? 'opacity-70 grayscale' : ''}`}
                   >
-                    {STATUS_MAP[selectedAppt.status as keyof typeof STATUS_MAP]?.label || selectedAppt.status}
-                  </Badge>
-                </div>
-              </DialogHeader>
-
-              <div className="space-y-4 text-xs">
-                {/* Cliente */}
-                <div className="border border-border/60 bg-card/40 p-4 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    Cliente
-                  </span>
-                  <div className="font-bold text-sm text-foreground">
-                    {selectedAppt.customer?.full_name || "Cliente não informado"}
-                  </div>
-                  {selectedAppt.customer?.phone && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                      <Phone className="h-3 w-3 text-accent" /> {selectedAppt.customer.phone}
+                    {/* Time Column */}
+                    <div className="w-[70px] shrink-0 bg-muted/40 border-r border-border/40 flex flex-col items-center justify-center py-3">
+                      <span className="font-bold text-foreground">{format(new Date(a.scheduled_start), "HH:mm")}</span>
                     </div>
-                  )}
-                </div>
-
-                {/* Profissional e Valor */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="border border-border/60 bg-card/40 p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Profissional
-                    </span>
-                    <div className="font-bold text-sm text-foreground">
-                      {selectedAppt.professional?.display_name || "Qualquer disponível"}
-                    </div>
-                  </div>
-
-                  <div className="border border-border/60 bg-card/40 p-4 space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Valor Total
-                    </span>
-                    <div className="font-serif text-lg font-bold text-accent">
-                      {brl(Number(selectedAppt.total_amount || 0))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Serviços Solicitados */}
-                {selectedAppt.services && selectedAppt.services.length > 0 && (
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Serviços Contratados
-                    </span>
-                    <div className="divide-y divide-border/20 border border-border/60 bg-card/40">
-                      {selectedAppt.services.map((item: any) => (
-                        <div key={item.id} className="flex items-center justify-between p-3">
-                          <div className="space-y-0.5">
-                            <span className="font-bold text-foreground">{item.service?.name}</span>
-                            <div className="text-[10px] text-muted-foreground">
-                              {minutes(item.duration_snapshot || item.service?.duration_min || 30)}
-                            </div>
-                          </div>
-                          <span className="font-mono font-bold text-accent">
-                            {brl(Number(item.price_snapshot || item.service?.price || 0))}
-                          </span>
+                    
+                    {/* Details Column */}
+                    <div className="flex-1 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 overflow-hidden">
+                      <div className="flex flex-col truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground truncate">{a.customer?.full_name || "Cliente Avulso"}</span>
+                          <Badge variant="outline" className={`text-[10px] uppercase font-bold shrink-0 ${st.className}`}>
+                            {st.label}
+                          </Badge>
                         </div>
-                      ))}
+                        <span className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-1">
+                          <Scissors className="h-3 w-3" /> {serviceNames}
+                        </span>
+                        <span className="text-xs text-muted-foreground truncate flex items-center gap-1 mt-0.5">
+                          <User className="h-3 w-3" /> {a.professional?.display_name || "Qualquer barbeiro"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between sm:justify-end sm:flex-col sm:items-end shrink-0 gap-2">
+                        <span className="font-mono font-bold text-accent text-sm">{brl(Number(a.total_amount || 0))}</span>
+                        {a.status === "scheduled" && !isPast && (
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); updateStatusMut.mutate({ id: a.id, status: "in_progress" }); }} className="h-7 text-xs bg-accent text-accent-foreground">
+                            Confirmar
+                          </Button>
+                        )}
+                        {a.status === "in_progress" && (
+                          <Button size="sm" onClick={(e) => { e.stopPropagation(); setPayAppt(a); }} className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white">
+                            Concluir
+                          </Button>
+                        )}
+                      </div>
                     </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* 3. APPOINTMENT DETAILS DRAWER */}
+      <Drawer open={!!selectedAppt && !rescheduleOpen} onOpenChange={(o) => !o && setSelectedAppt(null)}>
+        <DrawerContent className="max-h-[85vh]">
+          {selectedAppt && (
+            <div className="max-w-md mx-auto w-full flex flex-col">
+              <DrawerHeader className="text-left">
+                <DrawerTitle className="text-xl">{selectedAppt.customer?.full_name || "Cliente Avulso"}</DrawerTitle>
+                <DrawerDescription className="flex flex-col gap-1 mt-1">
+                  {selectedAppt.customer?.phone && (
+                    <span className="flex items-center gap-1 text-sm"><Smartphone className="h-3 w-3" /> {selectedAppt.customer.phone}</span>
+                  )}
+                </DrawerDescription>
+              </DrawerHeader>
+              
+              <div className="p-4 space-y-4 overflow-y-auto">
+                <div className="flex flex-col gap-2 p-3 bg-muted/30 rounded-xl border border-border/40">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Data/Hora</span>
+                    <span className="font-semibold text-foreground">
+                      {format(new Date(selectedAppt.scheduled_start), "dd/MM/yyyy HH:mm")}
+                    </span>
                   </div>
-                )}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Profissional</span>
+                    <span className="font-semibold text-foreground">{selectedAppt.professional?.display_name || "-"}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Status atual</span>
+                    <Badge variant="outline" className={(STATUS_MAP[selectedAppt.status as keyof typeof STATUS_MAP] || STATUS_MAP.scheduled).className}>
+                      {(STATUS_MAP[selectedAppt.status as keyof typeof STATUS_MAP] || STATUS_MAP.scheduled).label}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Serviços</h4>
+                  {Array.isArray(selectedAppt.services) && selectedAppt.services.map((s: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center text-sm p-2 bg-card rounded-lg border border-border/40">
+                      <span>{s.service?.name}</span>
+                      <span className="font-mono">{brl(Number(s.price || s.service?.price || 0))}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between items-center p-2 font-bold text-accent text-lg border-t border-border mt-2">
+                    <span>Total</span>
+                    <span>{brl(Number(selectedAppt.total_amount || 0))}</span>
+                  </div>
+                </div>
 
                 {selectedAppt.notes && (
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                      Observações
-                    </span>
-                    <p className="border border-border/40 bg-card/20 p-3 italic text-muted-foreground">
+                    <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Observações</h4>
+                    <p className="text-sm bg-accent/5 p-3 rounded-xl border border-accent/20 text-accent-foreground/80 italic">
                       "{selectedAppt.notes}"
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Ações Rápidas de Mudança de Status */}
-              <div className="flex flex-wrap gap-2 border-t border-border/40 pt-4">
+              <DrawerFooter className="flex-row flex-wrap gap-2 pt-2 border-t border-border/40">
                 {selectedAppt.status === "scheduled" && (
-                  <Button
-                    size="sm"
-                    className="flex-1 rounded-none bg-accent text-accent-foreground"
-                    onClick={() => handleSetStatus(selectedAppt.id, "in_progress")}
-                  >
-                    <Clock className="mr-1.5 h-3.5 w-3.5" /> Iniciar Atendimento
+                  <Button className="flex-1 bg-accent text-accent-foreground" onClick={() => updateStatusMut.mutate({ id: selectedAppt.id, status: "in_progress" })}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Confirmar
+                  </Button>
+                )}
+                
+                {selectedAppt.status === "in_progress" && (
+                  <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => { setPayAppt(selectedAppt); setSelectedAppt(null); }}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Concluir
                   </Button>
                 )}
 
-                {selectedAppt.status === "in_progress" && (
-                  <Button
-                    size="sm"
-                    className="flex-1 rounded-none bg-emerald-600 text-white hover:bg-emerald-700"
-                    onClick={() => {
-                      const cur = selectedAppt;
-                      setSelectedAppt(null);
-                      setPayAppt(cur);
-                    }}
-                  >
-                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Finalizar & Cobrar
+                {(selectedAppt.status === "scheduled" || selectedAppt.status === "in_progress") && (
+                  <Button variant="outline" className="flex-1" onClick={() => setRescheduleOpen(true)}>
+                    <Clock className="h-4 w-4 mr-2" /> Remarcar
                   </Button>
                 )}
 
                 {selectedAppt.status !== "completed" && selectedAppt.status !== "cancelled" && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-none text-destructive hover:bg-destructive hover:text-destructive-foreground text-xs"
-                    onClick={() => handleSetStatus(selectedAppt.id, "no_show")}
-                  >
-                    Registrar Falta
+                  <Button variant="outline" className="flex-none text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/20" 
+                    onClick={() => {
+                      if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
+                        cancelMut.mutate(selectedAppt.id);
+                      }
+                    }}>
+                    <XCircle className="h-4 w-4" />
                   </Button>
                 )}
-              </div>
+              </DrawerFooter>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </DrawerContent>
+      </Drawer>
 
-      {/* Lista de Agendamentos do Dia */}
-      {isLoading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="h-24 animate-pulse rounded-none border border-border bg-muted/30" />
-          ))}
-        </div>
-      ) : !appointments || appointments.length === 0 ? (
-        <Card className="grid place-items-center rounded-none border border-border p-16 text-center">
-          <Cal className="h-10 w-10 text-muted-foreground/40" />
-          <h3 className="mt-3 font-serif text-lg font-bold">Nenhum agendamento para este dia</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Novos agendamentos feitos online ou no balcão aparecerão aqui em tempo real.
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {appointments.map((a) => {
-            const st = STATUS_MAP[a.status as keyof typeof STATUS_MAP] || STATUS_MAP.scheduled;
+      {/* 4. NEW APPOINTMENT FORM */}
+      <NewAppointmentDrawer 
+        open={newApptOpen} 
+        onClose={() => setNewApptOpen(false)} 
+        shopId={shopId} 
+        services={services} 
+        professionals={professionals} 
+        customers={customersList}
+        onSuccess={() => {
+          refetch();
+          toast.success("Agendamento criado com sucesso!");
+        }}
+      />
 
-            return (
-              <Card
-                key={a.id}
-                onClick={() => setSelectedAppt(a)}
-                className="group relative flex cursor-pointer flex-col justify-between rounded-none border border-border bg-card/50 p-5 backdrop-blur-md transition-all hover:border-accent hover:bg-card sm:flex-row sm:items-center"
-              >
-                <div className="flex items-start gap-4">
-                  {/* Horário */}
-                  <div className="flex min-w-[68px] flex-col items-center justify-center border border-accent/30 bg-accent/10 px-3 py-2 text-center">
-                    <span className="font-mono text-lg font-bold text-accent">
-                      {format(new Date(a.scheduled_start), "HH:mm")}
-                    </span>
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                      {format(new Date(a.scheduled_end), "HH:mm")}
-                    </span>
-                  </div>
+      {/* 5. RESCHEDULE DIALOG */}
+      <RescheduleDialog 
+        open={rescheduleOpen}
+        onClose={() => setRescheduleOpen(false)}
+        appt={selectedAppt}
+        shopId={shopId}
+        onSuccess={() => {
+          refetch();
+          toast.success("Agendamento remarcado com sucesso!");
+          setSelectedAppt(null);
+        }}
+      />
 
-                  {/* Informações do Cliente e Profissional */}
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-serif text-lg font-bold text-foreground transition-colors group-hover:text-accent">
-                        {a.customer?.full_name || "Cliente Avulso"}
-                      </h3>
-                      <Badge variant="outline" className={`rounded-none text-[9px] font-bold uppercase ${st.className}`}>
-                        {st.label}
-                      </Badge>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <User className="h-3 w-3 text-accent" /> {a.professional?.display_name || "Qualquer barbeiro"}
-                      </span>
-                      <span className="font-bold text-accent">{brl(Number(a.total_amount || 0))}</span>
-                      {a.customer?.phone && (
-                        <span className="flex items-center gap-1 text-[10px]">
-                          <Phone className="h-2.5 w-2.5" /> {a.customer.phone}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Botões de Ação Rápida */}
-                <div className="mt-4 flex items-center justify-end gap-2 border-t border-border/20 pt-3 sm:mt-0 sm:border-none sm:pt-0">
-                  {a.status === "scheduled" && (
-                    <Button
-                      size="sm"
-                      className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSetStatus(a.id, "in_progress");
-                      }}
-                    >
-                      <Clock className="mr-1.5 h-3.5 w-3.5" /> Iniciar
-                    </Button>
-                  )}
-
-                  {a.status === "in_progress" && (
-                    <Button
-                      size="sm"
-                      className="rounded-none bg-emerald-600 text-white hover:bg-emerald-700 text-xs uppercase font-bold tracking-wider"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPayAppt(a);
-                      }}
-                    >
-                      <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Cobrar
-                    </Button>
-                  )}
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-none text-xs"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedAppt(a);
-                    }}
-                  >
-                    Detalhes
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Modal de Finalização de Pagamento */}
+      {/* PAYMENT/COMPLETE DIALOG */}
       <CompletePaymentDialog
         appt={payAppt}
         onClose={() => setPayAppt(null)}
         userId={user?.id}
-        onDone={refetch}
+        onDone={() => {
+          refetch();
+          setPayAppt(null);
+        }}
       />
+      
     </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// INTERNAL COMPONENTS
+// -----------------------------------------------------------------------------
+
+function NewAppointmentDrawer({ open, onClose, shopId, services, professionals, customers, onSuccess }: any) {
+  const { user } = useAuth();
+  
+  const [dateStr, setDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [timeStr, setTimeStr] = useState("");
+  const [proId, setProId] = useState("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  
+  // Customer selection
+  const [custId, setCustId] = useState<string>("new");
+  const [custName, setCustName] = useState("");
+  const [custPhone, setCustPhone] = useState("");
+  const [notes, setNotes] = useState("");
+  
+  const [loading, setLoading] = useState(false);
+
+  const totalDuration = selectedServices.reduce((acc, sid) => {
+    const s = services.find((x: any) => x.id === sid);
+    return acc + Number(s?.duration_min ?? 30);
+  }, 0);
+
+  const totalPrice = selectedServices.reduce((acc, sid) => {
+    const s = services.find((x: any) => x.id === sid);
+    return acc + Number(s?.price ?? 0);
+  }, 0);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!timeStr || selectedServices.length === 0 || !proId) {
+      return toast.error("Preencha todos os campos obrigatórios.");
+    }
+    if (custId === "new" && !custName) {
+      return toast.error("Nome do cliente é obrigatório.");
+    }
+
+    setLoading(true);
+    try {
+      const startsAt = new Date(`${dateStr}T${timeStr}:00`);
+      
+      await appointmentService.createAppointment({
+        barbershopId: shopId,
+        professionalId: proId,
+        startsAt,
+        services: services.filter((s: any) => selectedServices.includes(s.id)),
+        customerId: custId === "new" ? undefined : custId,
+        customerData: {
+          name: custName,
+          phone: custPhone,
+        },
+        userId: user?.id,
+        notes,
+        source: "admin",
+      });
+
+      onSuccess();
+      onClose();
+      
+      // Reset form
+      setCustId("new"); setCustName(""); setCustPhone(""); setTimeStr(""); setSelectedServices([]); setNotes("");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao agendar.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
+      <DrawerContent className="max-h-[90vh]">
+        <div className="max-w-lg mx-auto w-full flex flex-col h-full overflow-hidden">
+          <DrawerHeader className="text-left border-b border-border/40 shrink-0">
+            <DrawerTitle>Novo Agendamento</DrawerTitle>
+            <DrawerDescription>Preencha os dados abaixo para agendar.</DrawerDescription>
+          </DrawerHeader>
+
+          <ScrollArea className="flex-1 p-4">
+            <form id="new-appt-form" onSubmit={handleSubmit} className="space-y-5">
+              
+              <div className="space-y-3 p-3 bg-muted/20 border border-border/40 rounded-xl">
+                <Label className="text-accent font-semibold">Cliente</Label>
+                <Select value={custId} onValueChange={setCustId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um cliente" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="new" className="font-bold text-accent">+ Novo Cliente Avulso</SelectItem>
+                    {customers.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.full_name} {c.phone ? `(${c.phone})` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                {custId === "new" && (
+                  <div className="grid grid-cols-2 gap-3 mt-2">
+                    <Input placeholder="Nome completo" value={custName} onChange={e => setCustName(e.target.value)} required />
+                    <Input placeholder="Telefone" value={custPhone} onChange={e => setCustPhone(e.target.value)} />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <Label>Serviços</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {services.map((s: any) => (
+                    <div key={s.id} className="flex items-center space-x-2 border border-border/40 p-3 rounded-xl bg-card">
+                      <Checkbox 
+                        id={`s-${s.id}`} 
+                        checked={selectedServices.includes(s.id)}
+                        onCheckedChange={(c) => {
+                          if (c) setSelectedServices(prev => [...prev, s.id]);
+                          else setSelectedServices(prev => prev.filter(id => id !== s.id));
+                        }}
+                      />
+                      <label htmlFor={`s-${s.id}`} className="text-sm flex-1 cursor-pointer select-none font-medium">
+                        {s.name} <span className="text-muted-foreground block text-xs">{brl(Number(s.price))} • {s.duration_min} min</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Label>Profissional</Label>
+                <Select value={proId} onValueChange={setProId} required>
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    {professionals.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input type="date" value={dateStr} onChange={e => setDateStr(e.target.value)} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Horário</Label>
+                  <Input type="time" value={timeStr} onChange={e => setTimeStr(e.target.value)} required />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observação (Opcional)</Label>
+                <Textarea placeholder="Detalhes do agendamento..." value={notes} onChange={e => setNotes(e.target.value)} />
+              </div>
+
+            </form>
+          </ScrollArea>
+
+          <DrawerFooter className="border-t border-border/40 shrink-0 bg-background pt-3 flex-row items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">Total</span>
+              <span className="font-bold font-mono text-lg text-accent">{brl(totalPrice)}</span>
+              <span className="text-[10px] text-muted-foreground">{totalDuration} minutos</span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+              <Button type="submit" form="new-appt-form" disabled={loading} className="bg-accent text-accent-foreground font-bold">
+                {loading ? "Salvando..." : "Confirmar Agendamento"}
+              </Button>
+            </div>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+// -----------------------------------------------------------------------------
+
+function RescheduleDialog({ open, onClose, appt, shopId, onSuccess }: any) {
+  const [dateStr, setDateStr] = useState("");
+  const [timeStr, setTimeStr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (appt && open) {
+      const d = new Date(appt.scheduled_start);
+      setDateStr(format(d, "yyyy-MM-dd"));
+      setTimeStr(format(d, "HH:mm"));
+    }
+  }, [appt, open]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!appt) return;
+
+    setLoading(true);
+    try {
+      const startsAt = new Date(`${dateStr}T${timeStr}:00`);
+      
+      // Calculate duration
+      const totalDuration = Array.isArray(appt.services) 
+        ? appt.services.reduce((acc: number, s: any) => acc + Number(s.duration_snapshot ?? 30), 0)
+        : 30;
+
+      const endsAt = new Date(startsAt.getTime() + totalDuration * 60000);
+
+      // Check availability
+      const isAvailable = await appointmentService.checkSlotAvailable({
+        barbershopId: shopId,
+        professionalId: appt.professional_id,
+        start: startsAt,
+        end: endsAt,
+        excludeAppointmentId: appt.id
+      });
+
+      if (!isAvailable) {
+        throw new Error("O horário selecionado já está reservado ou o profissional está indisponível.");
+      }
+
+      // Update
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          scheduled_start: startsAt.toISOString(),
+          scheduled_end: endsAt.toISOString(),
+        })
+        .eq("id", appt.id);
+
+      if (error) throw error;
+
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao remarcar.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Remarcar Agendamento</DialogTitle>
+          <DialogDescription>
+            Escolha a nova data e horário para o atendimento de {appt?.customer?.full_name}.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Data</Label>
+              <Input type="date" value={dateStr} onChange={e => setDateStr(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label>Horário</Label>
+              <Input type="time" value={timeStr} onChange={e => setTimeStr(e.target.value)} required />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button type="submit" disabled={loading} className="bg-accent text-accent-foreground">
+              {loading ? "Verificando..." : "Salvar Alteração"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

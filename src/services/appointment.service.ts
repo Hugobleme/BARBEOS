@@ -22,6 +22,7 @@ export interface CreateAppointmentInput {
   services: ServiceItem[];
   scheduledStart?: Date;
   startsAt?: Date;
+  customerId?: string;
   customerData: {
     name: string;
     phone: string;
@@ -56,7 +57,7 @@ export const appointmentService = {
       .from("appointments")
       .select("id")
       .eq("barbershop_id", barbershopId)
-      .neq("status", "cancelled")
+      .in("status", ["scheduled", "in_progress"])
       .lt("scheduled_start", end.toISOString())
       .gt("scheduled_end", start.toISOString());
 
@@ -68,10 +69,27 @@ export const appointmentService = {
       query = query.neq("id", excludeAppointmentId);
     }
 
-    const { data, error } = await query;
-    if (error) throw error;
+    const { data: overlapping, error } = await query;
 
-    return (data?.length ?? 0) === 0;
+    if (error) {
+      console.error("Erro ao verificar disponibilidade:", error);
+      throw error;
+    }
+
+    // 3. Verificar time-offs
+    let timeOffQuery = supabase
+      .from("time_off")
+      .select("id")
+      .lt("start_at", end.toISOString())
+      .gt("end_at", start.toISOString());
+
+    if (professionalId) {
+      timeOffQuery = timeOffQuery.eq("professional_id", professionalId);
+    }
+    
+    const { data: overlappingTimeOff } = await timeOffQuery;
+
+    return overlapping.length === 0 && (overlappingTimeOff?.length || 0) === 0;
   },
 
   /**
@@ -83,6 +101,7 @@ export const appointmentService = {
       professionalId,
       services,
       customerData,
+      customerId: providedCustomerId,
       userId,
       notes,
       source = "web",
@@ -104,14 +123,12 @@ export const appointmentService = {
 
     // 2. Cálculo do horário de término baseado na duração dos serviços
     const totalDurationMinutes = services.reduce((acc, s) => {
-      const dur = s.duration_min ?? s.durationMinutes ?? 30;
-      return acc + dur;
+      return acc + Number(s.duration_min ?? s.durationMinutes ?? 30);
     }, 0);
 
     const endsAt = new Date(startsAt.getTime() + totalDurationMinutes * 60000);
-    const totalPrice = services.reduce((acc, s) => acc + Number(s.price ?? 0), 0);
 
-    // 3. Validação de conflito de horário (overlapping appointments)
+    // 3. Verificação de disponibilidade
     const isAvailable = await this.checkSlotAvailable({
       barbershopId,
       professionalId: professionalId || null,
@@ -120,12 +137,12 @@ export const appointmentService = {
     });
 
     if (!isAvailable) {
-      throw new Error("O horário selecionado já está reservado. Por favor, escolha outro horário.");
+      throw new Error("O horário selecionado já está reservado ou o profissional está indisponível.");
     }
 
     // 4. Obter ou registrar o cliente
-    let customerId: string | null = null;
-    if (userId) {
+    let customerId: string | null = providedCustomerId || null;
+    if (!customerId && userId) {
       const { data: existingCustomer } = await supabase
         .from("customers")
         .select("id, blocked")
@@ -138,27 +155,15 @@ export const appointmentService = {
           throw new Error("Seu cadastro está temporariamente bloqueado. Entre em contato com a barbearia.");
         }
         customerId = existingCustomer.id;
-      } else {
-        const { data: newCust, error: custErr } = await supabase
-          .from("customers")
-          .insert({
-            barbershop_id: barbershopId,
-            profile_id: userId,
-            full_name: customerData.name,
-            phone: customerData.phone,
-            email: customerData.email || null,
-          })
-          .select("id")
-          .single();
-
-        if (custErr) throw custErr;
-        customerId = newCust.id;
       }
-    } else {
+    }
+    
+    if (!customerId) {
       const { data: newCust, error: custErr } = await supabase
         .from("customers")
         .insert({
           barbershop_id: barbershopId,
+          profile_id: userId || null,
           full_name: customerData.name,
           phone: customerData.phone,
           email: customerData.email || null,
@@ -170,11 +175,8 @@ export const appointmentService = {
       customerId = newCust.id;
     }
 
-    if (!customerId) {
-      throw new Error("Falha ao registrar cliente para o agendamento.");
-    }
-
-    // 5. Inserir agendamento
+    // 5. Inserir o agendamento
+    const totalPrice = services.reduce((acc, s) => acc + Number(s.price ?? 0), 0);
     const initialStatus: AppointmentStatus = input.status || "scheduled";
 
     const { data: appt, error: apptErr } = await supabase
@@ -182,7 +184,7 @@ export const appointmentService = {
       .insert({
         barbershop_id: barbershopId,
         customer_id: customerId,
-        professional_id: professionalId || "",
+        professional_id: professionalId || null,
         scheduled_start: startsAt.toISOString(),
         scheduled_end: endsAt.toISOString(),
         total_amount: totalPrice,
