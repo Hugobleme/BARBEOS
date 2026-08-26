@@ -1,401 +1,346 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useCurrentShop } from "@/hooks/use-current-shop";
 import { useAuth } from "@/hooks/use-auth";
 import { cashService, CashTransaction, PaymentMethod } from "@/services/cash.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { brl } from "@/lib/format";
-import { format, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, ArrowDownRight, ArrowUpRight, DollarSign, Wallet, Receipt, Trash2, Calendar } from "lucide-react";
 import { toast } from "sonner";
+import { 
+  ArrowDownCircle, ArrowUpCircle, Banknote, Calendar as Cal, CheckCircle2, 
+  CreditCard, DollarSign, Filter, Lock, Plus, QrCode, Search, Trash2, Wallet,
+  ArrowLeftRight, FileText
+} from "lucide-react";
 
-export const Route = createFileRoute("/admin/caixa")({
-  head: () => ({ meta: [{ title: "Fluxo de Caixa — BarberOS" }] }),
-  component: CaixaPage,
-});
-
-const METHOD_LABELS: Record<string, string> = {
-  cash: "Dinheiro",
-  pix: "PIX",
-  credit: "Cartão de Crédito",
-  debit: "Cartão de Débito",
-  transfer: "Transferência",
-  other: "Outro",
-};
+export const Route = createFileRoute("/admin/caixa")({ component: CaixaPage });
 
 function CaixaPage() {
   const { shopId, shop } = useCurrentShop();
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
-  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const qc = useQueryClient();
 
-  const canManage = shop?.role === "owner" || shop?.role === "admin" || shop?.role === "receptionist";
+  const isAdmin = shop?.role === "owner" || shop?.role === "admin";
+  
+  const [dateStr, setDateStr] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [filterMethod, setFilterMethod] = useState<string>("all");
+  const [newEntryOpen, setNewEntryOpen] = useState(false);
+  const [entryType, setEntryType] = useState<"in" | "out">("in");
 
-  const dateRange = useMemo(() => {
-    const d = new Date(selectedDate + "T12:00:00");
-    return {
-      start: startOfDay(d),
-      end: endOfDay(d),
-    };
-  }, [selectedDate]);
+  const selectedDate = new Date(dateStr + "T12:00:00");
 
-  // Consulta de transações do dia
-  const { data: transactions, isLoading, refetch } = useQuery({
-    queryKey: ["admin-cash-entries", shopId, selectedDate],
+  const { data: openSession } = useQuery({
+    queryKey: ["admin-cash-session", shopId],
     enabled: !!shopId,
-    queryFn: () => cashService.getCashEntries(shopId!, dateRange.start, dateRange.end),
+    queryFn: () => cashService.getOpenSession(shopId!),
   });
 
-  // Cálculo de Totais
-  const totals = useMemo(() => {
-    let entradas = 0;
-    let saidas = 0;
+  const { data: transactions = [], isLoading, isError, refetch } = useQuery({
+    queryKey: ["admin-cash-tx", shopId, dateStr],
+    enabled: !!shopId,
+    queryFn: () => cashService.getCashEntries(shopId!, startOfDay(selectedDate), endOfDay(selectedDate)),
+  });
 
-    (transactions ?? []).forEach((tx) => {
-      const val = Number(tx.amount || 0);
-      if (tx.kind === "sale" || tx.kind === "in" || tx.kind === "deposit") {
-        entradas += val;
-      } else if (tx.kind === "withdraw" || tx.kind === "expense" || tx.kind === "out" || tx.kind === "fee") {
-        saidas += val;
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => cashService.deleteCashEntry(id),
+    onSuccess: () => {
+      toast.success("Lançamento removido.");
+      qc.invalidateQueries({ queryKey: ["admin-cash-tx", shopId, dateStr] });
+      qc.invalidateQueries({ queryKey: ["admin-cash-session", shopId] });
+    }
+  });
+
+  const filteredTx = useMemo(() => {
+    if (filterMethod === "all") return transactions;
+    return transactions.filter(t => t.method === filterMethod);
+  }, [transactions, filterMethod]);
+
+  const summary = useMemo(() => {
+    let inputs = 0;
+    let outputs = 0;
+    const methods: Record<string, number> = {};
+
+    filteredTx.forEach(t => {
+      const amt = Number(t.amount || 0);
+      if (t.kind === "in" || t.kind === "sale" || t.kind === "deposit") {
+        inputs += amt;
+      } else {
+        outputs += amt;
       }
+      methods[t.method] = (methods[t.method] || 0) + (t.kind === 'out' || t.kind === 'withdraw' ? -amt : amt);
     });
 
-    return {
-      entradas,
-      saidas,
-      saldo: entradas - saidas,
-      count: transactions?.length ?? 0,
-    };
-  }, [transactions]);
+    return { inputs, outputs, balance: inputs - outputs, methods };
+  }, [filteredTx]);
 
-  async function handleDeleteEntry(id: string) {
-    if (!canManage) return toast.error("Permissão insuficiente.");
-    if (!confirm("Deseja realmente excluir este lançamento do caixa?")) return;
+  const handleCreateEntry = (type: "in" | "out") => {
+    setEntryType(type);
+    setNewEntryOpen(true);
+  };
 
-    try {
-      await cashService.deleteCashEntry(id);
-      toast.success("Lançamento excluído com sucesso!");
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir lançamento.");
-    }
-  }
+  if (!shopId) return null;
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Fluxo de Caixa</h1>
-          <p className="text-muted-foreground">
-            Controle de entradas, saídas, sangrias e movimentações diárias da barbearia.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 border border-border bg-card/60 px-3 py-1.5 backdrop-blur">
-            <Calendar className="h-4 w-4 text-accent" />
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-transparent text-xs font-mono text-foreground focus:outline-none"
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+              <Wallet className="h-6 w-6 text-accent" /> Fluxo de Caixa
+            </h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie entradas e saídas do dia</p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Input 
+              type="date" 
+              value={dateStr} 
+              onChange={e => setDateStr(e.target.value)} 
+              className="w-auto h-11 bg-background"
             />
-          </div>
-
-          <Button
-            onClick={() => setCreateModalOpen(true)}
-            className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" /> Novo Lançamento
-          </Button>
-        </div>
-      </div>
-
-      {/* Cards de Resumo */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {/* Entradas */}
-        <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Total de Entradas
-            </span>
-            <div className="grid h-8 w-8 place-items-center bg-emerald-500/10 text-emerald-500">
-              <ArrowDownRight className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 font-serif text-3xl font-bold text-emerald-500">
-            {brl(totals.entradas)}
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Vendas, serviços e suprimentos</p>
-        </Card>
-
-        {/* Saídas */}
-        <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Total de Saídas
-            </span>
-            <div className="grid h-8 w-8 place-items-center bg-destructive/10 text-destructive">
-              <ArrowUpRight className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-2 font-serif text-3xl font-bold text-destructive">
-            {brl(totals.saidas)}
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Despesas, sangrias e retiradas</p>
-        </Card>
-
-        {/* Saldo do Dia */}
-        <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Saldo Líquido do Dia
-            </span>
-            <div className="grid h-8 w-8 place-items-center bg-accent/10 text-accent">
-              <DollarSign className="h-4 w-4" />
-            </div>
-          </div>
-          <div className={`mt-2 font-serif text-3xl font-bold ${totals.saldo >= 0 ? "text-accent" : "text-destructive"}`}>
-            {brl(totals.saldo)}
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            {totals.count} {totals.count === 1 ? "lançamento registrado" : "lançamentos registrados"}
-          </p>
-        </Card>
-      </div>
-
-      {/* Tabela de Lançamentos */}
-      <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
-        <div className="mb-4 flex items-center justify-between border-b border-border/40 pb-3">
-          <div className="flex items-center gap-2 font-serif text-lg font-bold">
-            <Receipt className="h-5 w-5 text-accent" />
-            <span>Extrato de Movimentações ({format(new Date(selectedDate + "T12:00:00"), "dd/MM/yyyy")})</span>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <Button variant="outline" className="h-11 px-3 border-emerald-500/30 text-emerald-600 hover:bg-emerald-500/10" onClick={() => handleCreateEntry("in")}>
+                  <ArrowUpCircle className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Entrada</span>
+                </Button>
+                <Button variant="outline" className="h-11 px-3 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => handleCreateEntry("out")}>
+                  <ArrowDownCircle className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Saída</span>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
-        {isLoading ? (
-          <TableSkeleton />
-        ) : !transactions || transactions.length === 0 ? (
-          <EmptyState
-            icon={Receipt}
-            title="Nenhum lançamento neste dia"
-            description="Clique em 'Novo Lançamento' para registrar entradas ou saídas avulsas."
-          />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="py-3">Horário</th>
-                  <th className="py-3">Tipo</th>
-                  <th className="py-3">Descrição</th>
-                  <th className="py-3">Forma de Pagamento</th>
-                  <th className="py-3">Profissional / Cliente</th>
-                  <th className="py-3 text-right">Valor</th>
-                  <th className="py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {transactions.map((t) => {
-                  const isEntry = t.kind === "sale" || t.kind === "in" || t.kind === "deposit";
-                  const person = t.professional?.display_name || t.customer?.full_name || "—";
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="p-3 bg-card border-border/40 rounded-xl flex flex-col gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ArrowUpCircle className="h-3.5 w-3.5 text-emerald-500" /> Entradas</span>
+            <span className="font-mono font-bold text-emerald-500 text-lg sm:text-xl truncate">{brl(summary.inputs)}</span>
+          </Card>
+          <Card className="p-3 bg-card border-border/40 rounded-xl flex flex-col gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><ArrowDownCircle className="h-3.5 w-3.5 text-destructive" /> Saídas</span>
+            <span className="font-mono font-bold text-destructive text-lg sm:text-xl truncate">{brl(summary.outputs)}</span>
+          </Card>
+          <Card className="p-3 bg-accent/5 border-accent/20 rounded-xl flex flex-col gap-1">
+            <span className="text-xs font-bold uppercase tracking-wider text-accent flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5" /> Saldo</span>
+            <span className="font-mono font-bold text-accent text-lg sm:text-xl truncate">{brl(summary.balance)}</span>
+          </Card>
+        </div>
 
-                  return (
-                    <tr key={t.id} className="hover:bg-card/60 transition-colors">
-                      <td className="py-3 font-mono text-xs text-muted-foreground">
-                        {format(new Date(t.created_at), "HH:mm")}
-                      </td>
-                      <td className="py-3">
-                        {isEntry ? (
-                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
-                            Entrada
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
-                            Saída
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-3 font-medium text-foreground">{t.description || "Lançamento de caixa"}</td>
-                      <td className="py-3 text-xs text-muted-foreground">
-                        {METHOD_LABELS[t.method] || t.method}
-                      </td>
-                      <td className="py-3 text-xs text-muted-foreground">{person}</td>
-                      <td className={`py-3 text-right font-mono font-bold ${isEntry ? "text-emerald-500" : "text-destructive"}`}>
-                        {isEntry ? `+ ${brl(Number(t.amount))}` : `- ${brl(Number(t.amount))}`}
-                      </td>
-                      <td className="py-3 text-right">
-                        {canManage && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDeleteEntry(t.id)}
-                            className="rounded-none text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <Button variant={filterMethod === "all" ? "default" : "outline"} size="sm" onClick={() => setFilterMethod("all")} className="rounded-full h-8 px-3 shrink-0">Todos</Button>
+          <Button variant={filterMethod === "pix" ? "default" : "outline"} size="sm" onClick={() => setFilterMethod("pix")} className="rounded-full h-8 px-3 shrink-0"><QrCode className="h-3 w-3 mr-1.5" /> PIX</Button>
+          <Button variant={filterMethod === "cash" ? "default" : "outline"} size="sm" onClick={() => setFilterMethod("cash")} className="rounded-full h-8 px-3 shrink-0"><Banknote className="h-3 w-3 mr-1.5" /> Dinheiro</Button>
+          <Button variant={filterMethod === "credit" ? "default" : "outline"} size="sm" onClick={() => setFilterMethod("credit")} className="rounded-full h-8 px-3 shrink-0"><CreditCard className="h-3 w-3 mr-1.5" /> Crédito</Button>
+          <Button variant={filterMethod === "debit" ? "default" : "outline"} size="sm" onClick={() => setFilterMethod("debit")} className="rounded-full h-8 px-3 shrink-0"><CreditCard className="h-3 w-3 mr-1.5" /> Débito</Button>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 bg-background/50">
+        <div className="mx-auto max-w-4xl p-4 sm:p-6 pb-24">
+          
+          <div className="mb-4">
+            <Badge variant="outline" className={`font-mono px-3 py-1 text-xs uppercase ${openSession ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' : 'bg-muted text-muted-foreground'}`}>
+              <Lock className="h-3 w-3 mr-1.5" />
+              {openSession ? "Caixa Aberto" : "Caixa Fechado"}
+            </Badge>
           </div>
-        )}
-      </Card>
 
-      {/* Modal de Criação de Lançamento */}
-      <CreateCashEntryModal
-        open={createModalOpen}
-        onOpenChange={setCreateModalOpen}
-        shopId={shopId!}
-        userId={user?.id || ""}
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => <Card key={i} className="h-16 animate-pulse rounded-xl border border-border/40 bg-muted/30" />)}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <span className="text-muted-foreground mb-4">Erro ao carregar movimentações.</span>
+              <Button onClick={() => refetch()} variant="outline">Tentar novamente</Button>
+            </div>
+          ) : filteredTx.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/20 py-20 text-center">
+              <FileText className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <h3 className="font-serif text-lg font-bold text-foreground">Nenhuma movimentação neste período.</h3>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filteredTx.map(tx => {
+                const isIn = tx.kind === "in" || tx.kind === "sale" || tx.kind === "deposit";
+                const isSale = tx.kind === "sale";
+                const amt = Number(tx.amount || 0);
+                
+                return (
+                  <Card key={tx.id} className="group flex items-center justify-between p-3 sm:p-4 rounded-xl border border-border/40 bg-card">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <div className={`h-10 w-10 shrink-0 rounded-full flex items-center justify-center ${isIn ? 'bg-emerald-500/10' : 'bg-destructive/10'}`}>
+                        {isIn ? <ArrowUpCircle className="h-5 w-5 text-emerald-500" /> : <ArrowDownCircle className="h-5 w-5 text-destructive" />}
+                      </div>
+                      <div className="flex flex-col truncate">
+                        <span className="font-bold text-foreground text-sm truncate">{tx.description}</span>
+                        <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                          <span>{format(new Date(tx.created_at), "HH:mm")}</span>
+                          <span>•</span>
+                          <span className="uppercase font-semibold flex items-center gap-1">
+                            {tx.method === "pix" && <QrCode className="h-3 w-3" />}
+                            {tx.method === "cash" && <Banknote className="h-3 w-3" />}
+                            {(tx.method === "credit" || tx.method === "debit") && <CreditCard className="h-3 w-3" />}
+                            {tx.method === "other" && <ArrowLeftRight className="h-3 w-3" />}
+                            {tx.method}
+                          </span>
+                          {tx.customer && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">Cliente: {tx.customer.full_name}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 ml-2">
+                      <span className={`font-mono font-bold ${isIn ? 'text-emerald-500' : 'text-destructive'}`}>
+                        {isIn ? '+' : '-'}{brl(amt)}
+                      </span>
+                      {isAdmin && !isSale && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
+                          if (confirm("Remover este lançamento manual do caixa?")) deleteMut.mutate(tx.id);
+                        }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <NewEntryDialog 
+        open={newEntryOpen} 
+        onClose={() => setNewEntryOpen(false)} 
+        shopId={shopId} 
+        userId={user?.id}
+        type={entryType} 
         onSuccess={() => {
-          setCreateModalOpen(false);
-          refetch();
+          qc.invalidateQueries({ queryKey: ["admin-cash-tx", shopId] });
+          qc.invalidateQueries({ queryKey: ["admin-cash-session", shopId] });
         }}
       />
     </div>
   );
 }
 
-function CreateCashEntryModal({
-  open,
-  onOpenChange,
-  shopId,
-  userId,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  shopId: string;
-  userId: string;
-  onSuccess: () => void;
-}) {
-  const [description, setDescription] = useState("");
-  const [amountStr, setAmountStr] = useState("");
-  const [type, setType] = useState<"entrada" | "saída">("entrada");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [busy, setBusy] = useState(false);
+// -----------------------------------------------------------------------------
 
-  async function handleSubmit(e: React.FormEvent) {
+function NewEntryDialog({ open, onClose, shopId, userId, type, onSuccess }: any) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    description: "",
+    amount: "",
+    method: "cash" as PaymentMethod,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const amountNum = Number(amountStr.replace(",", "."));
+    const amt = parseFloat(formData.amount.replace(",", "."));
+    if (isNaN(amt) || amt <= 0) return toast.error("Valor inválido.");
+    if (!formData.description.trim()) return toast.error("A descrição é obrigatória.");
 
-    if (!description.trim()) return toast.error("Informe a descrição do lançamento.");
-    if (!amountNum || amountNum <= 0) return toast.error("Informe um valor válido.");
-
-    setBusy(true);
+    setLoading(true);
     try {
       await cashService.createCashEntry({
         barbershop_id: shopId,
-        description: description.trim(),
-        amount: amountNum,
-        type: type,
-        payment_method: paymentMethod,
+        description: formData.description.trim(),
+        amount: amt,
+        type: type === "in" ? "in" : "out",
+        method: formData.method,
         created_by: userId,
       });
-
-      toast.success("Lançamento registrado com sucesso!");
-      setDescription("");
-      setAmountStr("");
-      setType("entrada");
-      setPaymentMethod("cash");
+      toast.success("Lançamento registrado!");
       onSuccess();
+      onClose();
+      setFormData({ description: "", amount: "", method: "cash" });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao registrar lançamento no caixa.");
+      toast.error(err.message || "Erro ao registrar lançamento.");
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-none border-border sm:max-w-md">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-2xl">Novo Lançamento no Caixa</DialogTitle>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md w-full rounded-xl">
+        <DialogHeader className="text-left">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            {type === "in" ? (
+              <><ArrowUpCircle className="h-5 w-5 text-emerald-500" /> Nova Entrada</>
+            ) : (
+              <><ArrowDownCircle className="h-5 w-5 text-destructive" /> Nova Saída</>
+            )}
+          </DialogTitle>
+          <DialogDescription>
+            Registre um lançamento avulso (ex: sangria, suprimento, pagamento de conta).
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="space-y-4 py-4 text-xs">
-            <div className="space-y-1.5">
-              <Label>Tipo de Movimentação *</Label>
-              <Select value={type} onValueChange={(v: any) => setType(v)}>
-                <SelectTrigger className="rounded-none">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="rounded-none">
-                  <SelectItem value="entrada">Entrada (Suprimento / Venda avulsa)</SelectItem>
-                  <SelectItem value="saída">Saída (Sangria / Pagamento / Despesa)</SelectItem>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Descrição <span className="text-destructive">*</span></Label>
+            <Input 
+              value={formData.description} 
+              onChange={e => setFormData({ ...formData, description: e.target.value })} 
+              placeholder={type === "in" ? "Ex: Troco inicial" : "Ex: Compra de materiais"} 
+              required 
+              className="h-11"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Valor (R$) <span className="text-destructive">*</span></Label>
+              <Input 
+                type="number" 
+                min="0.01" 
+                step="0.01" 
+                value={formData.amount} 
+                onChange={e => setFormData({ ...formData, amount: e.target.value })} 
+                required 
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Método <span className="text-destructive">*</span></Label>
+              <Select value={formData.method} onValueChange={(v: PaymentMethod) => setFormData({ ...formData, method: v })}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="credit">Crédito</SelectItem>
+                  <SelectItem value="debit">Débito</SelectItem>
+                  <SelectItem value="other">Outro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="tx_desc">Descrição do Lançamento *</Label>
-              <Input
-                id="tx_desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ex.: Troco inicial, Compra de café, Lâminas..."
-                className="rounded-none"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="tx_amount">Valor (R$) *</Label>
-                <Input
-                  id="tx_amount"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={amountStr}
-                  onChange={(e) => setAmountStr(e.target.value)}
-                  placeholder="0,00"
-                  className="rounded-none"
-                  required
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label>Método de Pagamento</Label>
-                <Select value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)}>
-                  <SelectTrigger className="rounded-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    <SelectItem value="cash">Dinheiro</SelectItem>
-                    <SelectItem value="pix">PIX</SelectItem>
-                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
-                    <SelectItem value="debit">Cartão de Débito</SelectItem>
-                    <SelectItem value="other">Outro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-none">
-              Cancelar
+          <div className="flex justify-end gap-2 pt-4 mt-2 border-t border-border/40">
+            <Button type="button" variant="outline" className="h-11" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button type="submit" className="h-11 bg-accent text-accent-foreground font-bold" disabled={loading}>
+              {loading ? "Registrando..." : "Registrar"}
             </Button>
-            <Button type="submit" disabled={busy} className="rounded-none bg-accent text-accent-foreground">
-              {busy ? "Salvando..." : "Confirmar Lançamento"}
-            </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
