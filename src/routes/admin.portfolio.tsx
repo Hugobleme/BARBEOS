@@ -27,7 +27,7 @@ function PortfolioPage() {
   const { data: professionals = [] } = useQuery({
     queryKey: ["admin-pros", shopId],
     enabled: !!shopId,
-    queryFn: () => barbershopService.getProfessionals(shopId!),
+    queryFn: () => barbershopService.getBarbers(shopId!),
   });
 
   const { data: items = [], isLoading, isError, refetch } = useQuery({
@@ -137,7 +137,7 @@ function PortfolioPage() {
                     </div>
                     {it.professional && (
                       <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-muted/40 px-1.5 py-0.5 rounded-sm w-fit truncate max-w-full">
-                        <User className="h-3 w-3 shrink-0" /> <span className="truncate">{it.professional.display_name}</span>
+                        <User className="h-3 w-3 shrink-0" /> <span className="truncate">{it.professional?.display_name || 'Desconhecido'}</span>
                       </span>
                     )}
                   </div>

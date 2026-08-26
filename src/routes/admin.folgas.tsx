@@ -27,7 +27,7 @@ function FolgasPage() {
   const { data: professionals = [] } = useQuery({
     queryKey: ["admin-pros", shopId],
     enabled: !!shopId,
-    queryFn: () => barbershopService.getProfessionals(shopId!),
+    queryFn: () => barbershopService.getBarbers(shopId!),
   });
 
   const { data: timeoffs = [], isLoading, isError, refetch } = useQuery({
@@ -125,7 +125,7 @@ function FolgasPage() {
                         <span className="font-bold text-sm text-foreground truncate">{t.professional?.display_name || "Desconhecido"}</span>
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><CalIcon className="h-3 w-3" /> {format(start, "dd/MM/yy HH:mm")} at√© {format(end, "dd/MM/yy HH:mm")}</span>
+                        <span className="flex items-center gap-1"><CalIcon className="h-3 w-3" /> {(isNaN(start.getTime()) ? 'Inv·lido' : format(start, "dd/MM/yy HH:mm"))} at√© {(isNaN(end.getTime()) ? 'Inv·lido' : format(end, "dd/MM/yy HH:mm"))}</span>
                       </div>
                       {t.reason && (
                         <span className="text-xs text-muted-foreground italic truncate mt-1 bg-muted/30 px-2 py-0.5 rounded-md inline-block w-fit max-w-full">

@@ -190,7 +190,7 @@ function AvaliacoesPage() {
                         
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1 font-semibold text-foreground"><User className="h-3 w-3 text-muted-foreground" /> {custName}</span>
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {format(new Date(s.answered_at), "dd/MM/yy")}</span>
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {(isNaN(new Date(s.answered_at).getTime()) ? 'Inválido' : format(new Date(s.answered_at), "dd/MM/yy"))}</span>
                           {s.professional && (
                             <span className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md">Atendido por: {s.professional.display_name}</span>
                           )}
