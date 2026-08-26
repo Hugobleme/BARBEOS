@@ -1,534 +1,307 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShop } from "@/hooks/use-current-shop";
-import { barbershopService } from "@/services/barbershop.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { PageHeaderSkeleton, CardGridSkeleton } from "@/components/site/LoadingState";
-import {
-  Building2,
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  ShieldAlert,
-  Save,
-  Trash2,
-  PowerOff,
-  AlertTriangle,
-} from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { Settings, Image as ImageIcon, MapPin, Phone, Mail, Globe, Clock, ShieldAlert } from "lucide-react";
 
-export const Route = createFileRoute("/admin/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações da Barbearia — BarberOS" }] }),
-  component: ConfiguracoesPage,
-});
+export const Route = createFileRoute("/admin/configuracoes")({ component: ConfigPage });
 
-export function ConfiguracoesPage() {
-  const navigate = useNavigate();
+function ConfigPage() {
   const { shopId, shop } = useCurrentShop();
+  const qc = useQueryClient();
   const isOwner = shop?.role === "owner";
-  const canManage = isOwner || shop?.role === "admin";
 
-  const { data: barbershop, isLoading, refetch } = useQuery({
-    queryKey: ["shop-settings-detail", shopId],
+  const { data: barbershop, isLoading } = useQuery({
+    queryKey: ["admin-config", shopId],
     enabled: !!shopId,
     queryFn: async () => {
       const { data, error } = await supabase.from("barbershops").select("*").eq("id", shopId!).single();
       if (error) throw error;
       return data;
-    },
+    }
   });
 
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
-    logo_url: "",
-    email: "",
     phone: "",
-    whatsapp: "",
-    street: "",
-    number: "",
-    neighborhood: "",
+    email: "",
+    logo_url: "",
+    address: "",
     city: "",
     state: "",
-    zip_code: "",
-    hours_weekdays: "09:00 - 20:00",
-    hours_saturday: "08:00 - 19:00",
-    hours_sunday: "Fechado",
+    zip: "",
+    slug: "",
+    slot_interval: "30",
+    min_advance: "0",
+    max_advance: "30",
+    auto_confirm: false,
+    cancellation_policy: ""
   });
-
-  const [policy, setPolicy] = useState({
-    min_lead_hours: "1",
-    cancel_lead_hours: "2",
-    max_no_shows: "3",
-    no_show_fee: "0",
-  });
-
-  const [saving, setSaving] = useState(false);
-  const [dangerBusy, setDangerBusy] = useState(false);
 
   useEffect(() => {
-    if (!barbershop) return;
+    if (barbershop) {
+      const contacts = barbershop.contacts as any || {};
+      const addr = barbershop.address as any || {};
+      const setts = barbershop.settings as any || {};
+      const booking = setts.booking_config || {};
 
-    const addr = (barbershop.address as any) || {};
-    const contacts = (barbershop.contacts as any) || {};
-    const settings = (barbershop.settings as any) || {};
-    const pol = settings.policy || {};
-    const hours = settings.opening_hours || {};
-
-    setForm({
-      name: barbershop.name || "",
-      description: barbershop.description || "",
-      logo_url: barbershop.logo_url || "",
-      email: contacts.email || "",
-      phone: contacts.phone || "",
-      whatsapp: contacts.whatsapp || "",
-      street: addr.street || "",
-      number: addr.number || "",
-      neighborhood: addr.neighborhood || addr.district || "",
-      city: addr.city || "",
-      state: addr.state || "",
-      zip_code: addr.zip_code || addr.postal_code || "",
-      hours_weekdays: hours.weekdays || "09:00 - 20:00",
-      hours_saturday: hours.saturday || "08:00 - 19:00",
-      hours_sunday: hours.sunday || "Fechado",
-    });
-
-    setPolicy({
-      min_lead_hours: pol.min_lead_hours != null ? String(pol.min_lead_hours) : "1",
-      cancel_lead_hours: pol.cancel_lead_hours != null ? String(pol.cancel_lead_hours) : "2",
-      max_no_shows: pol.max_no_shows != null ? String(pol.max_no_shows) : "3",
-      no_show_fee: pol.no_show_fee != null ? String(pol.no_show_fee) : "0",
-    });
+      setFormData({
+        name: barbershop.name || "",
+        description: barbershop.description || "",
+        phone: contacts.phone || "",
+        email: contacts.email || "",
+        logo_url: barbershop.logo_url || "",
+        address: addr.street || "",
+        city: addr.city || "",
+        state: addr.state || "",
+        zip: addr.zip || "",
+        slug: barbershop.slug || "",
+        slot_interval: booking.slot_interval ? String(booking.slot_interval) : "30",
+        min_advance: booking.min_advance_hours ? String(booking.min_advance_hours) : "0",
+        max_advance: booking.max_advance_days ? String(booking.max_advance_days) : "30",
+        auto_confirm: booking.auto_confirm === true,
+        cancellation_policy: booking.cancellation_policy || ""
+      });
+    }
   }, [barbershop]);
 
-  async function handleSaveSettings(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canManage) return toast.error("Permissão insuficiente para alterar configurações.");
-    if (!form.name.trim()) return toast.error("O nome da barbearia é obrigatório.");
-
-    setSaving(true);
-    try {
-      const mergedSettings = {
-        ...((barbershop?.settings as any) || {}),
-        opening_hours: {
-          weekdays: form.hours_weekdays,
-          saturday: form.hours_saturday,
-          sunday: form.hours_sunday,
-        },
-        policy: {
-          min_lead_hours: Number(policy.min_lead_hours) || 0,
-          cancel_lead_hours: Number(policy.cancel_lead_hours) || 0,
-          max_no_shows: Number(policy.max_no_shows) || 0,
-          no_show_fee: Number(policy.no_show_fee) || 0,
-        },
-      };
-
-      await barbershopService.updateBarbershop(shopId!, {
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        logo_url: form.logo_url.trim() || null,
-        contacts: {
-          email: form.email.trim() || null,
-          phone: form.phone.trim() || null,
-          whatsapp: form.whatsapp.trim() || null,
-        } as any,
-        address: {
-          street: form.street.trim() || null,
-          number: form.number.trim() || null,
-          neighborhood: form.neighborhood.trim() || null,
-          city: form.city.trim() || null,
-          state: form.state.trim().toUpperCase() || null,
-          zip_code: form.zip_code.trim() || null,
-        } as any,
-        settings: mergedSettings,
-      });
-
-      toast.success("Configurações da barbearia salvas com sucesso!");
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar configurações.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeactivateBarbershop() {
-    if (!isOwner) return toast.error("Apenas o proprietário (dono) pode desativar a barbearia.");
-    if (!confirm("Tem certeza que deseja desativar esta barbearia? Clientes não poderão agendar horários.")) return;
-
-    setDangerBusy(true);
-    try {
-      await barbershopService.deleteBarbershop(shopId!);
-      toast.success("Barbearia desativada.");
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao desativar barbearia.");
-    } finally {
-      setDangerBusy(false);
-    }
-  }
-
-  async function handleDeleteBarbershop() {
-    if (!isOwner) return toast.error("Apenas o proprietário pode excluir permanentemente a barbearia.");
-    const confirmName = prompt(`Digite "${barbershop?.name}" para confirmar a exclusão PERMANENTE:`);
-    if (confirmName !== barbershop?.name) {
-      return toast.error("Confirmação incorreta. Operação cancelada.");
-    }
-
-    setDangerBusy(true);
-    try {
-      const { error } = await supabase.from("barbershops").delete().eq("id", shopId!);
+  const updateMut = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase
+        .from("barbershops")
+        .update({
+          name: data.name,
+          description: data.description,
+          logo_url: data.logo_url || null,
+          slug: data.slug,
+          contacts: { phone: data.phone, email: data.email },
+          address: { street: data.address, city: data.city, state: data.state, zip: data.zip },
+          settings: {
+            ...(barbershop?.settings as any || {}),
+            booking_config: {
+              slot_interval: parseInt(data.slot_interval, 10),
+              min_advance_hours: parseInt(data.min_advance, 10),
+              max_advance_days: parseInt(data.max_advance, 10),
+              auto_confirm: data.auto_confirm,
+              cancellation_policy: data.cancellation_policy
+            }
+          }
+        })
+        .eq("id", shopId!);
       if (error) throw error;
-      toast.success("Barbearia excluída permanentemente.");
-      navigate({ to: "/" });
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir barbearia.");
-    } finally {
-      setDangerBusy(false);
-    }
-  }
+    },
+    onSuccess: () => {
+      toast.success("Configurações atualizadas!");
+      qc.invalidateQueries({ queryKey: ["admin-config", shopId] });
+      qc.invalidateQueries({ queryKey: ["current-shop", shopId] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao salvar configurações.")
+  });
 
-  if (isLoading) {
-    return (
-      <div className="space-y-6">
-        <PageHeaderSkeleton />
-        <CardGridSkeleton count={3} />
-      </div>
-    );
-  }
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return toast.error("O nome da barbearia é obrigatório.");
+    if (!formData.slug.trim().match(/^[a-z0-9-]+$/)) return toast.error("O link (slug) deve conter apenas letras minúsculas, números e hífens.");
+    updateMut.mutate(formData);
+  };
+
+  const deactivateMut = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("barbershops").update({ active: false }).eq("id", shopId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Barbearia desativada com sucesso.");
+      window.location.href = "/";
+    }
+  });
+
+  if (!shopId) return null;
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Topo */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Configurações da Barbearia</h1>
-          <p className="text-muted-foreground">
-            Altere os dados comerciais, localização, horários de funcionamento e regras de agendamento.
-          </p>
-        </div>
-
-        {!canManage && (
-          <Badge variant="outline" className="rounded-none text-muted-foreground">
-            <ShieldAlert className="mr-1.5 h-3.5 w-3.5" /> Modo Somente Leitura
-          </Badge>
-        )}
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      
+      {/* HEADER */}
+      <div className="flex flex-col border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
+        <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+          <Settings className="h-6 w-6 text-accent" /> Configurações
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie os detalhes públicos e regras da barbearia</p>
       </div>
 
-      <form onSubmit={handleSaveSettings} className="space-y-8">
-        {/* Bloco 1: Informações Gerais & Identidade */}
-        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
-          <div className="mb-6 flex items-center gap-2 border-b border-border/40 pb-3">
-            <Building2 className="h-5 w-5 text-accent" />
-            <h2 className="font-serif text-xl font-bold">Identidade & Dados Comerciais</h2>
-          </div>
-
-          <div className="grid gap-4 text-xs">
-            <div className="space-y-1.5">
-              <Label htmlFor="shop_name">Nome da Barbearia *</Label>
-              <Input
-                id="shop_name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex.: Barbearia Dom Corleone"
-                className="rounded-none"
-                disabled={!canManage}
-                required
-              />
+      <ScrollArea className="flex-1 bg-background/50">
+        <div className="mx-auto max-w-3xl p-4 sm:p-6 pb-24 space-y-8">
+          
+          {isLoading ? (
+            <div className="space-y-4">
+              <Card className="h-48 animate-pulse rounded-xl border border-border/40 bg-muted/30" />
+              <Card className="h-48 animate-pulse rounded-xl border border-border/40 bg-muted/30" />
             </div>
+          ) : (
+            <form onSubmit={handleSave} className="space-y-8">
+              
+              {/* GERAL */}
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Globe className="h-4 w-4" /> Informações Gerais
+                </h2>
+                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nome da Barbearia <span className="text-destructive">*</span></Label>
+                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required className="h-11" />
+                  </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="shop_desc">Descrição / Apresentação</Label>
-              <Textarea
-                id="shop_desc"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Apresente sua barbearia para seus clientes..."
-                className="rounded-none resize-none"
-                rows={3}
-                disabled={!canManage}
-              />
-            </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Telefone / WhatsApp</Label>
+                      <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>E-mail Público</Label>
+                      <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="contato@exemplo.com" className="h-11" />
+                    </div>
+                  </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="shop_logo">URL do Logotipo / Imagem de Capa</Label>
-              <Input
-                id="shop_logo"
-                value={form.logo_url}
-                onChange={(e) => setForm({ ...form, logo_url: e.target.value })}
-                placeholder="https://exemplo.com/foto-barbearia.jpg"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-            </div>
+                  <div className="space-y-2">
+                    <Label>Descrição / Bio</Label>
+                    <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} className="resize-none" placeholder="Conte sobre sua barbearia..." />
+                  </div>
 
-            <div className="grid gap-4 sm:grid-cols-3 pt-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="shop_phone">Telefone Fixo</Label>
-                <Input
-                  id="shop_phone"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="(11) 3333-0000"
-                  className="rounded-none"
-                  disabled={!canManage}
-                />
+                  <div className="space-y-2">
+                    <Label>URL da Logo (Opcional)</Label>
+                    <div className="flex gap-3 items-center">
+                      <div className="h-12 w-12 shrink-0 rounded-xl bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden">
+                        {formData.logo_url ? <img src={formData.logo_url} alt="Logo preview" className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                      </div>
+                      <Input value={formData.logo_url} onChange={e => setFormData({ ...formData, logo_url: e.target.value })} placeholder="https://exemplo.com/logo.png" className="h-11 flex-1" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Link Público (Slug)</Label>
+                    <Input value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase() })} className="h-11 font-mono text-sm" />
+                    <p className="text-[10px] text-muted-foreground mt-1 text-amber-500 font-semibold">Aviso: Mudar o link quebra QR Codes e links antigos compartilhados.</p>
+                  </div>
+                </Card>
+              </section>
+
+              {/* ADDRESS */}
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Endereço Local
+                </h2>
+                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
+                  <div className="space-y-2">
+                    <Label>Rua e Número</Label>
+                    <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="h-11" />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Cidade</Label>
+                      <Input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Estado (UF)</Label>
+                      <Input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value.toUpperCase() })} maxLength={2} className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>CEP</Label>
+                      <Input value={formData.zip} onChange={e => setFormData({ ...formData, zip: e.target.value })} className="h-11" />
+                    </div>
+                  </div>
+                </Card>
+              </section>
+
+              {/* BOOKING SETTINGS */}
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Configuração de Agendamento
+                </h2>
+                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Intervalo de Horários (Min)</Label>
+                      <Input type="number" step="5" min="10" value={formData.slot_interval} onChange={e => setFormData({ ...formData, slot_interval: e.target.value })} className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Antecedência Mínima (Horas)</Label>
+                      <Input type="number" min="0" value={formData.min_advance} onChange={e => setFormData({ ...formData, min_advance: e.target.value })} className="h-11" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Antecedência Máx. (Dias)</Label>
+                      <Input type="number" min="1" value={formData.max_advance} onChange={e => setFormData({ ...formData, max_advance: e.target.value })} className="h-11" />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 border border-border/40 rounded-lg mt-2">
+                    <div className="space-y-0.5">
+                      <Label className="text-sm">Confirmação Automática</Label>
+                      <p className="text-xs text-muted-foreground">Aprovar novos agendamentos online automaticamente</p>
+                    </div>
+                    <Switch checked={formData.auto_confirm} onCheckedChange={c => setFormData({ ...formData, auto_confirm: c })} />
+                  </div>
+
+                  <div className="space-y-2 pt-2">
+                    <Label>Política de Cancelamento</Label>
+                    <Textarea value={formData.cancellation_policy} onChange={e => setFormData({ ...formData, cancellation_policy: e.target.value })} rows={2} className="resize-none" placeholder="Ex: Cancelamentos apenas com 2 horas de antecedência..." />
+                  </div>
+                </Card>
+              </section>
+
+              {/* OPENING HOURS FALLBACK */}
+              <section className="space-y-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Horários de Funcionamento
+                </h2>
+                <div className="p-6 bg-muted/20 border border-dashed border-border/40 rounded-xl text-center flex flex-col items-center">
+                  <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                  <p className="text-sm text-foreground font-semibold">Configuração de grade de horários flexível será disponibilizada em breve.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Sua agenda continua operando conforme os horários individuais dos profissionais.</p>
+                </div>
+              </section>
+
+              <div className="pt-2">
+                <Button type="submit" className="w-full sm:w-auto h-11 bg-accent text-accent-foreground font-bold px-8" disabled={updateMut.isPending}>
+                  {updateMut.isPending ? "Salvando..." : "Salvar Configurações"}
+                </Button>
               </div>
+            </form>
+          )}
 
-              <div className="space-y-1.5">
-                <Label htmlFor="shop_wpp">WhatsApp</Label>
-                <Input
-                  id="shop_wpp"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                  placeholder="(11) 99999-0000"
-                  className="rounded-none"
-                  disabled={!canManage}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="shop_email">E-mail Comercial</Label>
-                <Input
-                  id="shop_email"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  placeholder="contato@barbearia.com"
-                  className="rounded-none"
-                  disabled={!canManage}
-                />
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Bloco 2: Localização & Endereço */}
-        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
-          <div className="mb-6 flex items-center gap-2 border-b border-border/40 pb-3">
-            <MapPin className="h-5 w-5 text-accent" />
-            <h2 className="font-serif text-xl font-bold">Endereço & Localização</h2>
-          </div>
-
-          <div className="grid gap-4 text-xs sm:grid-cols-6">
-            <div className="space-y-1.5 sm:col-span-4">
-              <Label htmlFor="addr_street">Rua / Logradouro</Label>
-              <Input
-                id="addr_street"
-                value={form.street}
-                onChange={(e) => setForm({ ...form, street: e.target.value })}
-                placeholder="Ex.: Rua Oscar Freire"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="addr_num">Número</Label>
-              <Input
-                id="addr_num"
-                value={form.number}
-                onChange={(e) => setForm({ ...form, number: e.target.value })}
-                placeholder="1000"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="addr_neigh">Bairro</Label>
-              <Input
-                id="addr_neigh"
-                value={form.neighborhood}
-                onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
-                placeholder="Jardins"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="addr_city">Cidade</Label>
-              <Input
-                id="addr_city"
-                value={form.city}
-                onChange={(e) => setForm({ ...form, city: e.target.value })}
-                placeholder="São Paulo"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-1">
-              <Label htmlFor="addr_state">Estado (UF)</Label>
-              <Input
-                id="addr_state"
-                maxLength={2}
-                value={form.state}
-                onChange={(e) => setForm({ ...form, state: e.target.value.toUpperCase() })}
-                placeholder="SP"
-                className="rounded-none uppercase font-mono"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5 sm:col-span-1">
-              <Label htmlFor="addr_zip">CEP</Label>
-              <Input
-                id="addr_zip"
-                value={form.zip_code}
-                onChange={(e) => setForm({ ...form, zip_code: e.target.value })}
-                placeholder="01426-001"
-                className="rounded-none font-mono"
-                disabled={!canManage}
-              />
-            </div>
-          </div>
-        </Card>
-
-        {/* Bloco 3: Horários de Funcionamento */}
-        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
-          <div className="mb-6 flex items-center gap-2 border-b border-border/40 pb-3">
-            <Clock className="h-5 w-5 text-accent" />
-            <h2 className="font-serif text-xl font-bold">Horário de Atendimento</h2>
-          </div>
-
-          <div className="grid gap-4 text-xs sm:grid-cols-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="h_weekdays">Segunda a Sexta</Label>
-              <Input
-                id="h_weekdays"
-                value={form.hours_weekdays}
-                onChange={(e) => setForm({ ...form, hours_weekdays: e.target.value })}
-                placeholder="09:00 - 20:00"
-                className="rounded-none font-mono"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="h_sat">Sábado</Label>
-              <Input
-                id="h_sat"
-                value={form.hours_saturday}
-                onChange={(e) => setForm({ ...form, hours_saturday: e.target.value })}
-                placeholder="08:00 - 19:00"
-                className="rounded-none font-mono"
-                disabled={!canManage}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="h_sun">Domingo</Label>
-              <Input
-                id="h_sun"
-                value={form.hours_sunday}
-                onChange={(e) => setForm({ ...form, hours_sunday: e.target.value })}
-                placeholder="Fechado"
-                className="rounded-none font-mono"
-                disabled={!canManage}
-              />
-            </div>
-          </div>
-        </Card>
-
-        {/* Bloco 4: Políticas Anti No-Show */}
-        <Card className="rounded-none border border-border bg-card/40 p-6 backdrop-blur-md">
-          <div className="mb-6 flex items-center gap-2 border-b border-border/40 pb-3">
-            <ShieldAlert className="h-5 w-5 text-accent" />
-            <h2 className="font-serif text-xl font-bold">Políticas de Agendamento & Cancelamento</h2>
-          </div>
-
-          <div className="grid gap-4 text-xs sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="pol_min_lead">Antecedência Mínima para Agendamento (horas)</Label>
-              <Input
-                id="pol_min_lead"
-                type="number"
-                min="0"
-                value={policy.min_lead_hours}
-                onChange={(e) => setPolicy({ ...policy, min_lead_hours: e.target.value })}
-                placeholder="1"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-              <p className="text-[10px] text-muted-foreground">Evita agendamentos de última hora sem preparação.</p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="pol_cancel_lead">Antecedência Mínima para Cancelamento (horas)</Label>
-              <Input
-                id="pol_cancel_lead"
-                type="number"
-                min="0"
-                value={policy.cancel_lead_hours}
-                onChange={(e) => setPolicy({ ...policy, cancel_lead_hours: e.target.value })}
-                placeholder="2"
-                className="rounded-none"
-                disabled={!canManage}
-              />
-              <p className="text-[10px] text-muted-foreground">Tempo limite para o cliente cancelar sem penalidade.</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Botão Salvar */}
-        {canManage && (
-          <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={saving}
-              className="rounded-none bg-accent px-8 text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
-            >
-              <Save className="mr-1.5 h-3.5 w-3.5" /> {saving ? "Salvando..." : "Salvar Todas as Configurações"}
-            </Button>
-          </div>
-        )}
-      </form>
-
-      {/* Bloco 5: Zona de Perigo */}
-      {isOwner && (
-        <Card className="rounded-none border border-destructive/40 bg-destructive/5 p-6 backdrop-blur-md">
-          <div className="mb-4 flex items-center gap-2 border-b border-destructive/20 pb-3 text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            <h2 className="font-serif text-xl font-bold">Zona de Perigo (Ações Críticas)</h2>
-          </div>
-
-          <p className="text-xs text-muted-foreground mb-6">
-            Estas ações afetam a visibilidade pública da barbearia e seus registros. Apenas o proprietário pode realizá-las.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={dangerBusy}
-              onClick={handleDeactivateBarbershop}
-              className="rounded-none border-destructive/60 text-destructive text-xs uppercase font-bold hover:bg-destructive hover:text-destructive-foreground"
-            >
-              <PowerOff className="mr-1.5 h-3.5 w-3.5" /> Desativar Barbearia
-            </Button>
-
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={dangerBusy}
-              onClick={handleDeleteBarbershop}
-              className="rounded-none text-xs uppercase font-bold"
-            >
-              <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Excluir Permanentemente
-            </Button>
-          </div>
-        </Card>
-      )}
+          {/* DANGER ZONE */}
+          {isOwner && !isLoading && barbershop && (
+            <section className="space-y-4 pt-12 border-t border-border/20">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-destructive flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4" /> Zona de Perigo
+              </h2>
+              <Card className="p-4 sm:p-6 bg-destructive/5 border-destructive/20 rounded-xl">
+                <h3 className="font-bold text-destructive">Desativar Barbearia</h3>
+                <p className="text-sm text-muted-foreground mt-1 mb-4">
+                  Ao desativar, sua barbearia deixará de aparecer para clientes e bloqueará novos agendamentos. Você poderá reativá-la solicitando ao suporte. Nenhum dado será excluído permanentemente nesta ação.
+                </p>
+                <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => {
+                  const check = prompt(`Digite "${barbershop.name}" para confirmar a desativação:`);
+                  if (check === barbershop.name) deactivateMut.mutate();
+                  else if (check !== null) toast.error("Nome incorreto. Ação cancelada.");
+                }}>
+                  Desativar Operação
+                </Button>
+              </Card>
+            </section>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
