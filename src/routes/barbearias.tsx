@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, Scissors, Search, ArrowRight, Star, Filter, RotateCcw } from "lucide-react";
+import { MapPin, Scissors, Search, Star, Filter, RotateCcw } from "lucide-react";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -20,174 +20,125 @@ const searchSchema = z.object({
 
 export const Route = createFileRoute("/barbearias")({
   validateSearch: (search) => searchSchema.parse(search),
-  head: () => ({
-    meta: [
-      { title: "Barbearias Parceiras — Encontre a sua no BarberOS" },
-      {
-        name: "description",
-        content:
-          "Diretório completo de barbearias parceiras. Filtre por cidade, bairro e avaliação e agende online em segundos.",
-      },
-      { property: "og:title", content: "Barbearias Parceiras — BarberOS" },
-      {
-        property: "og:description",
-        content: "Diretório de barbearias com agendamento online 24/7.",
-      },
-      { property: "og:url", content: "/barbearias" },
-    ],
-    links: [{ rel: "canonical", href: "/barbearias" }],
-  }),
-  component: Directory,
+  component: BarbeariasPage,
 });
 
-function Directory() {
-  const navigate = useNavigate();
+function BarbeariasPage() {
+  const navigate = useNavigate({ from: Route.fullPath });
   const searchParams = Route.useSearch();
 
+  // Estados locais para os filtros
   const [city, setCity] = useState(searchParams.city || "");
   const [neighborhood, setNeighborhood] = useState(searchParams.neighborhood || "");
-  const [minRating, setMinRating] = useState<string>(searchParams.minRating ? String(searchParams.minRating) : "all");
+  const [minRating, setMinRating] = useState(searchParams.minRating?.toString() || "");
   const [sort, setSort] = useState(searchParams.sort || "rating");
   const [page, setPage] = useState(searchParams.page || 1);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["barbershops-directory", city, neighborhood, minRating, sort, page],
+  // Busca de barbearias
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["public-barbershops", searchParams.city, searchParams.neighborhood, searchParams.minRating, searchParams.sort, searchParams.page],
     queryFn: () =>
-      barbershopService.getBarbershops({
-        city: city || undefined,
-        neighborhood: neighborhood || undefined,
-        minRating: minRating !== "all" ? Number(minRating) : undefined,
-        sort,
-        page,
-        limit: 20,
+      barbershopService.searchBarbershops({
+        city: searchParams.city,
+        neighborhood: searchParams.neighborhood,
+        minRating: searchParams.minRating,
+        sort: searchParams.sort as any,
+        page: searchParams.page,
+        limit: 12,
       }),
   });
 
   const shops = data?.data ?? [];
   const totalCount = data?.count ?? 0;
-  const totalPages = Math.ceil(totalCount / 20) || 1;
+  const totalPages = data?.totalPages ?? 1;
 
-  function applyFilters() {
-    setPage(1);
+  const applyFilters = () => {
     navigate({
-      to: "/barbearias",
       search: {
         city: city || undefined,
         neighborhood: neighborhood || undefined,
-        minRating: minRating !== "all" ? Number(minRating) : undefined,
-        sort,
+        minRating: minRating ? Number(minRating) : undefined,
+        sort: sort || undefined,
         page: 1,
       },
     });
-  }
+  };
 
-  function resetFilters() {
+  const resetFilters = () => {
     setCity("");
     setNeighborhood("");
-    setMinRating("all");
+    setMinRating("");
     setSort("rating");
-    setPage(1);
-    navigate({
-      to: "/barbearias",
-      search: {},
-    });
-  }
+    navigate({ search: {} });
+  };
 
   return (
     <PublicLayout>
-      {/* Header com estilo Midnight Prestige */}
-      <section className="border-b border-border/60 bg-card/30">
-        <div className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-24">
-          <div className="max-w-2xl space-y-4">
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
-              — Diretório oficial
-            </div>
-            <h1 className="font-serif text-5xl font-bold tracking-tight md:text-6xl">
-              Encontre sua <span className="italic font-normal">barbearia</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Explore as unidades parceiras, compare avaliações e agende seu horário em segundos.
-            </p>
-          </div>
-
-          {/* Painel de Filtros e Busca */}
-          <div className="mt-10 rounded-none border border-border/80 bg-background/80 p-6 backdrop-blur-md">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Cidade</label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Ex: São Paulo"
-                    className="h-11 rounded-none pl-9 text-sm"
-                  />
-                </div>
+      {/* Cabeçalho */}
+      <section className="border-b border-border bg-background pt-24 pb-8 md:pt-32 md:pb-12">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <h1 className="font-serif text-3xl font-bold md:text-5xl max-w-2xl">
+            Encontre a barbearia ideal para o seu <span className="text-accent italic">estilo</span>.
+          </h1>
+          
+          <div className="mt-8 bg-card/50 border border-border/60 p-4 md:p-6 shadow-sm">
+            <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Cidade"
+                  className="pl-9 h-11 text-base md:text-sm bg-background border-border/40"
+                  onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+                />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Bairro</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={neighborhood}
                   onChange={(e) => setNeighborhood(e.target.value)}
-                  placeholder="Ex: Jardins, Pinheiros"
-                  className="h-11 rounded-none text-sm"
+                  placeholder="Bairro"
+                  className="pl-9 h-11 text-base md:text-sm bg-background border-border/40"
+                  onKeyDown={(e) => e.key === "Enter" && applyFilters()}
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Avaliação Mínima</label>
+              <div>
                 <Select value={minRating} onValueChange={setMinRating}>
-                  <SelectTrigger className="h-11 rounded-none text-sm">
-                    <SelectValue placeholder="Todas as notas" />
+                  <SelectTrigger className="h-11 text-base md:text-sm bg-background border-border/40">
+                    <SelectValue placeholder="Avaliação mínima" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-none">
-                    <SelectItem value="all">Todas as notas</SelectItem>
-                    <SelectItem value="4.5">★ 4.5 ou mais</SelectItem>
-                    <SelectItem value="4.0">★ 4.0 ou mais</SelectItem>
-                    <SelectItem value="3.5">★ 3.5 ou mais</SelectItem>
+                  <SelectContent>
+                    <SelectItem value="none">Qualquer avaliação</SelectItem>
+                    <SelectItem value="4.5">Acima de 4.5</SelectItem>
+                    <SelectItem value="4.0">Acima de 4.0</SelectItem>
+                    <SelectItem value="3.0">Acima de 3.0</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ordenar por</label>
+              <div>
                 <Select value={sort} onValueChange={setSort}>
-                  <SelectTrigger className="h-11 rounded-none text-sm">
-                    <SelectValue placeholder="Ordenação" />
+                  <SelectTrigger className="h-11 text-base md:text-sm bg-background border-border/40">
+                    <SelectValue placeholder="Ordenar por" />
                   </SelectTrigger>
-                  <SelectContent className="rounded-none">
+                  <SelectContent>
                     <SelectItem value="rating">Mais bem avaliadas</SelectItem>
-                    <SelectItem value="popular">Mais populares</SelectItem>
                     <SelectItem value="recent">Mais recentes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/40 pt-4">
-              <span className="text-xs text-muted-foreground">
-                {totalCount} {totalCount === 1 ? "barbearia encontrada" : "barbearias encontradas"}
+            
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/20 pt-4">
+              <span className="text-sm text-muted-foreground font-medium">
+                {isLoading ? "Buscando..." : `${totalCount} ${totalCount === 1 ? "resultado" : "resultados"}`}
               </span>
-
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={resetFilters}
-                  className="rounded-none text-xs uppercase tracking-wider"
-                >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Limpar
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={resetFilters} className="h-11 flex-1 sm:flex-none border-border/40 hover:bg-muted">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Limpar
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={applyFilters}
-                  className="rounded-none bg-accent text-xs font-bold uppercase tracking-wider text-accent-foreground hover:bg-foreground hover:text-background"
-                >
-                  <Filter className="mr-1.5 h-3.5 w-3.5" /> Filtrar
+                <Button onClick={applyFilters} className="h-11 flex-1 sm:flex-none bg-accent text-accent-foreground hover:bg-accent/90">
+                  <Filter className="mr-2 h-4 w-4" /> Filtrar
                 </Button>
               </div>
             </div>
@@ -195,131 +146,89 @@ function Directory() {
         </div>
       </section>
 
-      {/* Lista de Barbearias */}
-      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 md:py-20">
+      {/* Lista */}
+      <section className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-12 bg-background/50">
         {isLoading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-80 animate-pulse border border-border bg-card/40" />
-            ))}
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {[1,2,3,4,5,6].map(i => <div key={i} className="h-[360px] animate-pulse bg-muted rounded-xl" />)}
+          </div>
+        ) : error ? (
+          <div className="border border-destructive/20 bg-destructive/5 p-8 text-center rounded-xl">
+            <h2 className="text-xl font-bold text-destructive">Erro ao carregar barbearias</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Tente novamente.</p>
+            <Button onClick={() => refetch()} variant="outline" className="mt-4 border-destructive/30 text-destructive">Tentar novamente</Button>
           </div>
         ) : shops.length === 0 ? (
-          <div className="border border-border p-16 text-center">
-            <Scissors className="mx-auto h-12 w-12 text-muted-foreground/40" />
-            <h2 className="mt-4 font-serif text-2xl font-bold">Nenhuma barbearia encontrada</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Tente ajustar seus filtros de cidade, bairro ou avaliação.
+          <div className="border border-border/40 bg-card/20 p-12 text-center rounded-xl">
+            <Scissors className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
+            <h2 className="text-xl font-bold">Nenhuma barbearia encontrada</h2>
+            <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+              Tente ajustar os filtros ou buscar outra cidade.
             </p>
-            <Button onClick={resetFilters} variant="outline" className="mt-6 rounded-none">
-              Limpar todos os filtros
-            </Button>
+            <Button onClick={resetFilters} variant="outline" className="mt-6 border-border/40">Limpar filtros</Button>
           </div>
         ) : (
           <>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {shops.map((shop) => {
                 const addr = (shop.address ?? {}) as any;
-                const locationText = [addr.street, addr.neighborhood || addr.district, addr.city]
-                  .filter(Boolean)
-                  .join(", ");
+                const locationText = [addr.street, addr.neighborhood || addr.district, addr.city].filter(Boolean).join(", ");
+                const hasValidSlug = Boolean(shop.slug);
 
                 return (
-                  <article
-                    key={shop.id}
-                    className="group relative flex flex-col justify-between overflow-hidden border border-border bg-background p-6 transition-all duration-300 hover:border-accent hover:bg-card/40"
-                  >
-                    <div>
-                      {shop.banner_url && (
-                        <div className="mb-4 aspect-[4/3] w-full max-w-full overflow-hidden border border-border/40">
-                          <img
-                            src={shop.banner_url}
-                            alt={shop.name}
-                            loading="lazy"
-                            className="h-full w-full max-w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                        </div>
-                      )}
+                  <article key={shop.id} className="group flex flex-col bg-card border border-border/40 rounded-xl overflow-hidden hover:border-accent/40 transition-colors">
+                    {shop.banner_url ? (
+                      <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                        <img src={shop.banner_url} alt={shop.name} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                      </div>
+                    ) : (
+                      <div className="aspect-[16/9] w-full bg-muted/40 flex items-center justify-center">
+                        <Scissors className="h-10 w-10 text-muted-foreground/20" />
+                      </div>
+                    )}
 
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-serif text-2xl font-bold transition-colors group-hover:text-accent">
-                          {shop.name}
-                        </h3>
-                        <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent shrink-0">
-                          <Star className="mr-1 h-3 w-3 fill-current" />
-                          {shop.rating?.toFixed(1) ?? "5.0"}
-                        </Badge>
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-3 mb-2">
+                          <h3 className="font-serif text-xl font-bold text-foreground line-clamp-1">{shop.name}</h3>
+                          <Badge variant="secondary" className="shrink-0 flex items-center gap-1">
+                            <Star className="h-3 w-3 fill-accent text-accent" />
+                            {shop.rating?.toFixed(1) ?? "5.0"}
+                          </Badge>
+                        </div>
+                        
+                        <p className="flex items-center gap-1.5 text-sm text-muted-foreground mb-3">
+                          <MapPin className="h-4 w-4 text-accent shrink-0" />
+                          <span className="truncate">{locationText || "Endereço não informado"}</span>
+                        </p>
+                        
+                        <p className="line-clamp-2 text-sm text-muted-foreground">
+                          {shop.description || "Barbearia parceira BarberOS."}
+                        </p>
                       </div>
 
-                      <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
-                        <span className="truncate">{locationText || "São Paulo, SP"}</span>
-                      </p>
-
-                      <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
-                        {shop.description || "Unidade especializada em cortes clássicos e modernos com atendimento de excelência."}
-                      </p>
-                    </div>
-
-                    <div className="mt-6 flex items-center justify-between border-t border-border/40 pt-4">
-                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                        {shop.review_count ? `${shop.review_count} avaliações` : "Nova no BarberOS"}
-                      </span>
-
-                      <div className="flex gap-2">
-                        <Button
-                          asChild
-                          size="sm"
-                          variant="outline"
-                          className="rounded-none text-[10px] font-bold uppercase tracking-wider"
-                        >
-                          <Link to="/b/$slug" params={{ slug: shop.slug }}>
-                            Ver unidade
-                          </Link>
-                        </Button>
-                        <Button
-                          asChild
-                          size="sm"
-                          className="rounded-none bg-accent text-[10px] font-bold uppercase tracking-wider text-accent-foreground hover:bg-foreground hover:text-background"
-                        >
-                          <Link to="/agendar" search={{ barbershop: shop.slug }}>
-                            Agendar
-                          </Link>
-                        </Button>
+                      <div className="mt-5 pt-4 border-t border-border/40">
+                        {hasValidSlug ? (
+                          <Button asChild className="w-full h-11 bg-card hover:bg-accent hover:text-accent-foreground border border-border/40 text-foreground font-medium">
+                            <Link to="/b/$slug" params={{ slug: shop.slug }}>Ver barbearia</Link>
+                          </Button>
+                        ) : (
+                          <Button disabled className="w-full h-11 opacity-50 cursor-not-allowed">Indisponível</Button>
+                        )}
                       </div>
                     </div>
                   </article>
                 );
               })}
             </div>
-
-            {/* Paginação */}
+            
             {totalPages > 1 && (
-              <div className="mt-14 flex items-center justify-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => {
-                    setPage((p) => Math.max(1, p - 1));
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="rounded-none text-xs"
-                >
+              <div className="mt-10 flex items-center justify-center gap-4">
+                <Button variant="outline" disabled={page <= 1} onClick={() => { setPage(p => Math.max(1, p - 1)); window.scrollTo(0,0); }} className="h-11">
                   Anterior
                 </Button>
-                <span className="px-4 text-xs font-mono text-muted-foreground">
-                  Página {page} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => {
-                    setPage((p) => Math.min(totalPages, p + 1));
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className="rounded-none text-xs"
-                >
+                <span className="text-sm text-muted-foreground">Página {page} de {totalPages}</span>
+                <Button variant="outline" disabled={page >= totalPages} onClick={() => { setPage(p => Math.min(totalPages, p + 1)); window.scrollTo(0,0); }} className="h-11">
                   Próxima
                 </Button>
               </div>

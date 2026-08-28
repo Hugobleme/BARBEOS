@@ -1,373 +1,303 @@
-import { PublicLayout } from "@/components/site/PublicLayout";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/use-auth";
 import { brl } from "@/lib/format";
-import { format } from "date-fns";
+import { Calendar, Clock, LogOut, MapPin, Scissors, Star, User, Settings, ArrowRight, AlertCircle, X } from "lucide-react";
+import { format, isFuture, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Calendar, Clock, Gift, LogOut, Wallet, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/minha-conta")({
-  head: () => ({
-    meta: [
-      { title: "Minha conta — BarberOS" },
-      { name: "description", content: "Gerencie seus agendamentos, histórico e avaliações." },
-      { name: "robots", content: "noindex,follow" },
-    ],
-    links: [{ rel: "canonical", href: "/minha-conta" }],
-  }),
-  component: Page,
+  component: MinhaContaPage,
 });
 
-function Page() {
+type Tab = "proximos" | "historico" | "perfil";
+
+function MinhaContaPage() {
   const { user, loading } = useAuth();
-  const nav = useNavigate();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState<Tab>("proximos");
 
-  useEffect(() => {
-    if (!loading && !user) nav({ to: "/login" });
-  }, [loading, user, nav]);
+  // Profile Edit State
+  const [editName, setEditName] = useState(user?.user_metadata?.full_name || "");
+  const [editPhone, setEditPhone] = useState(user?.user_metadata?.phone || "");
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  const { data: appts } = useQuery({
-    enabled: !!user,
-    queryKey: ["my-appts", user?.id],
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  // Queries
+  const { data: customerIds = [], isLoading: idsLoading } = useQuery({
+    queryKey: ["my-customer-ids", user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
-      const ids = (customers ?? []).map((c) => c.id);
-      if (ids.length === 0) return [];
-      const { data } = await supabase
-        .from("appointments")
-        .select("id, status, scheduled_start, scheduled_end, total_amount, professional:professionals(display_name), services:appointment_services(service:services(name))")
-        .in("customer_id", ids)
-        .order("scheduled_start", { ascending: false });
-      return data ?? [];
+      const { data } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
+      return (data || []).map(c => c.id);
     },
   });
 
-  const { data: loyalty } = useQuery({
-    enabled: !!user,
-    queryKey: ["my-loyalty", user?.id],
-    staleTime: 1000 * 60 * 5, // 5 minutes
+  const { data: appointments = [], isLoading: apptsLoading } = useQuery({
+    queryKey: ["my-appointments", customerIds.join(",")],
+    enabled: customerIds.length > 0,
     queryFn: async () => {
-      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
-      const ids = (customers ?? []).map((c) => c.id);
-      if (ids.length === 0) return { balances: [], txs: [] };
-      const [{ data: balances }, { data: txs }] = await Promise.all([
-        supabase.from("loyalty_balances").select("points, lifetime_points, barbershop:barbershops(id, name)").in("customer_id", ids),
-        supabase.from("loyalty_transactions").select("id, kind, points, description, created_at, barbershop:barbershops(name)").in("customer_id", ids).order("created_at", { ascending: false }).limit(20),
-      ]);
-      return { balances: balances ?? [], txs: txs ?? [] };
+      const { data } = await supabase.from("appointments").select(`
+        id, scheduled_start, scheduled_end, status, total_amount, barbershop_id,
+        barbershop:barbershops(name, slug, address),
+        professional:professionals(display_name),
+        services:appointment_services(service:services(name)),
+        reviews(id)
+      `).in("customer_id", customerIds).order("scheduled_start", { ascending: true });
+      
+      return data || [];
     },
   });
 
-  const { data: wallet } = useQuery({
-    enabled: !!user,
-    queryKey: ["my-wallet", user?.id],
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    queryFn: async () => {
-      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
-      const ids = (customers ?? []).map((c) => c.id);
-      if (ids.length === 0) return { balances: [], txs: [] };
-      const [{ data: balances }, { data: txs }] = await Promise.all([
-        supabase.from("wallet_balances").select("balance, lifetime_credited, barbershop:barbershops(id, name)").in("customer_id", ids),
-        supabase.from("wallet_transactions").select("id, kind, amount, description, created_at, barbershop:barbershops(name)").in("customer_id", ids).order("created_at", { ascending: false }).limit(20),
-      ]);
-      return { balances: balances ?? [], txs: txs ?? [] };
+  // Derived Data
+  const upcoming = appointments.filter(a => isFuture(new Date(a.scheduled_start)) && !["cancelled", "no_show"].includes(a.status || ""));
+  const history = appointments.filter(a => isPast(new Date(a.scheduled_start)) || ["cancelled", "no_show"].includes(a.status || "")).reverse();
+  const nextAppt = upcoming[0];
+
+  // Actions
+  const cancelMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
+      if (error) throw error;
     },
+    onSuccess: () => {
+      toast.success("Agendamento cancelado com sucesso.");
+      qc.invalidateQueries({ queryKey: ["my-appointments"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao cancelar agendamento.")
   });
 
-  const { data: subs } = useQuery({
-    enabled: !!user,
-    queryKey: ["my-subs", user?.id],
-    staleTime: 1000 * 60 * 5,
-    queryFn: async () => {
-      const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
-      const ids = (customers ?? []).map((c) => c.id);
-      if (ids.length === 0) return [];
-      const { data } = await supabase
-        .from("customer_subscriptions")
-        .select("*, package:packages(name, sessions_total)")
-        .in("customer_id", ids)
-        .eq("status", "active")
-        .order("purchased_at", { ascending: false });
-      return data ?? [];
-    },
-  });
+  const handleCancel = (a: any) => {
+    if (confirm("Tem certeza que deseja cancelar este agendamento?")) {
+      cancelMut.mutate(a.id);
+    }
+  };
 
-  const { queryClient } = Route.useRouteContext();
+  const saveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: editName, phone: editPhone }
+      });
+      if (error) throw error;
+      
+      // Update linked customer records
+      if (customerIds.length > 0) {
+        await supabase.from("customers").update({ full_name: editName, phone: editPhone }).in("id", customerIds);
+      }
+      
+      toast.success("Perfil atualizado!");
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao atualizar perfil.");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
-  if (loading || !user) return null;
-  const upcoming = (appts ?? []).filter((a) => new Date(a.scheduled_start) >= new Date() && a.status !== "cancelled");
-  const past = (appts ?? []).filter((a) => new Date(a.scheduled_start) < new Date() || a.status === "cancelled");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/" });
+  };
 
-  async function cancel(id: string) {
-    const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Agendamento cancelado");
-    queryClient.invalidateQueries({ queryKey: ["my-appts"] });
+  if (loading) return <PublicLayout><div className="flex justify-center p-20"><div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent"/></div></PublicLayout>;
+  
+  if (!user) {
+    navigate({ to: "/login", search: { redirect: "/minha-conta" } });
+    return null;
   }
+
+  const isLoading = idsLoading || apptsLoading;
 
   return (
     <PublicLayout>
-      <section className="relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[360px] bg-[radial-gradient(60%_60%_at_50%_0%,color-mix(in_oklab,var(--accent)_14%,transparent),transparent_70%)]"
-        />
-        <div className="mx-auto max-w-5xl px-6 py-16 md:py-20">
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-border/60 pb-8">
-            <div>
-              <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Minha conta</p>
-              <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Olá</h1>
-              <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="uppercase tracking-[0.2em]"
-              onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+      <div className="bg-muted/30 border-b border-border/40 py-6 md:py-10">
+        <div className="mx-auto max-w-4xl px-4 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-2xl md:text-4xl font-bold">Olá, {user.user_metadata?.full_name?.split(" ")[0] || "Cliente"}</h1>
+            <p className="text-muted-foreground mt-1 text-sm md:text-base">Bem-vindo à sua área exclusiva BarberOS.</p>
           </div>
+          <Button variant="outline" onClick={handleLogout} className="h-10 text-xs w-fit">
+            <LogOut className="mr-2 h-3.5 w-3.5" /> Sair da conta
+          </Button>
+        </div>
+      </div>
 
-          <VIPStatus lifetimePoints={loyalty?.balances?.reduce((acc: number, b: any) => acc + Number(b.lifetime_points || 0), 0) || 0} />
-
-          {(loyalty?.balances?.length ?? 0) > 0 && (
-            <>
-              <SectionTitle eyebrow="★" title="Seus pontos de fidelidade" />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {loyalty!.balances.map((b: any, i: number) => (
-                  <article key={i} className="flex items-center justify-between border border-accent/30 bg-accent/5 p-5">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
-                        <Gift className="h-4 w-4" /> {b.barbershop?.name}
-                      </div>
-                      <div className="mt-2 font-serif text-3xl font-bold">{b.points} pts</div>
-                      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Acumulou {b.lifetime_points} no total</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              {loyalty!.txs.length > 0 && (
-                <details className="mt-3 border border-border/50 p-4 text-sm">
-                  <summary className="cursor-pointer text-xs uppercase tracking-[0.2em] text-muted-foreground">Ver extrato (últimos 20)</summary>
-                  <ul className="mt-3 divide-y divide-border/40">
-                    {loyalty!.txs.map((t: any) => (
-                      <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-xs">
-                        <span className="text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy", { locale: ptBR })} · {t.barbershop?.name}</span>
-                        <span className="flex-1 truncate px-2">{t.description ?? (t.kind === "earn" ? "Ganho" : t.kind === "redeem" ? "Resgate" : t.kind)}</span>
-                        <span className={`font-mono ${t.points > 0 ? "text-accent" : "text-muted-foreground"}`}>{t.points > 0 ? "+" : ""}{t.points}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-
-          {(wallet?.balances?.some((b: any) => Number(b.balance) > 0) || (wallet?.txs?.length ?? 0) > 0) && (
-            <>
-              <SectionTitle eyebrow="$" title="Sua carteira" />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {(wallet?.balances ?? []).filter((b: any) => Number(b.balance) > 0 || Number(b.lifetime_credited) > 0).map((b: any, i: number) => (
-                  <article key={i} className="flex items-center justify-between border border-accent/30 bg-accent/5 p-5">
-                    <div>
-                      <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
-                        <Wallet className="h-4 w-4" /> {b.barbershop?.name}
-                      </div>
-                      <div className="mt-2 font-serif text-3xl font-bold">{brl(Number(b.balance))}</div>
-                      <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Recebeu {brl(Number(b.lifetime_credited))} de cashback</div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-              {(wallet?.txs?.length ?? 0) > 0 && (
-                <details className="mt-3 border border-border/50 p-4 text-sm">
-                  <summary className="cursor-pointer text-xs uppercase tracking-[0.2em] text-muted-foreground">Ver extrato (últimos 20)</summary>
-                  <ul className="mt-3 divide-y divide-border/40">
-                    {wallet!.txs.map((t: any) => (
-                      <li key={t.id} className="flex items-center justify-between gap-3 py-2 text-xs">
-                        <span className="text-muted-foreground">{format(new Date(t.created_at), "d MMM yyyy", { locale: ptBR })} · {t.barbershop?.name}</span>
-                        <span className="flex-1 truncate px-2">{t.description ?? t.kind}</span>
-                        <span className={`font-mono ${Number(t.amount) > 0 ? "text-accent" : "text-muted-foreground"}`}>{Number(t.amount) > 0 ? "+" : ""}{brl(Number(t.amount))}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </>
-          )}
-
-          {(subs?.length ?? 0) > 0 && (
-            <>
-              <SectionTitle eyebrow="VIP" title="Seus pacotes ativos" />
-              <div className="grid gap-3 sm:grid-cols-2">
-                {subs!.map((s: any) => (
-                  <article key={s.id} className="flex flex-col gap-2 border border-accent/30 bg-accent/5 p-5">
-                    <div className="flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-accent">
-                      <Gift className="h-4 w-4" /> {s.package?.name}
-                    </div>
-                    <div className="mt-1 font-serif text-3xl font-bold">
-                      {s.sessions_remaining} <span className="text-sm font-sans font-normal text-muted-foreground">/ {s.package?.sessions_total} sessões</span>
-                    </div>
-                    {s.expires_at && (
-                      <div className="mt-2 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-                        Expira em: {format(new Date(s.expires_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </div>
-                    )}
-                  </article>
-                ))}
-              </div>
-            </>
-          )}
-
-          <SectionTitle eyebrow="01" title="Próximos atendimentos" />
-          <div className="grid gap-3">
-            {upcoming.length === 0 && (
-              <div className="border border-border/60 p-8 text-center text-sm text-muted-foreground">
-                Nada agendado.{" "}
-                <Link to="/barbearias" className="font-medium text-accent hover:underline">
-                  Reservar agora →
-                </Link>
-              </div>
-            )}
-            {upcoming.map((a: any) => (
-              <article
-                key={a.id}
-                className="flex flex-col gap-4 border border-border/60 bg-card/40 p-5 transition hover:border-accent/40 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="grid h-12 w-12 place-items-center border border-accent/40 text-accent">
-                    <Calendar className="h-5 w-5" />
+      <div className="mx-auto max-w-4xl px-4 py-8 pb-32">
+        {nextAppt && (
+          <div className="mb-8">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Calendar className="h-4 w-4" /> Próximo Agendamento
+            </h2>
+            <Card className="bg-accent text-accent-foreground p-5 md:p-6 border-transparent shadow-lg relative overflow-hidden group">
+              <div className="absolute right-0 top-0 w-32 h-32 bg-background/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2" />
+              
+              <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-serif text-xl md:text-2xl font-bold mb-1">{nextAppt.barbershop?.name}</h3>
+                  <div className="flex flex-wrap items-center gap-3 text-sm md:text-base font-medium opacity-90">
+                    <span className="flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {format(new Date(nextAppt.scheduled_start), "EEEE, dd/MM", { locale: ptBR })}</span>
+                    <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {format(new Date(nextAppt.scheduled_start), "HH:mm")}</span>
                   </div>
-                  <div>
-                    <div className="font-serif text-lg">
-                      {format(new Date(a.scheduled_start), "EEEE, d 'de' MMM • HH:mm", { locale: ptBR })}
-                    </div>
-                    <div className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                      {a.services?.map((s: any) => s.service.name).join(" + ")} · com {a.professional?.display_name}
-                    </div>
-                  </div>
+                  <p className="mt-3 text-sm opacity-80 line-clamp-1">
+                    {nextAppt.services?.map((s:any) => s.service?.name).join(" + ")} com {nextAppt.professional?.display_name || "Profissional"}
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="rounded-none border-accent/50 text-accent">
-                    {brl(Number(a.total_amount))}
-                  </Badge>
-                  <Button size="sm" variant="outline" className="rounded-none uppercase tracking-[0.18em]" onClick={() => cancel(a.id)}>
-                    Cancelar
+                <div className="flex items-center gap-2 mt-2 md:mt-0">
+                  <Button asChild variant="secondary" className="h-11 bg-background text-foreground hover:bg-background/90 w-full md:w-auto font-bold">
+                    <Link to="/b/$slug" params={{ slug: nextAppt.barbershop?.slug || "" }}>Ver barbearia</Link>
                   </Button>
                 </div>
-              </article>
-            ))}
+              </div>
+            </Card>
           </div>
+        )}
 
-          <SectionTitle eyebrow="02" title="Histórico" />
-          <div className="grid gap-2">
-            {past.length === 0 && <p className="text-sm text-muted-foreground">Nada por aqui ainda.</p>}
-            {past.map((a: any) => (
-              <article
-                key={a.id}
-                className="flex flex-col gap-2 border border-border/40 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="flex items-center gap-3">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-serif">{format(new Date(a.scheduled_start), "d 'de' MMM yyyy • HH:mm", { locale: ptBR })}</span>
-                  <span className="text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                    · {a.services?.map((s: any) => s.service.name).join(", ")}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge
-                    variant={a.status === "cancelled" ? "destructive" : "secondary"}
-                    className="rounded-none uppercase tracking-[0.15em]"
-                  >
-                    {a.status === "cancelled" ? "Cancelado" : a.status === "completed" ? "Concluído" : a.status}
-                  </Badge>
-                  {a.status === "completed" && (
-                    <Button asChild size="sm" variant="outline" className="rounded-none uppercase tracking-[0.18em]">
-                      <Link to="/avaliar/$appointmentId" params={{ appointmentId: a.id }}>
-                        Avaliar
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
+        {/* Tabs Mobile First */}
+        <div className="flex overflow-x-auto no-scrollbar gap-2 mb-6 border-b border-border/40 pb-2">
+          <button 
+            onClick={() => setTab("proximos")} 
+            className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "proximos" ? "bg-card border border-border shadow-sm text-foreground" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            Próximos
+          </button>
+          <button 
+            onClick={() => setTab("historico")} 
+            className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "historico" ? "bg-card border border-border shadow-sm text-foreground" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            Histórico
+          </button>
+          <button 
+            onClick={() => setTab("perfil")} 
+            className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "perfil" ? "bg-card border border-border shadow-sm text-foreground" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            Editar Perfil
+          </button>
         </div>
-      </section>
+
+        {/* Tab Content */}
+        <div className="min-h-[400px]">
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1,2,3].map(i => <div key={i} className="h-32 bg-muted/50 rounded-xl animate-pulse" />)}
+            </div>
+          ) : tab === "proximos" ? (
+            upcoming.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/60 rounded-xl bg-card/20">
+                <Calendar className="h-12 w-12 text-muted-foreground/30 mb-4" />
+                <h3 className="font-bold text-lg">Você não tem agendamentos</h3>
+                <p className="text-muted-foreground mt-1 mb-6">Que tal marcar um horário para dar um tapa no visual?</p>
+                <Button asChild className="h-11 px-6 bg-accent text-accent-foreground font-bold">
+                  <Link to="/barbearias">Encontrar uma barbearia</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {upcoming.map(a => (
+                  <AppointmentCard key={a.id} appt={a} onCancel={() => handleCancel(a)} cancelable />
+                ))}
+              </div>
+            )
+          ) : tab === "historico" ? (
+            history.length === 0 ? (
+              <div className="p-12 text-center text-muted-foreground border border-border/40 rounded-xl">Seu histórico está vazio.</div>
+            ) : (
+              <div className="grid gap-4">
+                {history.map(a => (
+                  <AppointmentCard key={a.id} appt={a} />
+                ))}
+              </div>
+            )
+          ) : (
+            <Card className="p-5 md:p-8 max-w-xl border-border/60">
+              <h2 className="font-bold text-lg mb-6">Meus Dados</h2>
+              <form onSubmit={saveProfile} className="space-y-5">
+                <div className="space-y-2">
+                  <Label>Nome completo</Label>
+                  <Input value={editName} onChange={e=>setEditName(e.target.value)} className="h-11 bg-background" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone / WhatsApp</Label>
+                  <Input value={editPhone} onChange={e=>setEditPhone(e.target.value)} className="h-11 bg-background" placeholder="(11) 90000-0000" />
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail</Label>
+                  <Input value={user.email} disabled className="h-11 opacity-60" />
+                  <p className="text-xs text-muted-foreground">O e-mail não pode ser alterado no momento.</p>
+                </div>
+                <Button type="submit" disabled={savingProfile} className="w-full sm:w-auto h-11 bg-foreground text-background font-bold mt-4">
+                  {savingProfile ? "Salvando..." : "Salvar Alterações"}
+                </Button>
+              </form>
+            </Card>
+          )}
+        </div>
+      </div>
     </PublicLayout>
   );
 }
 
-function SectionTitle({ eyebrow, title }: { eyebrow: string; title: string }) {
-  return (
-    <div className="mt-14 mb-5 flex items-baseline gap-4">
-      <span className="font-serif text-sm italic text-accent">{eyebrow}</span>
-      <div className="h-px flex-1 bg-border/70" />
-      <h2 className="font-serif text-xl font-semibold">{title}</h2>
-    </div>
-  );
-}
-
-function VIPStatus({ lifetimePoints }: { lifetimePoints: number }) {
-  const tiers = [
-    { name: "Bronze", min: 0, max: 499, color: "text-[#cd7f32]", bg: "bg-[#cd7f32]/20", fill: "bg-[#cd7f32]" },
-    { name: "Prata", min: 500, max: 1499, color: "text-slate-300", bg: "bg-slate-300/20", fill: "bg-slate-300" },
-    { name: "Ouro", min: 1500, max: 2999, color: "text-yellow-500", bg: "bg-yellow-500/20", fill: "bg-yellow-500" },
-    { name: "Diamante", min: 3000, max: Infinity, color: "text-cyan-400", bg: "bg-cyan-400/20", fill: "bg-cyan-400" },
-  ];
-  
-  const currentTierIndex = tiers.findIndex(t => lifetimePoints >= t.min && lifetimePoints <= t.max);
-  const currentTier = tiers[currentTierIndex] || tiers[0];
-  const nextTier = tiers[currentTierIndex + 1];
-  
-  const progress = nextTier ? ((lifetimePoints - currentTier.min) / (nextTier.min - currentTier.min)) * 100 : 100;
+function AppointmentCard({ appt, cancelable, onCancel }: any) {
+  const isPastAppt = isPast(new Date(appt.scheduled_start));
+  const isCanceled = ["cancelled", "no_show"].includes(appt.status);
+  const canReview = isPastAppt && !isCanceled && (!appt.reviews || appt.reviews.length === 0);
 
   return (
-    <div className="mt-8 border border-border/60 bg-card/40 p-6 md:p-8 relative overflow-hidden group">
-      <div className={`absolute top-0 right-0 w-48 h-48 blur-[80px] opacity-20 transition-opacity duration-1000 group-hover:opacity-40 ${currentTier.bg}`} />
-      
-      <div className="relative flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Status de Fidelidade</p>
-          <div className="flex items-center gap-2 mt-1">
-            <Crown className={`h-6 w-6 ${currentTier.color} drop-shadow-[0_0_8px_currentColor]`} />
-            <h2 className={`font-serif text-3xl font-bold tracking-tight ${currentTier.color}`}>Membro {currentTier.name}</h2>
-          </div>
+    <Card className={`p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-border/60 transition-colors ${isCanceled ? "opacity-70 bg-muted/20" : "bg-card hover:border-accent/40"}`}>
+      <div className="flex-1">
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <h3 className="font-bold text-lg">{appt.barbershop?.name}</h3>
+          {isCanceled ? (
+            <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Cancelado</Badge>
+          ) : isPastAppt ? (
+            <Badge variant="outline" className="text-[10px] text-muted-foreground">Concluído</Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] border-emerald-500/30 text-emerald-500">Confirmado</Badge>
+          )}
         </div>
-        {nextTier && (
-          <div className="text-left md:text-right">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Próximo Nível</p>
-            <p className="text-sm font-medium mt-1">{nextTier.name} ({nextTier.min} pts)</p>
-          </div>
+        
+        <p className="text-sm font-medium mb-1 flex items-center gap-2">
+          <Calendar className="h-4 w-4 text-accent" /> 
+          {format(new Date(appt.scheduled_start), "dd/MM/yyyy 'às' HH:mm")}
+        </p>
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {appt.services?.map((s:any) => s.service?.name).join(" + ")} com {appt.professional?.display_name}
+        </p>
+        
+        <p className="text-sm font-bold mt-2">{brl(Number(appt.total_amount))}</p>
+      </div>
+
+      <div className="flex flex-col gap-2 min-w-[140px] pt-4 md:pt-0 border-t md:border-0 border-border/40">
+        {!isCanceled && appt.barbershop?.slug && (
+          <Button asChild variant="outline" className="h-10 text-xs w-full">
+            <Link to="/b/$slug" params={{ slug: appt.barbershop.slug }}>Ver barbearia</Link>
+          </Button>
+        )}
+        {cancelable && !isCanceled && !isPastAppt && (
+          <Button variant="ghost" className="h-10 text-xs text-destructive hover:bg-destructive/10 w-full" onClick={onCancel}>
+            Cancelar
+          </Button>
+        )}
+        {canReview && (
+          <Button asChild className="h-10 text-xs bg-accent text-accent-foreground font-bold w-full">
+            <Link to="/avaliar/$appointmentId" params={{ appointmentId: appt.id }}>
+              <Star className="h-3.5 w-3.5 mr-1.5" /> Avaliar
+            </Link>
+          </Button>
+        )}
+        {!canReview && isPastAppt && !isCanceled && appt.reviews?.length > 0 && (
+          <Badge variant="secondary" className="justify-center h-10 rounded-md bg-muted/50 text-muted-foreground">Avaliado ✓</Badge>
         )}
       </div>
-
-      <div className="relative h-2 w-full bg-border/50 rounded-full overflow-hidden">
-        <div 
-          className={`absolute left-0 top-0 h-full ${currentTier.fill} transition-all duration-1000 ease-out shadow-[0_0_10px_currentColor]`} 
-          style={{ width: `${progress}%` }} 
-        />
-      </div>
-      
-      {nextTier ? (
-        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground mt-4 text-center">
-          Faltam <span className="text-foreground font-bold">{nextTier.min - lifetimePoints} pontos</span> para você alcançar o prestigiado nível {nextTier.name}.
-        </p>
-      ) : (
-        <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground mt-4 text-center">
-          Você atingiu o nível máximo de fidelidade. Você é uma lenda! 👑
-        </p>
-      )}
-    </div>
+    </Card>
   );
 }
-
