@@ -59,18 +59,18 @@ function ProfessionalProfilePage() {
 
       // Reviews
       const { data: reviews } = await supabase
-        .from("reviews")
-        .select("id, rating, comment, created_at, customer:customers(full_name)")
+        .from("satisfaction_surveys")
+        .select("id, shop_rating, comment, answered_at, customer:customers(full_name)")
         .eq("barbershop_id", shop.id)
         .eq("professional_id", pro.id)
-        .order("created_at", { ascending: false })
+        .order("answered_at", { ascending: false })
         .limit(10);
 
-      const rating = reviews && reviews.length > 0 
-        ? reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length 
+      const shop_rating = reviews && reviews.length > 0 
+        ? reviews.reduce((acc, r) => acc + r.shop_rating, 0) / reviews.length 
         : null;
 
-      return { shop, pro, services: services ?? [], portfolio: portfolio ?? [], reviews: reviews ?? [], rating };
+      return { shop, pro, services: services ?? [], portfolio: portfolio ?? [], reviews: reviews ?? [], shop_rating };
     }
   });
 
@@ -97,7 +97,7 @@ function ProfessionalProfilePage() {
     );
   }
 
-  const { shop, pro, services, portfolio, reviews, rating } = data;
+  const { shop, pro, services, portfolio, reviews, shop_rating } = data;
 
   return (
     <PublicLayout>
@@ -117,11 +117,11 @@ function ProfessionalProfilePage() {
               </Avatar>
               <div>
                 <h1 className="font-serif text-3xl md:text-5xl font-bold">{pro.display_name}</h1>
-                <p className="text-accent font-medium text-lg mt-1">{pro.specialty || "Barbeiro Especialista"}</p>
-                {rating && (
+                <p className="text-accent font-medium text-lg mt-1">{pro.specialties || "Barbeiro Especialista"}</p>
+                {shop_rating && (
                   <Badge variant="secondary" className="mt-3 flex w-fit items-center gap-1 font-bold">
                     <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                    {rating.toFixed(1)} ({reviews.length} avaliações)
+                    {shop_rating.toFixed(1)} ({reviews.length} avaliações)
                   </Badge>
                 )}
               </div>
@@ -158,7 +158,7 @@ function ProfessionalProfilePage() {
                   <h3 className="font-bold">{s.name}</h3>
                   <div className="flex items-center gap-3 mt-3 text-sm">
                     <span className="font-medium text-accent">{brl(s.price)}</span>
-                    <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {minutes(s.duration)}</span>
+                    <span className="text-muted-foreground flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {minutes(s.duration_min)}</span>
                   </div>
                 </Card>
               ))}
@@ -190,7 +190,7 @@ function ProfessionalProfilePage() {
                   <div className="flex items-center gap-2 mb-2">
                     <div className="flex">
                       {[1,2,3,4,5].map(star => (
-                        <Star key={star} className={`h-3.5 w-3.5 ${star <= r.rating ? "fill-accent text-accent" : "text-muted-foreground/30"}`} />
+                        <Star key={star} className={`h-3.5 w-3.5 ${star <= r.shop_rating ? "fill-accent text-accent" : "text-muted-foreground/30"}`} />
                       ))}
                     </div>
                     <span className="text-xs font-bold text-foreground">{r.customer?.full_name || "Cliente"}</span>

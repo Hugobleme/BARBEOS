@@ -172,7 +172,7 @@ export const barbershopService = {
 
     let query = supabase
       .from("barbershops")
-      .select("*, satisfaction_surveys(shop_rating), appointments(id)", { count: "exact" })
+      .select("*", { count: "exact" })
       .eq("active", true);
 
     if (filters?.q) {

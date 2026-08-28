@@ -51,7 +51,7 @@ function MinhaContaPage() {
         barbershop:barbershops(name, slug, address),
         professional:professionals(display_name),
         services:appointment_services(service:services(name)),
-        reviews(id)
+        satisfaction_surveys(id)
       `).in("customer_id", customerIds).order("scheduled_start", { ascending: true });
       
       return data || [];
@@ -249,7 +249,7 @@ function MinhaContaPage() {
 function AppointmentCard({ appt, cancelable, onCancel }: any) {
   const isPastAppt = isPast(new Date(appt.scheduled_start));
   const isCanceled = ["cancelled", "no_show"].includes(appt.status);
-  const canReview = isPastAppt && !isCanceled && (!appt.reviews || appt.reviews.length === 0);
+  const canReview = isPastAppt && !isCanceled && (!appt.satisfaction_surveys || appt.satisfaction_surveys.length === 0);
 
   return (
     <Card className={`p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-border/60 transition-colors ${isCanceled ? "opacity-70 bg-muted/20" : "bg-card hover:border-accent/40"}`}>
@@ -294,7 +294,7 @@ function AppointmentCard({ appt, cancelable, onCancel }: any) {
             </Link>
           </Button>
         )}
-        {!canReview && isPastAppt && !isCanceled && appt.reviews?.length > 0 && (
+        {!canReview && isPastAppt && !isCanceled && appt.satisfaction_surveys?.length > 0 && (
           <Badge variant="secondary" className="justify-center h-10 rounded-md bg-muted/50 text-muted-foreground">Avaliado ✓</Badge>
         )}
       </div>

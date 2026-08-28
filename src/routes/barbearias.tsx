@@ -38,7 +38,7 @@ function BarbeariasPage() {
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ["public-barbershops", searchParams.city, searchParams.neighborhood, searchParams.minRating, searchParams.sort, searchParams.page],
     queryFn: () =>
-      barbershopService.searchBarbershops({
+      barbershopService.getBarbershops({
         city: searchParams.city,
         neighborhood: searchParams.neighborhood,
         minRating: searchParams.minRating,
@@ -48,9 +48,13 @@ function BarbeariasPage() {
       }),
   });
 
-  const shops = data?.data ?? [];
+  const shops = Array.isArray(data?.data) ? data!.data.map((s: any) => ({ id: s.id, name: s.name ?? "Barbearia", slug: s.slug ?? "", banner_url: s.banner_url, description: s.description, rating: s.rating, address: s.address })) : [];
   const totalCount = data?.count ?? 0;
-  const totalPages = data?.totalPages ?? 1;
+  const totalPages = Math.ceil((data?.count ?? 0) / 12) || 1;
+
+  if (error && import.meta.env.DEV) {
+    console.error('Failed to load barbershops', error);
+  }
 
   const applyFilters = () => {
     navigate({
@@ -131,7 +135,7 @@ function BarbeariasPage() {
             
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/20 pt-4">
               <span className="text-sm text-muted-foreground font-medium">
-                {isLoading ? "Buscando..." : `${totalCount} ${totalCount === 1 ? "resultado" : "resultados"}`}
+                {isLoading ? "Buscando..." : error ? "" : `${totalCount} ${totalCount === 1 ? "resultado" : "resultados"}`}
               </span>
               <div className="flex gap-2 w-full sm:w-auto">
                 <Button variant="outline" onClick={resetFilters} className="h-11 flex-1 sm:flex-none border-border/40 hover:bg-muted">
@@ -154,8 +158,8 @@ function BarbeariasPage() {
           </div>
         ) : error ? (
           <div className="border border-destructive/20 bg-destructive/5 p-8 text-center rounded-xl">
-            <h2 className="text-xl font-bold text-destructive">Erro ao carregar barbearias</h2>
-            <p className="mt-2 text-sm text-muted-foreground">Tente novamente.</p>
+            <h2 className="text-xl font-bold text-destructive">Não foi possível carregar as barbearias.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Tente novamente em alguns instantes.</p>
             <Button onClick={() => refetch()} variant="outline" className="mt-4 border-destructive/30 text-destructive">Tentar novamente</Button>
           </div>
         ) : shops.length === 0 ? (
@@ -163,7 +167,7 @@ function BarbeariasPage() {
             <Scissors className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
             <h2 className="text-xl font-bold">Nenhuma barbearia encontrada</h2>
             <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-              Tente ajustar os filtros ou buscar outra cidade.
+              Tente outra cidade ou remova os filtros.
             </p>
             <Button onClick={resetFilters} variant="outline" className="mt-6 border-border/40">Limpar filtros</Button>
           </div>

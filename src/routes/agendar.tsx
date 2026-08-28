@@ -33,7 +33,7 @@ export const Route = createFileRoute("/agendar")({
 const STEPS = ["Serviço", "Profissional", "Data e horário", "Confirmar"] as const;
 
 type Service = { id: string; name: string; duration_min: number; price: number; description: string | null };
-type Pro = { id: string; display_name: string; avatar_url: string | null; specialty: string | null };
+type Pro = { id: string; display_name: string; avatar_url: string | null; specialties: string[] | null };
 type TimeSlot = string;
 
 function BookingPage() {
@@ -162,7 +162,7 @@ function BookingPage() {
       let customerId = existingCustomer?.id;
       if (!customerId) {
         const { data: newCust, error: custErr } = await supabase.from("customers").insert({
-          barbershop_id: shop.id,
+          barbershopId: shop.id,
           profile_id: currentUser.id,
           full_name: currentUser.user_metadata?.full_name || name || "Cliente",
           email: currentUser.email,
@@ -181,15 +181,15 @@ function BookingPage() {
       const finalProId = proId === "any" ? pros[Math.floor(Math.random() * pros.length)]?.id : proId;
 
       await appointmentService.createAppointment({
-        barbershop_id: shop.id,
-        customer_id: customerId,
-        professional_id: finalProId,
-        scheduled_start: start.toISOString(),
-        scheduled_end: end.toISOString(),
-        total_amount: totalPrice,
-        status: "scheduled",
+        barbershopId: shop.id,
+        customerId: customerId,
+        professionalId: finalProId,
+        startsAt: start,
+        customerData: { name: name || currentUser?.user_metadata?.full_name || "Cliente", phone: phone || currentUser?.user_metadata?.phone || "", email: currentUser?.email },
+        
+        
         services: pickedServices.map(s => ({
-          service_id: s.id,
+          id: s.id,
           price: Number(s.price),
           duration_min: s.duration_min,
         })),
@@ -352,7 +352,7 @@ function BookingPage() {
                         <AvatarFallback className="bg-muted text-muted-foreground text-sm font-bold">{p.display_name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span className="font-bold text-sm">{p.display_name}</span>
-                      <span className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{p.specialty || "Barbeiro"}</span>
+                      <span className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{p.specialties?.[0] || "Barbeiro"}</span>
                     </button>
                   ))}
                 </div>

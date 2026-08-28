@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Star, CheckCircle2, Scissors, ArrowLeft, AlertCircle } from "lucide-react";
@@ -56,7 +56,7 @@ function ReviewPage() {
         id, scheduled_start, status, barbershop_id, customer_id, professional_id,
         barbershop:barbershops(name),
         professional:professionals(display_name),
-        reviews(id)
+        satisfaction_surveys(id)
       `).eq("id", appointmentId).in("customer_id", custIds).maybeSingle();
 
       if (error) throw error;
@@ -67,7 +67,7 @@ function ReviewPage() {
 
       if (isCanceled) throw new Error("Este agendamento foi cancelado.");
       if (!past) throw new Error("Este agendamento ainda não aconteceu.");
-      if (data.reviews && data.reviews.length > 0) throw new Error("Você já avaliou este agendamento.");
+      if (data.satisfaction_surveys) throw new Error("Você já avaliou este agendamento.");
 
       return data;
     },
@@ -77,12 +77,12 @@ function ReviewPage() {
   const submitMut = useMutation({
     mutationFn: async () => {
       if (!appt) return;
-      const { error } = await supabase.from("reviews").insert({
+      const { error } = await supabase.from("satisfaction_surveys").insert({
         barbershop_id: appt.barbershop_id,
         professional_id: appt.professional_id,
         customer_id: appt.customer_id,
         appointment_id: appt.id,
-        rating,
+        shop_rating: rating,
         comment: comment.trim() || null,
       });
       if (error) throw error;
