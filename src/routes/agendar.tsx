@@ -127,6 +127,37 @@ function BookingPage() {
     if (!date && step > 2) setStep(2);
   }, [date, step]);
 
+  const totalDuration = pickedServices.reduce((a, b) => a + (b.duration_min || 0), 0);
+  const totalPrice = pickedServices.reduce((a, b) => a + (Number(b.price) || 0), 0);
+
+  // Availability calculation (mocking time slots based on totalDuration for simplicity, but integrating nicely)
+  // In a real app we'd query working_hours and existing appointments. 
+  // We'll generate simple slots here.
+  const { data: slots = [], isLoading: slotsLoading, error: slotsError } = useQuery({
+    queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
+    enabled: !!shop?.id && !!date && pickedServices.length > 0,
+    queryFn: async () => {
+      try {
+        const generated: string[] = [];
+        const base = parse("09:00", "HH:mm", date!);
+        for(let i=0; i<18; i++) {
+          generated.push(format(addMinutes(base, i * 30), "HH:mm"));
+        }
+        return generated;
+      } catch (err) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
+        throw err;
+      }
+    },
+  });
+
+  const canNext = useMemo(() => {
+    if (step === 0) return pickedServices.length > 0;
+    if (step === 1) return !!proId;
+    if (step === 2) return !!date && !!time;
+    return true;
+  }, [step, pickedServices, proId, date, time]);
+
   if (!slug) {
     return (
       <PublicLayout>
@@ -164,37 +195,6 @@ function BookingPage() {
       </PublicLayout>
     );
   }
-
-  const totalDuration = pickedServices.reduce((a, b) => a + (b.duration_min || 0), 0);
-  const totalPrice = pickedServices.reduce((a, b) => a + (Number(b.price) || 0), 0);
-
-  // Availability calculation (mocking time slots based on totalDuration for simplicity, but integrating nicely)
-  // In a real app we'd query working_hours and existing appointments. 
-  // We'll generate simple slots here.
-  const { data: slots = [], isLoading: slotsLoading, error: slotsError } = useQuery({
-    queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
-    enabled: !!shop?.id && !!date && pickedServices.length > 0,
-    queryFn: async () => {
-      try {
-        const generated: string[] = [];
-        const base = parse("09:00", "HH:mm", date!);
-        for(let i=0; i<18; i++) {
-          generated.push(format(addMinutes(base, i * 30), "HH:mm"));
-        }
-        return generated;
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
-        throw err;
-      }
-    },
-  });
-
-  const canNext = useMemo(() => {
-    if (step === 0) return pickedServices.length > 0;
-    if (step === 1) return !!proId;
-    if (step === 2) return !!date && !!time;
-    return true;
-  }, [step, pickedServices, proId, date, time]);
 
   const submit = async () => {
     if (!shop) return;
