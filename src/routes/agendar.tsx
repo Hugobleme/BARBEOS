@@ -42,29 +42,41 @@ function BookingPage() {
   const { user } = useAuth();
 
   // Basic queries
-  const { data: shop, isLoading: shopLoading } = useQuery({
+  const { data: shop, isLoading: shopLoading, error: shopError } = useQuery({
     queryKey: ["book-shop", shopSlug],
     enabled: !!shopSlug,
     queryFn: async () => {
-      const { data } = await supabase.from("barbershops").select("*").eq("slug", shopSlug).eq("active", true).single();
+      const { data, error } = await supabase.from("barbershops").select("id, name, slug, logo_url").eq("slug", shopSlug).eq("active", true).maybeSingle();
+      if (error) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: barbershop", error);
+        throw error;
+      }
       return data;
     },
   });
 
-  const { data: services = [], isLoading: svcsLoading } = useQuery({
+  const { data: services = [], isLoading: svcsLoading, error: svcsError } = useQuery({
     queryKey: ["book-services", shop?.id],
     enabled: !!shop?.id,
     queryFn: async () => {
-      const { data } = await supabase.from("services").select("*").eq("barbershop_id", shop!.id).eq("active", true).order("name");
+      const { data, error } = await supabase.from("services").select("id, name, duration_min, price, description").eq("barbershop_id", shop!.id).eq("active", true).order("name");
+      if (error) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: services", error);
+        throw error;
+      }
       return (data as Service[]) || [];
     },
   });
 
-  const { data: pros = [], isLoading: prosLoading } = useQuery({
+  const { data: pros = [], isLoading: prosLoading, error: prosError } = useQuery({
     queryKey: ["book-pros", shop?.id],
     enabled: !!shop?.id,
     queryFn: async () => {
-      const { data } = await supabase.from("professionals").select("*").eq("barbershop_id", shop!.id).eq("active", true);
+      const { data, error } = await supabase.from("professionals").select("id, display_name, avatar_url, specialties").eq("barbershop_id", shop!.id).eq("active", true);
+      if (error) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: professionals", error);
+        throw error;
+      }
       return (data as Pro[]) || [];
     },
   });
@@ -101,23 +113,79 @@ function BookingPage() {
   }, [pros, initialPro, proId]);
 
   // Derived state
+  
+  const slug = shopSlug?.trim();
+
+  // Reset steps if parent selections change
+  useEffect(() => {
+    if (pickedServices.length === 0 && step > 0) setStep(0);
+  }, [pickedServices.length, step]);
+  useEffect(() => {
+    if (proId === "any" && pros.length > 0 && step > 1) { /* maybe reset? but any is fine */ }
+  }, [proId, pros, step]);
+  useEffect(() => {
+    if (!date && step > 2) setStep(2);
+  }, [date, step]);
+
+  if (!slug) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Escolha uma barbearia para agendar.</h2>
+          <Button asChild className="mt-4"><Link to="/barbearias">Ver barbearias</Link></Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (shopError || svcsError || prosError || slotsError) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar o agendamento.</h2>
+          <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
+          <Button onClick={() => window.location.reload()} variant="outline">Tentar novamente</Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (!shopLoading && !shop) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Barbearia não encontrada.</h2>
+          <p className="text-muted-foreground mb-8">Volte para a lista e escolha outra unidade.</p>
+          <Button asChild variant="outline"><Link to="/barbearias">Voltar para lista</Link></Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
   const totalDuration = pickedServices.reduce((a, b) => a + (b.duration_min || 0), 0);
   const totalPrice = pickedServices.reduce((a, b) => a + (Number(b.price) || 0), 0);
 
   // Availability calculation (mocking time slots based on totalDuration for simplicity, but integrating nicely)
   // In a real app we'd query working_hours and existing appointments. 
   // We'll generate simple slots here.
-  const { data: slots = [], isLoading: slotsLoading } = useQuery({
+  const { data: slots = [], isLoading: slotsLoading, error: slotsError } = useQuery({
     queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
     enabled: !!shop?.id && !!date && pickedServices.length > 0,
     queryFn: async () => {
-      // Mock slots generation.
-      const generated: string[] = [];
-      const base = parse("09:00", "HH:mm", date!);
-      for(let i=0; i<18; i++) {
-        generated.push(format(addMinutes(base, i * 30), "HH:mm"));
+      try {
+        const generated: string[] = [];
+        const base = parse("09:00", "HH:mm", date!);
+        for(let i=0; i<18; i++) {
+          generated.push(format(addMinutes(base, i * 30), "HH:mm"));
+        }
+        return generated;
+      } catch (err) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
+        throw err;
       }
-      return generated;
     },
   });
 
@@ -167,7 +235,7 @@ function BookingPage() {
           full_name: currentUser.user_metadata?.full_name || name || "Cliente",
           email: currentUser.email,
           phone: currentUser.user_metadata?.phone || phone || null,
-        }).select().single();
+        }).select().maybeSingle();
         if (custErr) throw custErr;
         customerId = newCust.id;
       }
@@ -279,7 +347,9 @@ function BookingPage() {
           {step === 0 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
               <h2 className="text-lg font-bold mb-4">Escolha os serviços</h2>
-              {svcsLoading ? (
+              {!svcsLoading && services.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhum serviço disponível para esta barbearia.</p>
+                ) : svcsLoading ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
@@ -319,7 +389,9 @@ function BookingPage() {
           {step === 1 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
               <h2 className="text-lg font-bold mb-4">Com quem você prefere?</h2>
-              {prosLoading ? (
+              {!prosLoading && pros.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">Nenhum profissional disponível para agendamento.</p>
+                ) : prosLoading ? (
                 <div className="grid grid-cols-2 gap-3">
                   {[1,2].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
