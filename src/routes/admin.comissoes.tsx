@@ -1,307 +1,268 @@
+import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentShop } from "@/hooks/use-current-shop";
-import { commissionService, Commission } from "@/services/commission.service";
+import { commissionService, type Commission } from "@/services/commission.service";
 import { barbershopService } from "@/services/barbershop.service";
-import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Wallet, Check, Search, Calendar as CalendarIcon, CheckCircle2, Clock } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Coins, CheckCircle, ShieldAlert, Calendar, User, DollarSign, Wallet } from "lucide-react";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/comissoes")({
-  head: () => ({ meta: [{ title: "Comissões — BarberOS" }, { name: "robots", content: "noindex,nofollow" }] }),
-  component: ComissoesPage,
+  component: AdminComissoesPage,
 });
 
-const MONTHS = [
-  { value: "1", label: "Janeiro" },
-  { value: "2", label: "Fevereiro" },
-  { value: "3", label: "Março" },
-  { value: "4", label: "Abril" },
-  { value: "5", label: "Maio" },
-  { value: "6", label: "Junho" },
-  { value: "7", label: "Julho" },
-  { value: "8", label: "Agosto" },
-  { value: "9", label: "Setembro" },
-  { value: "10", label: "Outubro" },
-  { value: "11", label: "Novembro" },
-  { value: "12", label: "Dezembro" },
-];
-
-function ComissoesPage() {
+function AdminComissoesPage() {
   const { shopId, shop } = useCurrentShop();
+  const isOwner = shop?.role === 'owner';
+  const isAdmin = shop?.role === 'admin' || shop?.role === 'manager';
+  const canManage = isOwner || isAdmin;
   const qc = useQueryClient();
-  const canManage = shop?.role === "owner" || shop?.role === "admin";
 
-  const now = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<string>(String(now.getMonth() + 1));
-  const [selectedYear, setSelectedYear] = useState<string>(String(now.getFullYear()));
-  const [selectedPro, setSelectedPro] = useState<string>("all");
-  const [selectedStatus, setSelectedStatus] = useState<string>("all");
-  const [payingId, setPayingId] = useState<string | null>(null);
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
 
-  // Lista de barbeiros para o filtro
-  const { data: pros } = useQuery({
-    queryKey: ["admin-pros-list", shopId],
+  const [month, setMonth] = useState(currentMonth.toString());
+  const [year, setYear] = useState(currentYear.toString());
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [proFilter, setProFilter] = useState("all");
+
+  const { data: professionals = [] } = useQuery({
+    queryKey: ["admin-pros", shopId],
     enabled: !!shopId,
     queryFn: () => barbershopService.getBarbers(shopId!),
   });
 
-  // Lista de comissões
-  const { data: commissions, isLoading, refetch } = useQuery({
-    queryKey: ["admin-commissions", shopId, selectedMonth, selectedYear],
+  const { data: commissions = [], isLoading } = useQuery({
+    queryKey: ["admin-commissions", shopId, parseInt(month), parseInt(year)],
     enabled: !!shopId,
-    queryFn: () => commissionService.getCommissions(shopId!, Number(selectedMonth), Number(selectedYear)),
+    queryFn: () => commissionService.getCommissions(shopId!, parseInt(month), parseInt(year)),
   });
 
-  // Filtros aplicados em memória
-  const filteredCommissions = (commissions ?? []).filter((c) => {
-    if (selectedPro !== "all" && c.professional_id !== selectedPro) return false;
-    if (selectedStatus !== "all" && c.status !== selectedStatus) return false;
-    return true;
+  const payMut = useMutation({
+    mutationFn: (id: string) => commissionService.payCommission(id),
+    onSuccess: () => {
+      toast.success("Comissão marcada como paga.");
+      qc.invalidateQueries({ queryKey: ["admin-commissions"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao pagar comissão.")
   });
 
-  // Totais
-  const totalPending = filteredCommissions
-    .filter((c) => c.status === "pending")
-    .reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-  const totalPaid = filteredCommissions
-    .filter((c) => c.status === "paid")
-    .reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-  const totalAll = filteredCommissions.reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-  async function handlePayCommission(id: string) {
-    if (!canManage) {
-      toast.error("Permissão insuficiente para alterar comissões.");
-      return;
+  const handlePay = (c: Commission) => {
+    if (confirm(`Confirmar o pagamento de ${brl(c.amount)} para ${c.professional?.display_name}?`)) {
+      payMut.mutate(c.id);
     }
+  };
 
-    setPayingId(id);
-    try {
-      await commissionService.payCommission(id);
-      toast.success("Comissão marcada como paga com sucesso!");
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao pagar comissão.");
-    } finally {
-      setPayingId(null);
-    }
-  }
+  const filtered = useMemo(() => {
+    if (!Array.isArray(commissions)) return [];
+    return commissions.filter(c => {
+      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (proFilter !== "all" && c.professional_id !== proFilter) return false;
+      return true;
+    });
+  }, [commissions, statusFilter, proFilter]);
+
+  const summary = useMemo(() => {
+    const totalPending = filtered.filter(c => c.status === "pending").reduce((acc, c) => acc + Number(c.amount), 0);
+    const totalPaid = filtered.filter(c => c.status === "paid").reduce((acc, c) => acc + Number(c.amount), 0);
+    
+    // Group by professional
+    const byPro: Record<string, { name: string, total: number }> = {};
+    filtered.forEach(c => {
+      if (!c.professional?.display_name) return;
+      if (!byPro[c.professional_id]) byPro[c.professional_id] = { name: c.professional.display_name, total: 0 };
+      byPro[c.professional_id].total += Number(c.amount);
+    });
+
+    return { totalPending, totalPaid, byPro: Object.values(byPro).sort((a,b) => b.total - a.total) };
+  }, [filtered]);
+
+  if (!shopId) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
         <div>
-          <h1 className="font-display text-3xl font-bold">Comissões da Equipe</h1>
-          <p className="text-muted-foreground">
-            Acompanhe e efetue o pagamento de comissões sobre atendimentos e vendas.
-          </p>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Wallet className="h-6 w-6 text-accent" /> Comissões
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Acompanhamento e pagamento de profissionais</p>
         </div>
-
-        {!canManage && (
-          <Badge variant="outline" className="flex items-center gap-1.5 rounded-none text-muted-foreground">
-            <ShieldAlert className="h-3.5 w-3.5" /> Modo somente leitura
-          </Badge>
-        )}
       </div>
 
-      {/* Cards de Resumo */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Comissões Pendentes
-            </span>
-            <Coins className="h-4 w-4 text-amber-500" />
-          </div>
-          <div className="mt-2 font-serif text-3xl font-bold text-amber-500">{brl(totalPending)}</div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Aguardando pagamento aos profissionais</p>
-        </Card>
-
-        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Comissões Pagas
-            </span>
-            <CheckCircle className="h-4 w-4 text-emerald-500" />
-          </div>
-          <div className="mt-2 font-serif text-3xl font-bold text-emerald-500">{brl(totalPaid)}</div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Pagas no período selecionado</p>
-        </Card>
-
-        <Card className="rounded-none border border-border bg-card/50 p-5 backdrop-blur-md">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Total Acumulado
-            </span>
-            <Wallet className="h-4 w-4 text-accent" />
-          </div>
-          <div className="mt-2 font-serif text-3xl font-bold text-foreground">{brl(totalAll)}</div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            {filteredCommissions.length} lançamentos no período
-          </p>
-        </Card>
-      </div>
-
-      {/* Barra de Filtros */}
-      <div className="flex flex-wrap items-center gap-3 border border-border/60 bg-card/40 p-4 backdrop-blur-md">
-        <div className="w-[140px]">
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Mês" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              {MONTHS.map((m) => (
-                <SelectItem key={m.value} value={m.value} className="text-xs">
-                  {m.label}
-                </SelectItem>
+      <div className="p-4 sm:p-5 border-b border-border/40 bg-card/20 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger className="w-full sm:w-[140px] h-11"><SelectValue placeholder="Mês" /></SelectTrigger>
+            <SelectContent>
+              {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                <SelectItem key={m} value={m.toString()}>{format(new Date(2000, m - 1), "MMMM", { locale: ptBR })}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={year} onValueChange={setYear}>
+            <SelectTrigger className="w-full sm:w-[100px] h-11"><SelectValue placeholder="Ano" /></SelectTrigger>
+            <SelectContent>
+              {[currentYear-1, currentYear, currentYear+1].map(y => (
+                <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[140px] h-11"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="pending">Pendentes</SelectItem>
+              <SelectItem value="paid">Pagas</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={proFilter} onValueChange={setProFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-11"><SelectValue placeholder="Profissional" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {professionals.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.display_name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-
-        <div className="w-[110px]">
-          <Select value={selectedYear} onValueChange={setSelectedYear}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Ano" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              <SelectItem value="2025" className="text-xs">2025</SelectItem>
-              <SelectItem value="2026" className="text-xs">2026</SelectItem>
-              <SelectItem value="2027" className="text-xs">2027</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="min-w-[180px] flex-1">
-          <Select value={selectedPro} onValueChange={setSelectedPro}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Profissional" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              <SelectItem value="all" className="text-xs">Todos os profissionais</SelectItem>
-              {pros?.map((p) => (
-                <SelectItem key={p.id} value={p.id} className="text-xs">
-                  {p.display_name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="w-[150px]">
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="h-10 rounded-none border-border bg-background/50 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent className="rounded-none">
-              <SelectItem value="all" className="text-xs">Todos os status</SelectItem>
-              <SelectItem value="pending" className="text-xs">Pendentes</SelectItem>
-              <SelectItem value="paid" className="text-xs">Pagas</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
       </div>
 
-      {/* Tabela de Lançamentos de Comissão */}
-      {isLoading ? (
-        <TableSkeleton />
-      ) : filteredCommissions.length === 0 ? (
-        <EmptyState
-          icon={Coins}
-          title="Nenhuma comissão encontrada"
-          description="Nenhuma comissão foi gerada para o mês e filtros selecionados."
-        />
-      ) : (
-        <Card className="overflow-hidden rounded-none border border-border bg-card/40 backdrop-blur-md">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border/60 bg-background/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="px-6 py-4">Profissional</th>
-                  <th className="px-6 py-4">Data / Atendimento</th>
-                  <th className="px-6 py-4">Valor Base</th>
-                  <th className="px-6 py-4">Taxa (%)</th>
-                  <th className="px-6 py-4">Comissão</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {filteredCommissions.map((c) => {
-                  const proName = c.professional?.display_name || "Profissional";
-                  const dateStr = c.appointment?.scheduled_start || c.created_at;
-                  const ratePercent = Number(c.rate) > 1 ? Number(c.rate) : Number(c.rate) * 100;
-                  const isPaid = c.status === "paid";
-
-                  return (
-                    <tr key={c.id} className="transition-colors hover:bg-card/80">
-                      <td className="px-6 py-4">
-                        <div className="font-serif font-bold text-foreground">{proName}</div>
-                        {c.appointment?.customer?.full_name && (
-                          <div className="text-[11px] text-muted-foreground">
-                            Cliente: {c.appointment.customer.full_name}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground">
-                        {format(new Date(dateStr), "dd/MM/yyyy · HH:mm", { locale: ptBR })}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-semibold text-foreground">
-                        {brl(Number(c.base_amount || 0))}
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline" className="rounded-none text-[10px] font-mono border-accent/40 text-accent">
-                          {ratePercent.toFixed(0)}%
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 font-serif font-bold text-accent">
-                        {brl(Number(c.amount || 0))}
-                      </td>
-                      <td className="px-6 py-4">
-                        {isPaid ? (
-                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
-                            Paga
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-none border-amber-500/30 bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase">
-                            Pendente
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {!isPaid && canManage ? (
-                          <Button
-                            size="sm"
-                            disabled={payingId === c.id}
-                            onClick={() => handlePayCommission(c.id)}
-                            className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
-                          >
-                            {payingId === c.id ? "Salvando..." : "Pagar"}
-                          </Button>
-                        ) : isPaid ? (
-                          <span className="text-xs text-muted-foreground/60">Paga em {c.paid_at ? format(new Date(c.paid_at), "dd/MM") : "—"}</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/40">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <ScrollArea className="flex-1">
+        <div className="p-4 sm:p-6 pb-24 space-y-6 sm:space-y-8">
+          
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            <Card className="p-4 bg-card/40 flex items-center gap-3 border-border/40">
+              <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                <Clock className="h-5 w-5 text-orange-500" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase">Pendente</p>
+                <p className="text-lg sm:text-2xl font-black text-foreground">{brl(summary.totalPending)}</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-card/40 flex items-center gap-3 border-border/40">
+              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground font-bold uppercase">Pago</p>
+                <p className="text-lg sm:text-2xl font-black text-foreground">{brl(summary.totalPaid)}</p>
+              </div>
+            </Card>
+            <div className="col-span-2 lg:col-span-1 hidden lg:block">
+              {summary.byPro.length > 0 && (
+                <Card className="p-3 bg-card/40 border-border/40 h-full overflow-y-auto max-h-[72px]">
+                  <p className="text-[10px] text-muted-foreground font-bold uppercase mb-1">Top Profissionais (Total)</p>
+                  <div className="text-xs text-foreground font-mono space-y-0.5">
+                    {summary.byPro.slice(0, 2).map((p, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span className="truncate mr-2">{p.name}</span>
+                        <span className="font-bold shrink-0">{brl(p.total)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
           </div>
-        </Card>
-      )}
+
+          <div>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/40 rounded-xl bg-muted/10">
+                <Wallet className="h-10 w-10 text-muted-foreground/40 mb-3" />
+                <h3 className="font-bold">Nenhuma comissão</h3>
+                <p className="text-sm text-muted-foreground max-w-md mt-1">Nenhum registro encontrado para os filtros selecionados.</p>
+              </div>
+            ) : (
+              <div className="bg-card border border-border/40 rounded-xl overflow-hidden shadow-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/30 border-b border-border/40 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                      <tr>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap">Data</th>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap">Profissional</th>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">Base / %</th>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">Comissão</th>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap text-center">Status</th>
+                        <th className="px-4 sm:px-6 py-3 whitespace-nowrap text-right">Ação</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border/20">
+                      {filtered.map(c => (
+                        <tr key={c.id} className="hover:bg-muted/20 transition-colors group">
+                          <td className="px-4 sm:px-6 py-3 whitespace-nowrap">
+                            <div className="font-medium">
+                              {format(new Date(c.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {c.appointment?.customer?.full_name || "Serviço Avulso"}
+                            </div>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 font-bold text-foreground">
+                            {c.professional?.display_name || "Desconhecido"}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-right font-mono text-xs">
+                            <div className="text-muted-foreground">{brl(Number(c.base_amount))}</div>
+                            <div>{(Number(c.rate) * 100).toFixed(0)}%</div>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-right">
+                            <span className="font-black text-accent">{brl(Number(c.amount))}</span>
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-center">
+                            {c.status === "paid" ? (
+                              <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] uppercase font-bold">
+                                Paga
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-orange-500/30 bg-orange-500/10 text-orange-500 text-[10px] uppercase font-bold">
+                                Pendente
+                              </Badge>
+                            )}
+                            {c.paid_at && (
+                              <div className="text-[9px] text-muted-foreground mt-1">
+                                {format(new Date(c.paid_at), "dd/MM")}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 sm:px-6 py-3 text-right">
+                            {canManage && c.status === "pending" ? (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="h-8 text-xs border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-white"
+                                onClick={() => handlePay(c)}
+                                disabled={payMut.isPending}
+                              >
+                                Pagar
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground/30">-</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </ScrollArea>
     </div>
   );
 }

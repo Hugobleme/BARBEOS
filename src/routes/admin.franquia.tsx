@@ -1,475 +1,294 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShop } from "@/hooks/use-current-shop";
+import { barbershopService } from "@/services/barbershop.service";
 import { useAuth } from "@/hooks/use-auth";
-import { barbershopService, Barbershop } from "@/services/barbershop.service";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Building2, Plus, ArrowRight, MapPin, Phone, RefreshCw } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { brl } from "@/lib/format";
-import { startOfMonth, endOfMonth, format, subDays, startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import {
-  Building2,
-  Calendar,
-  DollarSign,
-  TrendingUp,
-  Users,
-  ArrowRight,
-  Plus,
-  MapPin,
-  Phone,
-  CheckCircle,
-  ExternalLink,
-} from "lucide-react";
-import { KPISkeleton, CardGridSkeleton } from "@/components/site/LoadingState";
-import { ResponsiveContainer, LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { brl } from "@/lib/format";
 
 export const Route = createFileRoute("/admin/franquia")({
-  head: () => ({ meta: [{ title: "Franquia & Múltiplas Unidades — BarberOS" }] }),
-  component: FranquiaPage,
+  component: AdminFranquiaPage,
 });
 
-type ShopStats = {
-  id: string;
-  name: string;
-  slug: string;
-  role: string;
-  active: boolean;
-  address?: any;
-  phone?: string;
-  monthRevenue: number;
-  monthCount: number;
-  avgTicket: number;
-  customers: number;
-};
-
-const SERIES_COLORS = [
-  "hsl(var(--accent))",
-  "hsl(var(--primary))",
-  "#3b82f6",
-  "#10b981",
-  "#8b5cf6",
-  "#f59e0b",
-];
-
-function FranquiaPage() {
-  const navigate = useNavigate();
+function AdminFranquiaPage() {
   const { user } = useAuth();
-  const { shopId: currentShopId, setShopId } = useCurrentShop();
+  const { shopId, shops, setShopId, refresh } = useCurrentShop();
+  const qc = useQueryClient();
+
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  // Consulta: Todas as Barbearias do Dono
-  const { data: ownedShops, isLoading: loadingShops, refetch: refetchOwned } = useQuery({
-    queryKey: ["admin-owned-barbershops", user?.id],
-    enabled: !!user?.id,
-    queryFn: () => barbershopService.getBarbershopsByOwner(user!.id),
-  });
+  const shopIds = useMemo(() => shops.map(s => s.id), [shops]);
 
-  const shopIds = useMemo(() => (ownedShops ?? []).map((s) => s.id), [ownedShops]);
-
-  // Consulta de Estatísticas por Unidade
-  const { data: stats, isLoading: loadingStats } = useQuery({
-    queryKey: ["franquia-shop-stats", shopIds.join(",")],
+  // Busca detalhes completos das unidades
+  const { data: barbershops = [], isLoading } = useQuery({
+    queryKey: ["admin-franquia-shops", shopIds],
     enabled: shopIds.length > 0,
-    queryFn: async (): Promise<ShopStats[]> => {
-      const now = new Date();
-      const monthStart = startOfMonth(now).toISOString();
-      const monthEnd = endOfMonth(now).toISOString();
-
-      return Promise.all(
-        (ownedShops ?? []).map(async (s) => {
-          const [apptsRes, customersRes] = await Promise.all([
-            supabase
-              .from("appointments")
-              .select("total_amount, status")
-              .eq("barbershop_id", s.id)
-              .gte("scheduled_start", monthStart)
-              .lte("scheduled_start", monthEnd),
-            supabase
-              .from("customers")
-              .select("id", { count: "exact", head: true })
-              .eq("barbershop_id", s.id),
-          ]);
-
-          const completed = (apptsRes.data ?? []).filter((a: any) => a.status === "completed");
-          const monthRevenue = completed.reduce((acc: number, a: any) => acc + Number(a.total_amount || 0), 0);
-          const monthCount = completed.length;
-          const avgTicket = monthCount > 0 ? monthRevenue / monthCount : 0;
-          const contacts = (s.contacts as any) || {};
-
-          return {
-            id: s.id,
-            name: s.name,
-            slug: s.slug,
-            role: "owner",
-            active: s.active,
-            address: s.address,
-            phone: contacts.phone || contacts.whatsapp || "",
-            monthRevenue,
-            monthCount,
-            avgTicket,
-            customers: customersRes.count ?? 0,
-          };
-        })
-      );
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershops")
+        .select("*")
+        .in("id", shopIds)
+        .order("created_at");
+      if (error) throw error;
+      return data;
     },
   });
 
-  // Métricas Consolidadas Totais
-  const totals = useMemo(() => {
-    return (stats ?? []).reduce(
-      (acc, s) => ({
-        revenue: acc.revenue + s.monthRevenue,
-        count: acc.count + s.monthCount,
-        customers: acc.customers + s.customers,
-      }),
-      { revenue: 0, count: 0, customers: 0 }
-    );
-  }, [stats]);
+  // Busca estatísticas básicas do mês
+  const { data: stats = {} } = useQuery({
+    queryKey: ["admin-franquia-stats", shopIds],
+    enabled: shopIds.length > 0,
+    queryFn: async () => {
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+      
+      const result: Record<string, { revenue: number, count: number }> = {};
+      
+      await Promise.all(shopIds.map(async (id) => {
+        const { data, error } = await supabase
+          .from("appointments")
+          .select("total_amount, status")
+          .eq("barbershop_id", id)
+          .gte("scheduled_start", startOfMonth)
+          .lte("scheduled_start", endOfMonth)
+          .eq("status", "completed");
+          
+        if (!error && data) {
+          result[id] = {
+            count: data.length,
+            revenue: data.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0)
+          };
+        } else {
+          result[id] = { count: 0, revenue: 0 };
+        }
+      }));
+      
+      return result;
+    },
+  });
 
-  const bestUnit = useMemo(() => {
-    if (!stats || !stats.length) return null;
-    return [...stats].sort((a, b) => b.monthRevenue - a.monthRevenue)[0];
-  }, [stats]);
-
-  function handleSelectShop(id: string) {
+  const handleSelectShop = (id: string) => {
+    if (id === shopId) return;
     setShopId(id);
-    toast.success("Unidade ativa alterada!");
-    navigate({ to: "/admin" });
-  }
+    toast.success("Unidade alterada com sucesso.");
+    setTimeout(() => {
+      window.location.href = "/admin";
+    }, 500);
+  };
+
+  const isSingleUnit = shops.length === 1;
+
+  if (!shopId || !user) return null;
 
   return (
-    <div className="space-y-8 pb-12">
-      {/* Cabeçalho */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
         <div>
-          <h1 className="font-display text-3xl font-bold">Painel da Franquia</h1>
-          <p className="text-muted-foreground">
-            Gerencie todas as suas filiais e barbearias em um único lugar com visão consolidada.
-          </p>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-accent" /> Gestão de Unidades
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Expanda sua rede e gerencie filiais</p>
         </div>
-
-        <Button
-          onClick={() => setCreateModalOpen(true)}
-          className="rounded-none bg-accent text-accent-foreground text-xs uppercase font-bold tracking-wider hover:bg-foreground hover:text-background"
-        >
-          <Plus className="mr-1.5 h-3.5 w-3.5" /> Nova Unidade
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button onClick={() => setCreateModalOpen(true)} className="bg-accent text-accent-foreground h-11 w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" /> Cadastrar Unidade
+          </Button>
+        </div>
       </div>
 
-      {/* Resumo Consolidado (se houver mais de 1 unidade) */}
-      {(ownedShops?.length ?? 0) > 1 && (
-        <>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Faturamento da Rede (Mês)
-                </span>
-                <DollarSign className="h-4 w-4 text-accent" />
-              </div>
-              <div className="mt-2 font-serif text-3xl font-bold text-accent">{brl(totals.revenue)}</div>
-              <p className="mt-1 text-[10px] text-muted-foreground">{ownedShops?.length} unidades ativas</p>
-            </Card>
-
-            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Atendimentos Concluídos
-                </span>
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-              </div>
-              <div className="mt-2 font-serif text-3xl font-bold text-foreground">{totals.count}</div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Volume total no mês corrente</p>
-            </Card>
-
-            <Card className="rounded-none border border-border bg-card/40 p-5 backdrop-blur-md">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  Base Total de Clientes
-                </span>
-                <Users className="h-4 w-4 text-blue-400" />
-              </div>
-              <div className="mt-2 font-serif text-3xl font-bold text-foreground">{totals.customers}</div>
-              <p className="mt-1 text-[10px] text-muted-foreground">Cadastros somados de todas as lojas</p>
-            </Card>
-          </div>
-
-          {bestUnit && bestUnit.monthRevenue > 0 && (
-            <Card className="flex flex-col gap-3 rounded-none border border-accent/40 bg-accent/5 p-5 backdrop-blur-md sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center bg-accent text-accent-foreground font-serif font-bold text-lg">
-                  🏆
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-widest text-accent font-bold">
-                    Unidade Destaque do Mês
-                  </div>
-                  <div className="font-serif text-xl font-bold text-foreground">{bestUnit.name}</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="font-serif text-2xl font-bold text-accent">{brl(bestUnit.monthRevenue)}</div>
-                <div className="text-xs text-muted-foreground">{bestUnit.monthCount} atendimentos realizados</div>
-              </div>
+      <ScrollArea className="flex-1">
+        <div className="p-4 sm:p-6 pb-24 max-w-5xl mx-auto space-y-6">
+          
+          {isSingleUnit && (
+            <Card className="p-6 sm:p-8 text-center border border-accent/20 bg-accent/5 rounded-xl">
+              <Building2 className="h-12 w-12 text-accent/60 mx-auto mb-4" />
+              <h2 className="text-xl font-bold mb-2">Você administra 1 unidade.</h2>
+              <p className="text-muted-foreground max-w-lg mx-auto mb-6">
+                Quando expandir, você poderá cadastrar novas unidades e acompanhar os resultados de toda a sua rede em um só lugar.
+              </p>
+              <Button onClick={() => setCreateModalOpen(true)} className="bg-accent text-accent-foreground font-bold h-11 px-8">
+                Cadastrar Nova Unidade
+              </Button>
             </Card>
           )}
-        </>
-      )}
 
-      {/* Grid de Unidades */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between border-b border-border/40 pb-3">
-          <h2 className="font-serif text-2xl font-bold">Suas Unidades Cadastradas</h2>
-          <Badge variant="outline" className="rounded-none text-xs font-mono text-accent">
-            {ownedShops?.length ?? 0} {ownedShops?.length === 1 ? "unidade" : "unidades"}
-          </Badge>
-        </div>
-
-        {loadingShops || loadingStats ? (
-          <CardGridSkeleton count={3} />
-        ) : !stats || stats.length === 0 ? (
-          <Card className="p-12 text-center rounded-none border border-border">
-            <Building2 className="mx-auto h-12 w-12 text-muted-foreground/40 mb-3" />
-            <h3 className="font-serif text-lg font-bold">Nenhuma unidade cadastrada</h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-              Clique em "Nova Unidade" para cadastrar sua barbearia ou adicionar uma nova filial à sua rede.
-            </p>
-          </Card>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {stats.map((s) => {
-              const isCurrent = s.id === currentShopId;
-              const addr = s.address || {};
-              const cityState = [addr.neighborhood || addr.district, addr.city, addr.state].filter(Boolean).join(" · ");
-
-              return (
-                <Card
-                  key={s.id}
-                  className={`flex flex-col justify-between rounded-none border p-6 backdrop-blur-md transition-all ${
-                    isCurrent ? "border-accent bg-card shadow-lg shadow-accent/5" : "border-border bg-card/40 hover:border-border/80"
-                  }`}
-                >
-                  <div className="space-y-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h3 className="font-serif text-xl font-bold text-foreground">{s.name}</h3>
-                        <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                          <MapPin className="h-3.5 w-3.5 text-accent shrink-0" />
-                          {cityState || "Endereço não configurado"}
-                        </p>
-                        {s.phone && (
-                          <p className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                            <Phone className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            {s.phone}
+          {!isSingleUnit && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {barbershops.map(b => {
+                const isCurrent = b.id === shopId;
+                const shopRole = shops.find(s => s.id === b.id)?.role || "membro";
+                const stat = stats[b.id] || { count: 0, revenue: 0 };
+                const address = b.address as any;
+                const cityState = address?.city ? `${address.city} - ${address.state}` : "";
+                
+                return (
+                  <Card key={b.id} className={`p-5 flex flex-col justify-between border ${isCurrent ? 'border-accent shadow-md bg-accent/5' : 'border-border/40 bg-card'} rounded-xl transition-all`}>
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                          <h3 className="font-bold text-lg leading-tight flex items-center gap-2">
+                            {b.name}
+                            {isCurrent && <Badge variant="outline" className="bg-accent text-accent-foreground border-0 text-[10px] h-5">Atual</Badge>}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1">
+                            {!b.active && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/30">Inativa</Badge>}
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground capitalize">{shopRole}</Badge>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-1.5 mt-4">
+                        {cityState && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-2">
+                            <MapPin className="h-3.5 w-3.5 shrink-0" /> {cityState}
+                          </p>
+                        )}
+                        {(b.contacts as any)?.phone && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 shrink-0" /> {(b.contacts as any).phone}
                           </p>
                         )}
                       </div>
-
-                      {isCurrent ? (
-                        <Badge className="rounded-none bg-accent text-accent-foreground text-[10px] font-bold uppercase">
-                          Ativa
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="rounded-none text-[10px] uppercase border-border/60">
-                          Filial
-                        </Badge>
-                      )}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3 border-y border-border/40 py-3 text-xs">
+                    
+                    <div className="mt-5 pt-4 border-t border-border/40 grid grid-cols-2 gap-3">
                       <div>
-                        <span className="text-[10px] uppercase text-muted-foreground">Faturamento (Mês)</span>
-                        <div className="font-serif text-lg font-bold text-accent">{brl(s.monthRevenue)}</div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Faturamento (Mês)</p>
+                        <p className="font-bold text-foreground text-sm mt-0.5">{brl(stat.revenue)}</p>
                       </div>
                       <div>
-                        <span className="text-[10px] uppercase text-muted-foreground">Atendimentos</span>
-                        <div className="font-serif text-lg font-bold text-foreground">{s.monthCount}</div>
+                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Atendimentos</p>
+                        <p className="font-bold text-foreground text-sm mt-0.5">{stat.count}</p>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-6 flex items-center justify-between gap-3">
-                    <Button
-                      size="sm"
-                      onClick={() => handleSelectShop(s.id)}
-                      className={`w-full rounded-none text-xs uppercase font-bold tracking-wider ${
-                        isCurrent
-                          ? "bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
-                          : "bg-card border border-border hover:bg-accent hover:text-accent-foreground"
-                      }`}
+                    <Button 
+                      onClick={() => handleSelectShop(b.id)} 
+                      disabled={isCurrent}
+                      variant={isCurrent ? "secondary" : "outline"}
+                      className={`w-full mt-5 h-11 ${!isCurrent ? 'hover:bg-accent hover:text-accent-foreground hover:border-accent' : ''}`}
                     >
-                      {isCurrent ? "Painel Aberto" : "Gerenciar Unidade"}
-                      <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                      {isCurrent ? (
+                        <>Painel Aberto</>
+                      ) : (
+                        <>Gerenciar Unidade <ArrowRight className="h-4 w-4 ml-2" /></>
+                      )}
                     </Button>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
 
-      {/* Modal: Nova Unidade */}
+        </div>
+      </ScrollArea>
+
       <CreateShopModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
-        ownerId={user?.id || ""}
+        ownerId={user.id}
         onSuccess={() => {
           setCreateModalOpen(false);
-          refetchOwned();
+          refresh();
         }}
       />
     </div>
   );
 }
 
-function CreateShopModal({
-  open,
-  onOpenChange,
-  ownerId,
-  onSuccess,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  ownerId: string;
-  onSuccess: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [street, setStreet] = useState("");
-  const [neighborhood, setNeighborhood] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("SP");
-  const [busy, setBusy] = useState(false);
+function CreateShopModal({ open, onOpenChange, ownerId, onSuccess }: any) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    street: "",
+    neighborhood: "",
+    city: "",
+    state: "SP",
+  });
 
-  async function handleCreate(e: React.FormEvent) {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return toast.error("Informe o nome da unidade.");
+    if (!form.name.trim()) return toast.error("O nome é obrigatório.");
 
-    setBusy(true);
+    setLoading(true);
     try {
       await barbershopService.createBarbershop({
-        name: name.trim(),
+        name: form.name.trim(),
         ownerId,
-        phone: phone.trim() || undefined,
+        phone: form.phone.trim() || undefined,
         address: {
-          street: street.trim() || null,
-          neighborhood: neighborhood.trim() || null,
-          city: city.trim() || null,
-          state: state.trim().toUpperCase() || "SP",
+          street: form.street.trim() || null,
+          neighborhood: form.neighborhood.trim() || null,
+          city: form.city.trim() || null,
+          state: form.state.trim().toUpperCase() || "SP",
         },
       });
 
       toast.success("Nova unidade criada com sucesso!");
-      setName("");
-      setPhone("");
-      setStreet("");
-      setNeighborhood("");
-      setCity("");
+      setForm({ name: "", phone: "", street: "", neighborhood: "", city: "", state: "SP" });
       onSuccess();
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar nova unidade.");
     } finally {
-      setBusy(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-none border-border sm:max-w-md">
-        <form onSubmit={handleCreate}>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-2xl">Cadastrar Nova Unidade</DialogTitle>
-          </DialogHeader>
+      <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-left">
+          <DialogTitle>Cadastrar Nova Unidade</DialogTitle>
+        </DialogHeader>
 
-          <div className="space-y-4 py-4 text-xs">
-            <div className="space-y-1.5">
-              <Label htmlFor="sh_name">Nome da Unidade / Filial *</Label>
-              <Input
-                id="sh_name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex.: BarberOS — Unidade Jardins"
-                className="rounded-none"
-                required
-              />
+        <form onSubmit={handleCreate} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Nome da Unidade / Filial <span className="text-destructive">*</span></Label>
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex.: Barbearia Matriz" required className="h-11" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Telefone / WhatsApp</Label>
+            <Input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" className="h-11" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Rua / Endereço</Label>
+              <Input value={form.street} onChange={e => setForm({ ...form, street: e.target.value })} placeholder="Rua 15" className="h-11" />
             </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="sh_phone">Telefone / WhatsApp</Label>
-              <Input
-                id="sh_phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(11) 99999-0000"
-                className="rounded-none"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="sh_street">Rua / Endereço</Label>
-                <Input
-                  id="sh_street"
-                  value={street}
-                  onChange={(e) => setStreet(e.target.value)}
-                  placeholder="Rua Oscar Freire"
-                  className="rounded-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sh_neigh">Bairro</Label>
-                <Input
-                  id="sh_neigh"
-                  value={neighborhood}
-                  onChange={(e) => setNeighborhood(e.target.value)}
-                  placeholder="Jardins"
-                  className="rounded-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="sh_city">Cidade</Label>
-                <Input
-                  id="sh_city"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="São Paulo"
-                  className="rounded-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sh_uf">UF</Label>
-                <Input
-                  id="sh_uf"
-                  maxLength={2}
-                  value={state}
-                  onChange={(e) => setState(e.target.value.toUpperCase())}
-                  placeholder="SP"
-                  className="rounded-none uppercase font-mono"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Bairro</Label>
+              <Input value={form.neighborhood} onChange={e => setForm({ ...form, neighborhood: e.target.value })} placeholder="Centro" className="h-11" />
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-none">
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={busy} className="rounded-none bg-accent text-accent-foreground">
-              {busy ? "Criando..." : "Criar Unidade"}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-2">
+              <Label>Cidade</Label>
+              <Input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="São Paulo" className="h-11" />
+            </div>
+            <div className="space-y-2">
+              <Label>UF</Label>
+              <Input maxLength={2} value={form.state} onChange={e => setForm({ ...form, state: e.target.value.toUpperCase() })} placeholder="SP" className="h-11 uppercase" />
+            </div>
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+            <Button type="submit" className="h-11 w-full sm:w-auto bg-accent text-accent-foreground" disabled={loading}>
+              {loading ? "Criando..." : "Criar Unidade"}
             </Button>
           </DialogFooter>
         </form>

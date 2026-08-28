@@ -1,400 +1,364 @@
+import { useState, useMemo } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentShop } from "@/hooks/use-current-shop";
-import { couponService, Coupon } from "@/services/coupon.service";
-import { Card } from "@/components/ui/card";
+import { couponService, type Coupon } from "@/services/coupon.service";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TicketPercent, Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { EmptyState, TableSkeleton } from "@/components/site/LoadingState";
-import { TicketPercent, Plus, Trash2, Pencil, ShieldAlert, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { brl } from "@/lib/format";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/admin/cupons")({
-  head: () => ({ meta: [{ title: "Cupons — BarberOS" }, { name: "robots", content: "noindex,nofollow" }] }),
-  component: Page,
+  component: AdminCuponsPage,
 });
 
-function Page() {
+function AdminCuponsPage() {
   const { shopId, shop } = useCurrentShop();
+  const isOwner = shop?.role === 'owner';
+  const isAdmin = shop?.role === 'admin' || shop?.role === 'manager';
+  const canManage = isOwner || isAdmin;
   const qc = useQueryClient();
-  const canManage = shop?.role === "owner" || shop?.role === "admin";
 
-  const { data: coupons, isLoading, refetch } = useQuery({
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Coupon | null>(null);
+
+  const { data: coupons = [], isLoading } = useQuery({
     queryKey: ["admin-coupons", shopId],
     enabled: !!shopId,
     queryFn: () => couponService.getCoupons(shopId!),
   });
 
-  const [open, setOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const [form, setForm] = useState({
-    code: "",
-    kind: "percent" as "percent" | "fixed",
-    value: 10,
-    min_amount: 0,
-    valid_until: "",
-    usage_limit: "",
-    active: true,
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => couponService.deleteCoupon(id),
+    onSuccess: () => {
+      toast.success("Cupom removido.");
+      qc.invalidateQueries({ queryKey: ["admin-coupons", shopId] });
+    },
   });
 
-  function openNew() {
-    if (!canManage) {
-      toast.error("Permissão insuficiente para criar cupons.");
-      return;
-    }
-    setEditingCoupon(null);
-    setForm({
-      code: "",
-      kind: "percent",
-      value: 10,
-      min_amount: 0,
-      valid_until: "",
-      usage_limit: "",
-      active: true,
+  const filtered = useMemo(() => {
+    if (!Array.isArray(coupons)) return [];
+    const now = new Date();
+    return coupons.filter(c => {
+      const matchSearch = c.code.toLowerCase().includes(search.toLowerCase());
+      if (!matchSearch) return false;
+      
+      const isExpired = c.valid_until && new Date(c.valid_until) < now;
+      const isLimitReached = c.usage_limit && (c.used_count || 0) >= c.usage_limit;
+      
+      let status = "active";
+      if (!c.active) status = "paused";
+      else if (isExpired) status = "expired";
+      else if (isLimitReached) status = "limit";
+
+      if (statusFilter === "all") return true;
+      return status === statusFilter;
     });
-    setOpen(true);
-  }
+  }, [coupons, search, statusFilter]);
 
-  function openEdit(c: Coupon) {
-    if (!canManage) {
-      toast.error("Permissão insuficiente para editar cupons.");
-      return;
+  const handleDelete = (c: Coupon) => {
+    if (confirm(`Tem certeza que deseja excluir o cupom ${c.code}?`)) {
+      deleteMut.mutate(c.id);
     }
-    setEditingCoupon(c);
-    setForm({
-      code: c.code,
-      kind: c.kind === "fixed" ? "fixed" : "percent",
-      value: Number(c.value),
-      min_amount: Number(c.min_amount || 0),
-      valid_until: c.valid_until ? c.valid_until.split("T")[0] : "",
-      usage_limit: c.usage_limit ? String(c.usage_limit) : "",
-      active: c.active,
-    });
-    setOpen(true);
-  }
+  };
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    if (!form.code.trim()) return toast.error("O código do cupom é obrigatório.");
-    if (form.value <= 0) return toast.error("O valor do desconto deve ser maior que 0.");
-    if (form.kind === "percent" && form.value > 100) return toast.error("O percentual de desconto não pode exceder 100%.");
+  const openNew = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+  const openEdit = (c: Coupon) => {
+    setEditing(c);
+    setFormOpen(true);
+  };
 
-    setBusy(true);
-    try {
-      if (editingCoupon) {
-        await couponService.updateCoupon(editingCoupon.id, {
-          code: form.code.toUpperCase().trim(),
-          kind: form.kind,
-          value: Number(form.value),
-          min_amount: Number(form.min_amount) || 0,
-          valid_until: form.valid_until ? new Date(form.valid_until).toISOString() : null,
-          usage_limit: form.usage_limit ? Number(form.usage_limit) : null,
-          active: form.active,
-        });
-        toast.success("Cupom atualizado com sucesso!");
-      } else {
-        await couponService.createCoupon({
-          barbershop_id: shopId!,
-          code: form.code.toUpperCase().trim(),
-          kind: form.kind,
-          value: Number(form.value),
-          min_amount: Number(form.min_amount) || 0,
-          valid_until: form.valid_until ? new Date(form.valid_until).toISOString() : null,
-          usage_limit: form.usage_limit ? Number(form.usage_limit) : null,
-        });
-        toast.success("Cupom criado com sucesso!");
-      }
-      setOpen(false);
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar cupom.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleDelete(c: Coupon) {
-    if (!canManage) {
-      toast.error("Permissão insuficiente para excluir cupons.");
-      return;
-    }
-    if (!confirm(`Tem certeza que deseja excluir o cupom "${c.code}"?`)) return;
-
-    try {
-      await couponService.deleteCoupon(c.id);
-      toast.success("Cupom excluído com sucesso!");
-      refetch();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir cupom.");
-    }
-  }
+  if (!shopId) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
         <div>
-          <h1 className="font-display text-3xl font-bold">Cupons de Desconto</h1>
-          <p className="text-muted-foreground">
-            Crie campanhas promocionais para uso no PDV e agendamento online.
-          </p>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <TicketPercent className="h-6 w-6 text-accent" /> Cupons de Desconto
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie códigos promocionais e descontos</p>
         </div>
-
-        {canManage ? (
-          <Button
-            onClick={openNew}
-            className="rounded-none bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
-          >
-            <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
+        {canManage && (
+          <Button onClick={openNew} className="bg-accent text-accent-foreground w-full sm:w-auto h-11">
+            <Plus className="h-4 w-4 mr-2" /> Novo Cupom
           </Button>
-        ) : (
-          <Badge variant="outline" className="flex items-center gap-1.5 rounded-none text-muted-foreground">
-            <ShieldAlert className="h-3.5 w-3.5" /> Modo somente leitura
-          </Badge>
         )}
       </div>
 
-      {/* Modal de Criação / Edição */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="rounded-none border-border sm:max-w-md">
-          <form onSubmit={handleSave}>
-            <DialogHeader>
-              <DialogTitle className="font-serif text-2xl">
-                {editingCoupon ? "Editar cupom" : "Novo cupom de desconto"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon_code">Código do Cupom *</Label>
-                <Input
-                  id="coupon_code"
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  placeholder="EX: PROMO10, CLIENTEVIP"
-                  className="rounded-none font-mono uppercase font-bold"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Tipo de Desconto</Label>
-                  <Select
-                    value={form.kind}
-                    onValueChange={(v: "percent" | "fixed") => setForm({ ...form, kind: v })}
-                  >
-                    <SelectTrigger className="rounded-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-none">
-                      <SelectItem value="percent">Porcentagem (%)</SelectItem>
-                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="coupon_val">
-                    {form.kind === "percent" ? "Desconto (%) *" : "Desconto (R$) *"}
-                  </Label>
-                  <Input
-                    id="coupon_val"
-                    type="number"
-                    step={form.kind === "percent" ? "1" : "0.01"}
-                    min={1}
-                    max={form.kind === "percent" ? 100 : undefined}
-                    value={form.value}
-                    onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
-                    className="rounded-none font-bold"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="coupon_valid">Válido até (opcional)</Label>
-                  <Input
-                    id="coupon_valid"
-                    type="date"
-                    value={form.valid_until}
-                    onChange={(e) => setForm({ ...form, valid_until: e.target.value })}
-                    className="rounded-none text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="coupon_limit">Limite de Usos (opcional)</Label>
-                  <Input
-                    id="coupon_limit"
-                    type="number"
-                    min={1}
-                    value={form.usage_limit}
-                    onChange={(e) => setForm({ ...form, usage_limit: e.target.value })}
-                    placeholder="Sem limite"
-                    className="rounded-none"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="coupon_min">Valor mínimo do pedido (R$)</Label>
-                <Input
-                  id="coupon_min"
-                  type="number"
-                  step="0.01"
-                  min={0}
-                  value={form.min_amount}
-                  onChange={(e) => setForm({ ...form, min_amount: Number(e.target.value) })}
-                  placeholder="0.00"
-                  className="rounded-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                <Label htmlFor="coupon_active" className="cursor-pointer">
-                  Cupom ativo para uso
-                </Label>
-                <Switch
-                  id="coupon_active"
-                  checked={form.active}
-                  onCheckedChange={(v) => setForm({ ...form, active: v })}
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="rounded-none">
-                Cancelar
-              </Button>
-              <Button
-                type="submit"
-                disabled={busy}
-                className="rounded-none bg-accent text-accent-foreground hover:bg-foreground hover:text-background"
-              >
-                {busy ? "Salvando..." : "Salvar cupom"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Tabela de Cupons */}
-      {isLoading ? (
-        <TableSkeleton />
-      ) : !coupons || coupons.length === 0 ? (
-        <EmptyState
-          icon={TicketPercent}
-          title="Nenhum cupom cadastrado"
-          description="Crie o primeiro cupom promocional para oferecer descontos aos seus clientes."
-          action={
-            canManage ? (
-              <Button onClick={openNew} className="rounded-none bg-accent text-accent-foreground">
-                <Plus className="mr-1.5 h-4 w-4" /> Novo cupom
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <Card className="overflow-hidden rounded-none border border-border bg-card/40 backdrop-blur-md">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-border/60 bg-background/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                <tr>
-                  <th className="px-6 py-4">Código</th>
-                  <th className="px-6 py-4">Tipo</th>
-                  <th className="px-6 py-4">Desconto</th>
-                  <th className="px-6 py-4">Validade</th>
-                  <th className="px-6 py-4">Utilizações</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/20">
-                {coupons.map((c) => {
-                  const isExpired = c.valid_until && new Date(c.valid_until) < new Date();
-
-                  return (
-                    <tr key={c.id} className="transition-colors hover:bg-card/80">
-                      <td className="px-6 py-4">
-                        <span className="font-mono text-base font-bold text-accent">{c.code}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <Badge variant="outline" className="rounded-none text-[10px] uppercase border-border/60">
-                          {c.kind === "percent" ? "Percentual" : "Valor fixo"}
-                        </Badge>
-                      </td>
-                      <td className="px-6 py-4 font-bold text-foreground">
-                        {c.kind === "percent" ? `${c.value}%` : brl(Number(c.value))}
-                      </td>
-                      <td className="px-6 py-4 text-xs text-muted-foreground">
-                        {c.valid_until ? (
-                          <span className={isExpired ? "text-destructive font-bold" : ""}>
-                            {format(new Date(c.valid_until), "dd/MM/yyyy", { locale: ptBR })}
-                            {isExpired && " (Expirado)"}
-                          </span>
-                        ) : (
-                          "Sem validade"
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-xs font-mono">
-                        <span className="font-bold text-foreground">{c.used_count || 0}</span>
-                        {c.usage_limit ? ` / ${c.usage_limit}` : " usos"}
-                      </td>
-                      <td className="px-6 py-4">
-                        {c.active && !isExpired ? (
-                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
-                            Ativo
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
-                            Inativo
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {canManage ? (
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => openEdit(c)}
-                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-foreground"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => handleDelete(c)}
-                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/40">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <div className="p-4 sm:p-5 border-b border-border/40 bg-card/20 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              placeholder="Buscar por código..." 
+              className="pl-9 h-11"
+            />
           </div>
-        </Card>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full sm:w-[180px] h-11">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              <SelectItem value="active">Ativos</SelectItem>
+              <SelectItem value="paused">Pausados</SelectItem>
+              <SelectItem value="expired">Expirados</SelectItem>
+              <SelectItem value="limit">Limite atingido</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 sm:p-6 pb-24">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1,2,3].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/40 rounded-xl bg-muted/10 mt-8">
+              <TicketPercent className="h-10 w-10 text-muted-foreground/40 mb-3" />
+              <h3 className="font-bold">Nenhum cupom encontrado</h3>
+              <p className="text-sm text-muted-foreground max-w-md mt-1">Crie cupons para oferecer descontos.</p>
+              {canManage && (
+                <Button onClick={openNew} variant="outline" className="mt-6 text-accent border-accent/30 hover:bg-accent/10">
+                  Criar Primeiro Cupom
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-1">
+              {/* Responsive: Grid of cards on mobile, vertical list of cards on desktop */}
+              {filtered.map(c => {
+                const isExpired = c.valid_until && new Date(c.valid_until) < new Date();
+                const isLimit = c.usage_limit && (c.used_count || 0) >= c.usage_limit;
+
+                return (
+                  <Card key={c.id} className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-lg font-black text-accent">{c.code}</span>
+                          {!c.active ? (
+                            <Badge variant="outline" className="bg-muted text-muted-foreground border-0 text-[10px]">Pausado</Badge>
+                          ) : isExpired ? (
+                            <Badge variant="outline" className="bg-destructive/10 text-destructive border-0 text-[10px]">Expirado</Badge>
+                          ) : isLimit ? (
+                            <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-0 text-[10px]">Esgotado</Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-0 text-[10px]">Ativo</Badge>
+                          )}
+                        </div>
+                        <div className="font-bold text-lg">
+                          {c.kind === "percent" ? `${c.value}% OFF` : `${brl(Number(c.value))} OFF`}
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-muted-foreground flex flex-col gap-0.5">
+                        {c.valid_until ? (
+                          <span>Válido até: {format(new Date(c.valid_until), "dd/MM/yyyy")}</span>
+                        ) : (
+                          <span>Sem validade</span>
+                        )}
+                        <span>Usos: {c.used_count || 0} {c.usage_limit ? `/ ${c.usage_limit}` : ""}</span>
+                      </div>
+                    </div>
+
+                    {canManage && (
+                      <div className="flex items-center justify-end gap-2 mt-2 lg:mt-0 pt-3 lg:pt-0 border-t lg:border-0 border-border/40">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(c)}>Editar</Button>
+                        <Button variant="ghost" size="sm" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => handleDelete(c)}>
+                          Excluir
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {formOpen && (
+        <CouponForm 
+          open={formOpen} 
+          onClose={() => setFormOpen(false)} 
+          shopId={shopId!} 
+          coupon={editing} 
+          existingCodes={coupons.map(c => c.code)}
+          onSuccess={() => qc.invalidateQueries({ queryKey: ["admin-coupons", shopId] })} 
+        />
       )}
     </div>
+  );
+}
+
+function CouponForm({ open, onClose, shopId, coupon, existingCodes, onSuccess }: any) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    code: coupon?.code || "",
+    kind: coupon?.kind || "percent",
+    value: coupon?.value?.toString() || "",
+    valid_until: coupon?.valid_until ? coupon.valid_until.split("T")[0] : "",
+    usage_limit: coupon?.usage_limit?.toString() || "",
+    active: coupon ? coupon.active : true,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const code = form.code.trim().toUpperCase();
+    if (!code) return toast.error("Código é obrigatório.");
+    if (!coupon && existingCodes.includes(code)) {
+      return toast.error("Este código já existe na barbearia.");
+    }
+
+    const valueNum = Number(form.value);
+    if (isNaN(valueNum) || valueNum <= 0) {
+      return toast.error("O valor de desconto deve ser maior que zero.");
+    }
+    if (form.kind === "percent" && valueNum > 100) {
+      return toast.error("O desconto percentual não pode ser maior que 100%.");
+    }
+
+    setLoading(true);
+    try {
+      const payload: any = {
+        code,
+        kind: form.kind,
+        value: valueNum,
+        valid_until: form.valid_until ? new Date(form.valid_until + "T23:59:59").toISOString() : null,
+        usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
+        active: form.active,
+      };
+
+      if (coupon) {
+        await couponService.updateCoupon(coupon.id, payload);
+        toast.success("Cupom atualizado!");
+      } else {
+        await couponService.createCoupon({ ...payload, barbershop_id: shopId });
+        toast.success("Cupom criado!");
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar cupom.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-left">
+          <DialogTitle className="text-xl">{coupon ? "Editar Cupom" : "Novo Cupom"}</DialogTitle>
+          <DialogDescription>
+            Configure as regras do desconto promocional.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Código do Cupom <span className="text-destructive">*</span></Label>
+            <Input 
+              value={form.code} 
+              onChange={e => setForm({ ...form, code: e.target.value.toUpperCase() })} 
+              placeholder="Ex: VERAO20" 
+              disabled={!!coupon}
+              className="h-11 font-mono uppercase" 
+              required 
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Tipo de Desconto</Label>
+              <Select value={form.kind} onValueChange={v => setForm({ ...form, kind: v })}>
+                <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="percent">Percentual (%)</SelectItem>
+                  <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Valor do Desconto <span className="text-destructive">*</span></Label>
+              <Input 
+                type="number" 
+                step={form.kind === "percent" ? "1" : "0.01"} 
+                min="0.01" 
+                value={form.value} 
+                onChange={e => setForm({ ...form, value: e.target.value })} 
+                placeholder={form.kind === "percent" ? "20" : "15.00"} 
+                className="h-11" 
+                required 
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Validade (Opcional)</Label>
+              <Input 
+                type="date" 
+                value={form.valid_until} 
+                onChange={e => setForm({ ...form, valid_until: e.target.value })} 
+                className="h-11" 
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Limite de Usos (Opcional)</Label>
+              <Input 
+                type="number" 
+                min="1" 
+                value={form.usage_limit} 
+                onChange={e => setForm({ ...form, usage_limit: e.target.value })} 
+                placeholder="Sem limite" 
+                className="h-11" 
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-2">
+            <div className="space-y-0.5">
+              <Label>Cupom Ativo</Label>
+              <p className="text-[10px] text-muted-foreground">Permitir o uso deste cupom</p>
+            </div>
+            <Switch checked={form.active} onCheckedChange={v => setForm({ ...form, active: v })} />
+          </div>
+
+          <DialogFooter className="gap-2 pt-4 sm:pt-6">
+            <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button type="submit" className="h-11 w-full sm:w-auto bg-accent text-accent-foreground" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

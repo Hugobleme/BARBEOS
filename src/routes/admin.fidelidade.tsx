@@ -1,552 +1,470 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCurrentShop } from "@/hooks/use-current-shop";
-import { useAuth } from "@/hooks/use-auth";
-import { loyaltyService, Reward, LoyaltyBalance } from "@/services/loyalty.service";
-import { Card } from "@/components/ui/card";
+import { loyaltyService, type Reward } from "@/services/loyalty.service";
+import { customerService } from "@/services/customer.service";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Gift, Plus, Trophy, Coins, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { EmptyState, TableSkeleton, CardGridSkeleton } from "@/components/site/LoadingState";
 import { toast } from "sonner";
-import { Gift, Search, Sparkles, Plus, Trash2, Pencil, Award, Users, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/admin/fidelidade")({
-  head: () => ({ meta: [{ title: "Fidelidade — Admin BarberOS" }, { name: "robots", content: "noindex" }] }),
-  component: Page,
+  component: AdminLoyaltyPage,
 });
 
-function Page() {
+function AdminLoyaltyPage() {
   const { shopId, shop } = useCurrentShop();
-  const { user } = useAuth();
+  const isOwner = shop?.role === 'owner';
+  const isAdmin = shop?.role === 'admin' || shop?.role === 'manager';
+  const canManage = isOwner || isAdmin;
   const qc = useQueryClient();
-  const canManage = shop?.role === "owner" || shop?.role === "admin";
 
-  const [q, setQ] = useState("");
-  const [openRewardDialog, setOpenRewardDialog] = useState(false);
+  const [rewardFormOpen, setRewardFormOpen] = useState(false);
   const [editingReward, setEditingReward] = useState<Reward | null>(null);
-  const [rewardForm, setRewardForm] = useState({
-    name: "",
-    description: "",
-    points_required: 100,
-    active: true,
-  });
-  const [busyReward, setBusyReward] = useState(false);
 
-  // Modal de resgate de pontos
-  const [redeemCustomer, setRedeemCustomer] = useState<LoyaltyBalance | null>(null);
-  const [redeemPointsAmount, setRedeemPointsAmount] = useState(50);
-  const [redeemReason, setRedeemReason] = useState("");
-  const [busyRedeem, setBusyRedeem] = useState(false);
+  const [pointsFormOpen, setPointsFormOpen] = useState(false);
 
-  // Configurações do programa de fidelidade
-  const { data: settings, refetch: refetchSettings } = useQuery({
+  const { data: rewards = [], isLoading: loadingRewards } = useQuery({
+    queryKey: ["admin-rewards", shopId],
     enabled: !!shopId,
-    queryKey: ["loyalty-settings", shopId],
-    queryFn: async () => {
-      const { data } = await supabase.from("barbershops").select("settings").eq("id", shopId!).single();
-      const l = ((data?.settings as any)?.loyalty ?? {}) as { enabled?: boolean; points_per_real?: number; redeem_rate?: number };
-      return { enabled: !!l.enabled, points_per_real: Number(l.points_per_real ?? 1), redeem_rate: Number(l.redeem_rate ?? 100) };
-    },
-  });
-
-  // Lista de Recompensas
-  const { data: rewards, isLoading: loadingRewards, refetch: refetchRewards } = useQuery({
-    enabled: !!shopId,
-    queryKey: ["loyalty-rewards", shopId],
     queryFn: () => loyaltyService.getRewards(shopId!),
   });
 
-  // Lista de Clientes com Saldo de Pontos
-  const { data: balances, isLoading: loadingBalances, refetch: refetchBalances } = useQuery({
+  const { data: balances = [], isLoading: loadingBalances } = useQuery({
+    queryKey: ["admin-loyalty-balances", shopId],
     enabled: !!shopId,
-    queryKey: ["loyalty-balances", shopId],
     queryFn: () => loyaltyService.getCustomersWithPoints(shopId!),
   });
 
-  const filteredBalances = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return balances ?? [];
-    return (balances ?? []).filter((b: any) =>
-      (b.customer?.full_name ?? "").toLowerCase().includes(term) ||
-      (b.customer?.phone ?? "").toLowerCase().includes(term)
-    );
-  }, [balances, q]);
+  const deleteRewardMut = useMutation({
+    mutationFn: (id: string) => loyaltyService.deleteReward(id),
+    onSuccess: () => {
+      toast.success("Recompensa removida.");
+      qc.invalidateQueries({ queryKey: ["admin-rewards", shopId] });
+    },
+  });
 
-  async function saveSettings(next: { enabled: boolean; points_per_real: number; redeem_rate: number }) {
-    if (!canManage) return toast.error("Permissão insuficiente.");
-    const { data: cur } = await supabase.from("barbershops").select("settings").eq("id", shopId!).single();
-    const merged = { ...((cur?.settings as any) ?? {}), loyalty: next };
-    const { error } = await supabase.from("barbershops").update({ settings: merged }).eq("id", shopId!);
-    if (error) return toast.error(error.message);
-    toast.success("Configurações do programa de fidelidade atualizadas!");
-    refetchSettings();
-  }
+  const handleDeleteReward = (r: Reward) => {
+    if (confirm(`Excluir a recompensa "${r.name}"?`)) {
+      deleteRewardMut.mutate(r.id);
+    }
+  };
 
-  function openNewReward() {
-    if (!canManage) return toast.error("Permissão insuficiente para criar recompensas.");
+  const openNewReward = () => {
     setEditingReward(null);
-    setRewardForm({ name: "", description: "", points_required: 100, active: true });
-    setOpenRewardDialog(true);
-  }
-
-  function openEditReward(r: Reward) {
-    if (!canManage) return toast.error("Permissão insuficiente para editar recompensas.");
+    setRewardFormOpen(true);
+  };
+  const openEditReward = (r: Reward) => {
     setEditingReward(r);
-    setRewardForm({
-      name: r.name,
-      description: r.description ?? "",
-      points_required: r.sessions_total || 100,
-      active: r.active,
-    });
-    setOpenRewardDialog(true);
-  }
+    setRewardFormOpen(true);
+  };
 
-  async function handleSaveReward(e: React.FormEvent) {
-    e.preventDefault();
-    if (!rewardForm.name.trim()) return toast.error("Nome da recompensa é obrigatório.");
-    if (!rewardForm.points_required || rewardForm.points_required <= 0) {
-      return toast.error("A quantidade de pontos deve ser maior que 0.");
-    }
-
-    setBusyReward(true);
-    try {
-      if (editingReward) {
-        await loyaltyService.updateReward(editingReward.id, {
-          name: rewardForm.name.trim(),
-          description: rewardForm.description.trim() || null,
-          sessions_total: rewardForm.points_required,
-          active: rewardForm.active,
-        });
-        toast.success("Recompensa atualizada com sucesso!");
-      } else {
-        await loyaltyService.createReward({
-          barbershop_id: shopId!,
-          name: rewardForm.name.trim(),
-          description: rewardForm.description.trim() || null,
-          points_required: rewardForm.points_required,
-          active: rewardForm.active,
-        });
-        toast.success("Recompensa criada com sucesso!");
-      }
-      setOpenRewardDialog(false);
-      refetchRewards();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar recompensa.");
-    } finally {
-      setBusyReward(false);
-    }
-  }
-
-  async function handleDeleteReward(r: Reward) {
-    if (!canManage) return toast.error("Permissão insuficiente para excluir.");
-    if (!confirm(`Tem certeza que deseja excluir a recompensa "${r.name}"?`)) return;
-
-    try {
-      await loyaltyService.deleteReward(r.id);
-      toast.success("Recompensa excluída com sucesso!");
-      refetchRewards();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao excluir recompensa.");
-    }
-  }
-
-  async function handleRedeemSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!redeemCustomer) return;
-    if (redeemPointsAmount <= 0) return toast.error("Quantidade de pontos inválida.");
-    if (redeemPointsAmount > Number(redeemCustomer.points)) {
-      return toast.error(`Saldo insuficiente (o cliente possui ${redeemCustomer.points} pts).`);
-    }
-
-    setBusyRedeem(true);
-    try {
-      await loyaltyService.redeemPoints({
-        customerId: redeemCustomer.customer_id,
-        barbershopId: shopId!,
-        points: redeemPointsAmount,
-        reason: redeemReason.trim() || "Resgate manual de fidelidade",
-        createdBy: user?.id,
-      });
-      toast.success(`Resgate de ${redeemPointsAmount} pontos realizado com sucesso!`);
-      setRedeemCustomer(null);
-      refetchBalances();
-    } catch (err: any) {
-      toast.error(err.message || "Erro ao resgatar pontos.");
-    } finally {
-      setBusyRedeem(false);
-    }
-  }
+  if (!shopId) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
         <div>
-          <h1 className="font-display text-3xl font-bold">Programa de Fidelidade</h1>
-          <p className="text-muted-foreground">
-            Recompense seus clientes fiéis com pontos acumulados a cada serviço realizado.
-          </p>
+          <h1 className="font-serif text-xl sm:text-2xl font-bold flex items-center gap-2">
+            <Gift className="h-6 w-6 text-accent" /> Fidelidade
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Programa de pontos e recompensas</p>
         </div>
-
-        {!canManage && (
-          <Badge variant="outline" className="flex items-center gap-1.5 rounded-none text-muted-foreground">
-            <ShieldAlert className="h-3.5 w-3.5" /> Modo somente leitura
-          </Badge>
-        )}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {canManage && (
+            <>
+              <Button onClick={() => setPointsFormOpen(true)} variant="outline" className="flex-1 sm:flex-none h-11 border-accent/30 text-accent hover:bg-accent/10">
+                <ArrowRightLeft className="h-4 w-4 mr-2" /> Ajustar Pontos
+              </Button>
+              <Button onClick={openNewReward} className="flex-1 sm:flex-none bg-accent text-accent-foreground h-11">
+                <Plus className="h-4 w-4 mr-2" /> Nova Recompensa
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Regras e Ativação do Programa */}
-      <Card className="rounded-none border border-border bg-card/50 p-6 backdrop-blur-md">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-none bg-accent/10 text-accent">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-bold text-foreground">Acúmulo Automático de Pontos</div>
-              <div className="text-xs text-muted-foreground">
-                Ao finalizar agendamentos e vendas, o cliente recebe pontos no saldo.
+      <ScrollArea className="flex-1">
+        <div className="p-4 sm:p-6 pb-24 space-y-6 sm:space-y-8">
+          
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <Card className="p-4 bg-card/40 flex items-center gap-3 border-border/40">
+              <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
+                <Trophy className="h-5 w-5 text-accent" />
               </div>
-            </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-bold uppercase">Recompensas</p>
+                <p className="text-xl sm:text-2xl font-black">{rewards.length}</p>
+              </div>
+            </Card>
+            <Card className="p-4 bg-card/40 flex items-center gap-3 border-border/40">
+              <div className="h-10 w-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <Coins className="h-5 w-5 text-emerald-500" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground font-bold uppercase">Clientes com Pontos</p>
+                <p className="text-xl sm:text-2xl font-black">{balances.length}</p>
+              </div>
+            </Card>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Label htmlFor="loyalty_switch" className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-              {settings?.enabled ? "Ativo" : "Inativo"}
-            </Label>
-            <Switch
-              id="loyalty_switch"
-              checked={!!settings?.enabled}
-              disabled={!canManage}
-              onCheckedChange={(v) =>
-                saveSettings({
-                  points_per_real: settings?.points_per_real ?? 1,
-                  redeem_rate: settings?.redeem_rate ?? 100,
-                  enabled: v,
-                })
-              }
-            />
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 border-t border-border/40 pt-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Pontos por R$ 1,00 gasto</Label>
-            <Input
-              type="number"
-              min="0"
-              step="0.1"
-              disabled={!canManage}
-              defaultValue={settings?.points_per_real ?? 1}
-              onBlur={(e) =>
-                saveSettings({
-                  enabled: !!settings?.enabled,
-                  redeem_rate: settings?.redeem_rate ?? 100,
-                  points_per_real: Number(e.target.value) || 1,
-                })
-              }
-              className="rounded-none"
-            />
-            <p className="text-[10px] text-muted-foreground">Ex: R$ 50 gastos geram 50 pontos.</p>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Valor do ponto no resgate (Pontos por R$ 1)</Label>
-            <Input
-              type="number"
-              min="1"
-              disabled={!canManage}
-              defaultValue={settings?.redeem_rate ?? 100}
-              onBlur={(e) =>
-                saveSettings({
-                  enabled: !!settings?.enabled,
-                  points_per_real: settings?.points_per_real ?? 1,
-                  redeem_rate: Number(e.target.value) || 100,
-                })
-              }
-              className="rounded-none"
-            />
-            <p className="text-[10px] text-muted-foreground">Ex: 100 pontos equivalem a R$ 1,00 de desconto.</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Tabs: Recompensas e Clientes com Pontos */}
-      <Tabs defaultValue="rewards">
-        <TabsList className="rounded-none border border-border/60 bg-card/40">
-          <TabsTrigger value="rewards" className="rounded-none text-xs uppercase tracking-wider">
-            <Gift className="mr-1.5 h-3.5 w-3.5" /> Catálogo de Recompensas
-          </TabsTrigger>
-          <TabsTrigger value="customers" className="rounded-none text-xs uppercase tracking-wider">
-            <Users className="mr-1.5 h-3.5 w-3.5" /> Clientes com Pontos ({balances?.length ?? 0})
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Aba 1: Recompensas */}
-        <TabsContent value="rewards" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            {canManage && (
-              <Button onClick={openNewReward} className="rounded-none bg-accent text-accent-foreground">
-                <Plus className="mr-1.5 h-4 w-4" /> Nova recompensa
-              </Button>
+          <div>
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Gift className="h-5 w-5 text-accent" /> Recompensas Disponíveis
+            </h2>
+            
+            {loadingRewards ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[1,2].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
+              </div>
+            ) : rewards.length === 0 ? (
+              <div className="p-6 sm:p-8 text-center border border-dashed border-border/40 rounded-xl bg-muted/10">
+                <p className="text-muted-foreground text-sm">Nenhuma recompensa configurada.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {rewards.map(r => (
+                  <Card key={r.id} className="p-4 sm:p-5 flex flex-col justify-between gap-4 border-border/40 group">
+                    <div>
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <h3 className="font-bold text-foreground line-clamp-2">{r.name}</h3>
+                        {!r.active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{r.description || "Nenhuma descrição."}</p>
+                    </div>
+                    
+                    <div className="flex items-center justify-between border-t border-border/40 pt-3">
+                      <span className="font-bold text-accent text-sm flex items-center gap-1.5">
+                        <Coins className="h-4 w-4" /> {r.sessions_total} pontos
+                      </span>
+                      {canManage && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-foreground" onClick={() => openEditReward(r)}>
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteReward(r)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
 
-          {loadingRewards ? (
-            <CardGridSkeleton count={3} />
-          ) : !rewards || rewards.length === 0 ? (
-            <EmptyState
-              icon={Gift}
-              title="Nenhuma recompensa cadastrada"
-              description="Cadastre itens como 'Corte Grátis' ou 'Pomada' para os clientes resgatarem com pontos."
-              action={
-                canManage ? (
-                  <Button onClick={openNewReward} className="rounded-none bg-accent text-accent-foreground">
-                    <Plus className="mr-1.5 h-4 w-4" /> Nova recompensa
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {rewards.map((r) => (
-                <Card key={r.id} className="group flex flex-col justify-between border border-border bg-card/50 p-6 rounded-none backdrop-blur-md">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="grid h-10 w-10 place-items-center bg-accent/10 text-accent">
-                        <Award className="h-5 w-5" />
+          <div>
+            <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-accent" /> Top Clientes
+            </h2>
+            
+            <Card className="border-border/40 overflow-hidden">
+              {loadingBalances ? (
+                <div className="p-4 space-y-3">
+                  {[1,2,3].map(i => <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />)}
+                </div>
+              ) : balances.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">Nenhum cliente com pontos no momento.</div>
+              ) : (
+                <div className="divide-y divide-border/20">
+                  {balances.slice(0, 10).map((b, i) => (
+                    <div key={b.id} className="p-3 sm:p-4 flex items-center justify-between hover:bg-card/50 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-6 w-6 sm:h-8 sm:w-8 rounded-full bg-accent/10 text-accent font-bold text-xs flex items-center justify-center">
+                          {i + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold">{b.customer?.full_name || "Desconhecido"}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground">{b.customer?.phone || "Sem telefone"}</p>
+                        </div>
                       </div>
-                      <Badge variant="outline" className="rounded-none font-mono text-xs font-bold text-accent border-accent/40">
-                        {r.sessions_total} PONTOS
-                      </Badge>
+                      <div className="text-right">
+                        <p className="text-sm font-black text-accent">{b.points} <span className="text-[10px] text-muted-foreground uppercase font-normal tracking-wider">pts</span></p>
+                      </div>
                     </div>
-
-                    <div>
-                      <h3 className="font-serif text-xl font-bold text-foreground">{r.name}</h3>
-                      {r.description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{r.description}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {canManage && (
-                    <div className="mt-6 flex gap-2 border-t border-border/40 pt-4">
-                      <Button size="sm" variant="outline" onClick={() => openEditReward(r)} className="flex-1 rounded-none text-xs">
-                        <Pencil className="mr-1.5 h-3.5 w-3.5" /> Editar
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleDeleteReward(r)} className="rounded-none text-xs text-destructive hover:bg-destructive hover:text-destructive-foreground">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Aba 2: Clientes com Pontos */}
-        <TabsContent value="customers" className="mt-4 space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Buscar cliente com saldo por nome ou telefone..."
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="h-10 rounded-none pl-9 text-xs"
-            />
+                  ))}
+                </div>
+              )}
+            </Card>
           </div>
 
-          {loadingBalances ? (
-            <TableSkeleton />
-          ) : filteredBalances.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="Nenhum cliente com pontos"
-              description="Os clientes que acumularem pontos em agendamentos aparecerão aqui."
-            />
-          ) : (
-            <Card className="overflow-hidden rounded-none border border-border bg-card/40 backdrop-blur-md">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="border-b border-border/60 bg-background/60 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <tr>
-                      <th className="px-6 py-4">Cliente</th>
-                      <th className="px-6 py-4">Telefone</th>
-                      <th className="px-6 py-4">Saldo Atual</th>
-                      <th className="px-6 py-4">Total Vitalício</th>
-                      <th className="px-6 py-4 text-right">Ação</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {filteredBalances.map((b: any) => (
-                      <tr key={b.id} className="transition-colors hover:bg-card/80">
-                        <td className="px-6 py-4">
-                          <span className="font-serif font-bold text-foreground">{b.customer?.full_name || "Cliente"}</span>
-                        </td>
-                        <td className="px-6 py-4 text-xs text-muted-foreground">{b.customer?.phone || "—"}</td>
-                        <td className="px-6 py-4 font-mono font-bold text-accent text-base">{Number(b.points)} pts</td>
-                        <td className="px-6 py-4 text-xs text-muted-foreground font-mono">{Number(b.lifetime_points || b.points)} pts</td>
-                        <td className="px-6 py-4 text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setRedeemCustomer(b);
-                              setRedeemPointsAmount(Math.min(50, Number(b.points)));
-                              setRedeemReason("");
-                            }}
-                            className="rounded-none text-xs hover:border-accent hover:text-accent"
-                          >
-                            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Resgatar Pontos
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        </div>
+      </ScrollArea>
+
+      {rewardFormOpen && (
+        <RewardForm 
+          open={rewardFormOpen} 
+          onClose={() => setRewardFormOpen(false)} 
+          shopId={shopId!} 
+          reward={editingReward} 
+          onSuccess={() => qc.invalidateQueries({ queryKey: ["admin-rewards", shopId] })} 
+        />
+      )}
+
+      {pointsFormOpen && (
+        <PointsForm 
+          open={pointsFormOpen} 
+          onClose={() => setPointsFormOpen(false)} 
+          shopId={shopId!} 
+          rewards={rewards.filter(r => r.active)}
+          onSuccess={() => qc.invalidateQueries({ queryKey: ["admin-loyalty-balances", shopId] })} 
+        />
+      )}
+    </div>
+  );
+}
+
+function RewardForm({ open, onClose, shopId, reward, onSuccess }: any) {
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: reward?.name || "",
+    description: reward?.description || "",
+    points_required: reward?.sessions_total?.toString() || "",
+    active: reward ? reward.active : true,
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return toast.error("O nome é obrigatório.");
+    
+    const pts = parseInt(form.points_required);
+    if (isNaN(pts) || pts <= 0) return toast.error("Os pontos necessários devem ser maiores que zero.");
+
+    setLoading(true);
+    try {
+      if (reward) {
+        await loyaltyService.updateReward(reward.id, {
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          sessions_total: pts,
+          active: form.active,
+        });
+        toast.success("Recompensa atualizada.");
+      } else {
+        await loyaltyService.createReward({
+          barbershop_id: shopId,
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          points_required: pts,
+          active: form.active,
+        });
+        toast.success("Recompensa criada.");
+      }
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao salvar recompensa.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-left">
+          <DialogTitle>{reward ? "Editar Recompensa" : "Nova Recompensa"}</DialogTitle>
+          <DialogDescription>Premiações que os clientes podem resgatar.</DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Nome da Recompensa <span className="text-destructive">*</span></Label>
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Corte Grátis" required className="h-11" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Pontos Necessários <span className="text-destructive">*</span></Label>
+            <Input type="number" min="1" step="1" value={form.points_required} onChange={e => setForm({ ...form, points_required: e.target.value })} placeholder="10" required className="h-11" />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Descrição (Opcional)</Label>
+            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Ex: Válido de ter a sex" className="h-11" />
+          </div>
+
+          <div className="flex items-center justify-between pt-2">
+            <Label>Recompensa Ativa</Label>
+            <Switch checked={form.active} onCheckedChange={v => setForm({ ...form, active: v })} />
+          </div>
+
+          <DialogFooter className="pt-4">
+            <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={onClose} disabled={loading}>Cancelar</Button>
+            <Button type="submit" className="h-11 w-full sm:w-auto bg-accent text-accent-foreground" disabled={loading}>Salvar</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [customer, setCustomer] = useState<any>(null);
+  
+  const [action, setAction] = useState<"add"|"redeem">("add");
+  const [points, setPoints] = useState("");
+  const [reason, setReason] = useState("");
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (search.length < 3) return toast.error("Digite ao menos 3 caracteres.");
+    
+    setLoading(true);
+    try {
+      const results = await customerService.searchCustomers(shopId, search);
+      setCustomers(Array.isArray(results) ? results : []);
+      if (results.length === 0) toast.error("Nenhum cliente encontrado.");
+    } catch (err: any) {
+      toast.error("Erro na busca.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectCustomer = async (c: any) => {
+    setCustomer(c);
+    setCustomers([]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customer) return toast.error("Selecione um cliente.");
+    
+    const pts = parseInt(points);
+    if (isNaN(pts) || pts <= 0) return toast.error("A quantidade de pontos deve ser maior que zero.");
+    
+    if (action === "redeem") {
+      if (!confirm(`Deseja realmente resgatar ${pts} pontos de ${customer.full_name}?`)) return;
+    } else {
+      if (!confirm(`Deseja adicionar ${pts} pontos para ${customer.full_name}?`)) return;
+    }
+
+    setLoading(true);
+    try {
+      if (action === "add") {
+        await loyaltyService.addPoints({
+          barbershopId: shopId,
+          customerId: customer.id,
+          points: pts,
+          reason: reason.trim() || "Ajuste manual",
+        });
+        toast.success("Pontos adicionados com sucesso.");
+      } else {
+        await loyaltyService.redeemPoints({
+          barbershopId: shopId,
+          customerId: customer.id,
+          points: pts,
+          reason: reason.trim() || "Resgate manual",
+        });
+        toast.success("Resgate realizado com sucesso.");
+      }
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Erro na operação.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="text-left">
+          <DialogTitle>Ajustar Pontos / Resgatar</DialogTitle>
+          <DialogDescription>Adicione pontos manualmente ou faça um resgate.</DialogDescription>
+        </DialogHeader>
+
+        {!customer ? (
+          <div className="space-y-4 py-2">
+            <form onSubmit={handleSearch} className="flex gap-2">
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nome ou telefone..." className="h-11" />
+              <Button type="submit" disabled={loading} className="h-11 px-4">Buscar</Button>
+            </form>
+            
+            {customers.length > 0 && (
+              <div className="space-y-2 max-h-48 overflow-y-auto border border-border/40 p-2 rounded-lg">
+                {customers.map(c => (
+                  <div key={c.id} onClick={() => handleSelectCustomer(c)} className="p-2 hover:bg-muted cursor-pointer rounded text-sm">
+                    <p className="font-bold">{c.full_name}</p>
+                    <p className="text-muted-foreground">{c.phone || c.email || "Sem contato"}</p>
+                  </div>
+                ))}
               </div>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Modal Nova / Editar Recompensa */}
-      <Dialog open={openRewardDialog} onOpenChange={setOpenRewardDialog}>
-        <DialogContent className="rounded-none border-border sm:max-w-md">
-          <form onSubmit={handleSaveReward}>
-            <DialogHeader>
-              <DialogTitle className="font-serif text-2xl">
-                {editingReward ? "Editar recompensa" : "Nova recompensa de fidelidade"}
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4 py-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="reward_name">Nome do Benefício / Recompensa *</Label>
-                <Input
-                  id="reward_name"
-                  value={rewardForm.name}
-                  onChange={(e) => setRewardForm({ ...rewardForm, name: e.target.value })}
-                  placeholder="Ex: Corte de Cabelo Grátis"
-                  className="rounded-none"
-                  required
-                />
+            )}
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 py-2">
+            <div className="p-3 bg-muted/30 border border-border/40 rounded-lg flex justify-between items-center">
+              <div>
+                <p className="font-bold text-sm">{customer.full_name}</p>
+                <p className="text-xs text-muted-foreground">Cliente selecionado</p>
               </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setCustomer(null)} className="h-8 px-2 text-xs">Alterar</Button>
+            </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="reward_points">Pontos Necessários para Resgatar *</Label>
-                <Input
-                  id="reward_points"
-                  type="number"
-                  min={1}
-                  value={rewardForm.points_required}
-                  onChange={(e) => setRewardForm({ ...rewardForm, points_required: Number(e.target.value) })}
-                  className="rounded-none font-mono font-bold"
-                  required
-                />
+            <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-lg">
+              <div 
+                className={`text-center p-2 rounded-md cursor-pointer text-sm font-bold transition-colors ${action === "add" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                onClick={() => setAction("add")}
+              >
+                Adicionar
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="reward_desc">Descrição (opcional)</Label>
-                <Textarea
-                  id="reward_desc"
-                  rows={2}
-                  value={rewardForm.description}
-                  onChange={(e) => setRewardForm({ ...rewardForm, description: e.target.value })}
-                  placeholder="Regras de utilização ou validade da recompensa..."
-                  className="rounded-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-between border-t border-border/40 pt-4">
-                <Label htmlFor="reward_active" className="cursor-pointer">
-                  Disponível para resgate
-                </Label>
-                <Switch
-                  id="reward_active"
-                  checked={rewardForm.active}
-                  onCheckedChange={(v) => setRewardForm({ ...rewardForm, active: v })}
-                />
+              <div 
+                className={`text-center p-2 rounded-md cursor-pointer text-sm font-bold transition-colors ${action === "redeem" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground"}`}
+                onClick={() => setAction("redeem")}
+              >
+                Resgatar
               </div>
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setOpenRewardDialog(false)} className="rounded-none">
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={busyReward} className="rounded-none bg-accent text-accent-foreground">
-                {busyReward ? "Salvando..." : "Salvar recompensa"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Resgatar Pontos do Cliente */}
-      <Dialog open={!!redeemCustomer} onOpenChange={(o) => !o && setRedeemCustomer(null)}>
-        <DialogContent className="rounded-none border-border sm:max-w-md">
-          {redeemCustomer && (
-            <form onSubmit={handleRedeemSubmit}>
-              <DialogHeader>
-                <DialogTitle className="font-serif text-2xl">Resgatar Pontos</DialogTitle>
-              </DialogHeader>
-
-              <div className="space-y-4 py-4 text-xs">
-                <div className="border border-border/60 bg-card/40 p-4">
-                  <div className="font-bold text-foreground text-sm">
-                    {redeemCustomer.customer?.full_name}
-                  </div>
-                  <div className="mt-1 text-muted-foreground">
-                    Saldo disponível: <span className="font-mono font-bold text-accent">{redeemCustomer.points} pontos</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="redeem_amount">Quantidade de pontos a debitar *</Label>
-                  <Input
-                    id="redeem_amount"
-                    type="number"
-                    min={1}
-                    max={Number(redeemCustomer.points)}
-                    value={redeemPointsAmount}
-                    onChange={(e) => setRedeemPointsAmount(Number(e.target.value))}
-                    className="rounded-none font-mono font-bold"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="redeem_motivo">Motivo do Resgate / Prêmio</Label>
-                  <Input
-                    id="redeem_motivo"
-                    value={redeemReason}
-                    onChange={(e) => setRedeemReason(e.target.value)}
-                    placeholder="Ex: Troca por Pomada Modeladora"
-                    className="rounded-none"
-                  />
+            {action === "redeem" && rewards.length > 0 && (
+              <div className="space-y-2">
+                <Label>Recompensa Rápida</Label>
+                <div className="flex flex-wrap gap-2">
+                  {rewards.map((r:any) => (
+                    <Badge 
+                      key={r.id} 
+                      variant="outline" 
+                      className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                      onClick={() => { setPoints(r.sessions_total.toString()); setReason(`Resgate: ${r.name}`); }}
+                    >
+                      {r.name} ({r.sessions_total} pts)
+                    </Badge>
+                  ))}
                 </div>
               </div>
+            )}
 
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button type="button" variant="outline" onClick={() => setRedeemCustomer(null)} className="rounded-none">
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={busyRedeem} className="rounded-none bg-accent text-accent-foreground">
-                  {busyRedeem ? "Processando..." : "Confirmar Resgate"}
-                </Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+            <div className="space-y-2">
+              <Label>Quantidade de Pontos <span className="text-destructive">*</span></Label>
+              <Input type="number" min="1" step="1" value={points} onChange={e => setPoints(e.target.value)} required className="h-11" placeholder="Ex: 5" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Motivo / Observação</Label>
+              <Input value={reason} onChange={e => setReason(e.target.value)} placeholder="Ex: Correção de saldo" className="h-11" />
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" className="h-11 w-full sm:w-auto" onClick={onClose} disabled={loading}>Cancelar</Button>
+              <Button type="submit" className="h-11 w-full sm:w-auto bg-accent text-accent-foreground" disabled={loading}>Confirmar</Button>
+            </DialogFooter>
+          </form>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
