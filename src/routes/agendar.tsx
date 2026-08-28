@@ -183,6 +183,17 @@ function BookingPage() {
     );
   }
 
+  if (shopLoading) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent mb-4" />
+          <p className="text-muted-foreground text-sm">Carregando agendamento...</p>
+        </div>
+      </PublicLayout>
+    );
+  }
+
   if (!shopLoading && !shop) {
     return (
       <PublicLayout>
@@ -230,14 +241,14 @@ function BookingPage() {
       let customerId = existingCustomer?.id;
       if (!customerId) {
         const { data: newCust, error: custErr } = await supabase.from("customers").insert({
-          barbershopId: shop.id,
+          barbershop_id: shop.id,
           profile_id: currentUser.id,
           full_name: currentUser.user_metadata?.full_name || name || "Cliente",
           email: currentUser.email,
           phone: currentUser.user_metadata?.phone || phone || null,
         }).select().maybeSingle();
         if (custErr) throw custErr;
-        customerId = newCust.id;
+        customerId = newCust?.id;
       }
 
       // Create appointment
@@ -586,3 +597,7 @@ function BookingPage() {
     </PublicLayout>
   );
 }
+
+
+
+

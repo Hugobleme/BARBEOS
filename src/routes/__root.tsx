@@ -98,6 +98,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-xs text-muted-foreground">
           Não se preocupe, tente recarregar ou voltar para a página inicial.
         </p>
+        <p className="mt-3 text-xs text-muted-foreground break-words text-left bg-muted/30 p-2 rounded">
+          Diagnóstico: {error instanceof Error && error.message ? error.message.slice(0, 220) : "Erro inesperado na aplicação."}
+        </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
