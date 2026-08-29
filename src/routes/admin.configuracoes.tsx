@@ -3,22 +3,38 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentShop } from "@/hooks/use-current-shop";
+import { useOnboardingStatus } from "@/hooks/use-onboarding";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Settings, Image as ImageIcon, MapPin, Phone, Mail, Globe, Clock, ShieldAlert } from "lucide-react";
+import { 
+  Store, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Globe, 
+  ShieldAlert, 
+  Image as ImageIcon,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  Instagram
+} from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/configuracoes")({ component: ConfigPage });
 
 function ConfigPage() {
-  const { shopId, shop } = useCurrentShop();
+  const { shopId, shop: currentShopContext } = useCurrentShop();
   const qc = useQueryClient();
-  const isOwner = shop?.role === "owner";
+  const isOwner = currentShopContext?.role === "owner";
+
+  // Existing onboarding hook to share logic for the read-only checklist
+  const { data: onboarding } = useOnboardingStatus(shopId);
 
   const { data: barbershop, isLoading } = useQuery({
     queryKey: ["admin-config", shopId],
@@ -32,88 +48,110 @@ function ConfigPage() {
 
   const [formData, setFormData] = useState({
     name: "",
+    slug: "",
     description: "",
-    phone: "",
-    email: "",
     logo_url: "",
     address: "",
     city: "",
     state: "",
     zip: "",
-    slug: "",
-    slot_interval: "30",
-    min_advance: "0",
-    max_advance: "30",
-    auto_confirm: false,
-    cancellation_policy: ""
+    neighborhood: "",
+    phone: "",
+    whatsapp: "",
+    email: "",
+    website: "",
+    instagram: ""
   });
 
   useEffect(() => {
     if (barbershop) {
       const contacts = barbershop.contacts as any || {};
       const addr = barbershop.address as any || {};
-      const setts = barbershop.settings as any || {};
-      const booking = setts.booking_config || {};
+      const social = barbershop.social as any || {};
 
       setFormData({
         name: barbershop.name || "",
+        slug: barbershop.slug || "",
         description: barbershop.description || "",
-        phone: contacts.phone || "",
-        email: contacts.email || "",
         logo_url: barbershop.logo_url || "",
         address: addr.street || "",
         city: addr.city || "",
         state: addr.state || "",
         zip: addr.zip || "",
-        slug: barbershop.slug || "",
-        slot_interval: booking.slot_interval ? String(booking.slot_interval) : "30",
-        min_advance: booking.min_advance_hours ? String(booking.min_advance_hours) : "0",
-        max_advance: booking.max_advance_days ? String(booking.max_advance_days) : "30",
-        auto_confirm: booking.auto_confirm === true,
-        cancellation_policy: booking.cancellation_policy || ""
+        neighborhood: addr.neighborhood || "",
+        phone: contacts.phone || "",
+        whatsapp: contacts.whatsapp || "",
+        email: contacts.email || "",
+        website: contacts.website || "",
+        instagram: social.instagram || ""
       });
     }
   }, [barbershop]);
 
   const updateMut = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: typeof formData) => {
+      // Uniqueness check for slug
+      if (data.slug !== barbershop?.slug) {
+        const { data: existing, error: checkErr } = await supabase
+          .from("barbershops")
+          .select("id")
+          .eq("slug", data.slug)
+          .neq("id", shopId!)
+          .maybeSingle();
+        
+        if (checkErr) throw checkErr;
+        if (existing) {
+          throw new Error("SLUG_EXISTS");
+        }
+      }
+
       const { error } = await supabase
         .from("barbershops")
         .update({
           name: data.name,
+          slug: data.slug,
           description: data.description,
           logo_url: data.logo_url || null,
-          slug: data.slug,
-          contacts: { phone: data.phone, email: data.email },
-          address: { street: data.address, city: data.city, state: data.state, zip: data.zip },
-          settings: {
-            ...(barbershop?.settings as any || {}),
-            booking_config: {
-              slot_interval: parseInt(data.slot_interval, 10),
-              min_advance_hours: parseInt(data.min_advance, 10),
-              max_advance_days: parseInt(data.max_advance, 10),
-              auto_confirm: data.auto_confirm,
-              cancellation_policy: data.cancellation_policy
-            }
+          contacts: {
+            ...(barbershop?.contacts as any || {}),
+            phone: data.phone,
+            whatsapp: data.whatsapp,
+            email: data.email,
+            website: data.website
+          },
+          address: {
+            ...(barbershop?.address as any || {}),
+            street: data.address,
+            city: data.city,
+            state: data.state,
+            zip: data.zip,
+            neighborhood: data.neighborhood
+          },
+          social: {
+            ...(barbershop?.social as any || {}),
+            instagram: data.instagram
           }
         })
         .eq("id", shopId!);
+        
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Configurações atualizadas!");
       qc.invalidateQueries({ queryKey: ["admin-config", shopId] });
-      qc.invalidateQueries({ queryKey: ["current-shop", shopId] });
+      qc.invalidateQueries({ queryKey: ["onboarding-status", shopId] });
+      toast.success("Informações da barbearia atualizadas.");
     },
-    onError: (err: any) => toast.error(err.message || "Erro ao salvar configurações.")
+    onError: (err: any) => {
+      if (err.message === "SLUG_EXISTS") {
+        toast.error("Este link (slug) já está em uso por outra barbearia.");
+      } else {
+        toast.error("Não foi possível salvar as alterações. Tente novamente.");
+        if (import.meta.env.DEV) {
+          console.error("Save error:", err);
+        }
+      }
+    }
   });
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) return toast.error("O nome da barbearia é obrigatório.");
-    if (!formData.slug.trim().match(/^[a-z0-9-]+$/)) return toast.error("O link (slug) deve conter apenas letras minúsculas, números e hífens.");
-    updateMut.mutate(formData);
-  };
 
   const deactivateMut = useMutation({
     mutationFn: async () => {
@@ -126,182 +164,272 @@ function ConfigPage() {
     }
   });
 
-  if (!shopId) return null;
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) return toast.error("O nome da barbearia é obrigatório.");
+    
+    // Normalize slug safely
+    const normalizedSlug = formData.slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    if (!normalizedSlug) return toast.error("O link (slug) é inválido.");
+
+    const payload = { ...formData, slug: normalizedSlug };
+    setFormData(payload); // Update UI with normalized version
+    updateMut.mutate(payload);
+  };
+
+  if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
+        <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada à sua conta.</h2>
+        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsável pela conta.</p>
+      </div>
+    );
+  }
+
+  const hasSlug = Boolean(barbershop?.slug);
+  const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/b/${barbershop?.slug || formData.slug}` : `/b/${barbershop?.slug || formData.slug}`;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
-      
-      {/* HEADER */}
-      <div className="flex flex-col border-b border-border/40 p-4 sm:p-5 bg-card/40 backdrop-blur-md shrink-0">
-        <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-          <Settings className="h-6 w-6 text-accent" /> Configurações
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie os detalhes públicos e regras da barbearia</p>
-      </div>
-
-      <ScrollArea className="flex-1 bg-background/50">
-        <div className="mx-auto max-w-3xl p-4 sm:p-6 pb-24 space-y-8">
+    <div className="h-[calc(100vh-4rem)] flex flex-col bg-background/50">
+      <ScrollArea className="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-3xl mx-auto space-y-8 pb-12">
           
+          <header className="space-y-1">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent">CONFIGURAÇÕES DA UNIDADE</p>
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">Perfil da barbearia</h1>
+            <p className="text-sm text-muted-foreground">Mantenha as informações da sua unidade atualizadas para uma presença pública mais clara.</p>
+          </header>
+
+          {/* PRESENÇA PÚBLICA STATUS */}
+          <section className="space-y-4">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Presença pública</h2>
+            <Card className="p-4 sm:p-5 bg-card border-border/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className={`mt-0.5 sm:mt-0 p-2 rounded-full shrink-0 ${hasSlug ? "bg-emerald-500/10 text-emerald-500" : "bg-amber-500/10 text-amber-500"}`}>
+                  {hasSlug ? <CheckCircle2 className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+                </div>
+                <div>
+                  <p className="font-bold text-sm">
+                    {hasSlug ? "Perfil público disponível" : "Seu perfil público ainda precisa de um endereço."}
+                  </p>
+                  {hasSlug && (
+                    <a href={publicUrl} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-accent truncate max-w-[200px] sm:max-w-xs inline-block">
+                      {publicUrl}
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div className="shrink-0">
+                {hasSlug ? (
+                  <Button asChild variant="outline" size="sm" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
+                    <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil público</Link>
+                  </Button>
+                ) : (
+                  <Button size="sm" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider" onClick={() => {
+                    document.getElementById('slug-input')?.focus();
+                  }}>
+                    Completar perfil
+                  </Button>
+                )}
+              </div>
+            </Card>
+          </section>
+
           {isLoading ? (
-            <div className="space-y-4">
-              <Card className="h-48 animate-pulse rounded-xl border border-border/40 bg-muted/30" />
-              <Card className="h-48 animate-pulse rounded-xl border border-border/40 bg-muted/30" />
+            <div className="h-64 flex items-center justify-center">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-r-transparent" />
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-8">
               
-              {/* GERAL */}
+              {/* 1. IDENTIDADE DA BARBEARIA */}
               <section className="space-y-4">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Globe className="h-4 w-4" /> Informações Gerais
+                  <Store className="h-4 w-4" /> Identidade da barbearia
                 </h2>
-                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
+                <Card className="p-4 sm:p-6 bg-card border-border/40 shadow-sm space-y-6">
+                  
                   <div className="space-y-2">
-                    <Label>Nome da Barbearia <span className="text-destructive">*</span></Label>
-                    <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required className="h-11" />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Telefone / WhatsApp</Label>
-                      <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} placeholder="(11) 99999-9999" className="h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>E-mail Público</Label>
-                      <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="contato@exemplo.com" className="h-11" />
-                    </div>
+                    <Label htmlFor="name-input">Nome da barbearia <span className="text-destructive">*</span></Label>
+                    <Input id="name-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="h-11" required />
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Descrição / Bio</Label>
-                    <Textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} rows={3} className="resize-none" placeholder="Conte sobre sua barbearia..." />
+                    <Label htmlFor="slug-input">Endereço do perfil (Slug) <span className="text-destructive">*</span></Label>
+                    <div className="flex rounded-md border border-input bg-transparent overflow-hidden h-11 focus-within:ring-1 focus-within:ring-ring">
+                      <div className="flex items-center justify-center px-3 bg-muted/30 border-r border-input text-muted-foreground text-xs sm:text-sm font-mono shrink-0 select-none">
+                        barbeos.com/b/
+                      </div>
+                      <input 
+                        id="slug-input"
+                        value={formData.slug} 
+                        onChange={e => setFormData({ ...formData, slug: e.target.value })} 
+                        className="flex-1 bg-transparent px-3 py-1 text-sm font-mono shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        required 
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Apenas letras, números e hifens. Ex: barbearia-do-ze</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Descrição</Label>
+                    <Textarea 
+                      value={formData.description} 
+                      onChange={e => setFormData({ ...formData, description: e.target.value })} 
+                      rows={3} 
+                      className="resize-none" 
+                      placeholder="Conte um pouco sobre sua barbearia para os clientes..." 
+                    />
+                    <p className="text-[11px] text-muted-foreground text-right">{formData.description.length} caracteres</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label>URL da Logo (Opcional)</Label>
-                    <div className="flex gap-3 items-center">
-                      <div className="h-12 w-12 shrink-0 rounded-xl bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden">
-                        {formData.logo_url ? <img src={formData.logo_url} alt="Logo preview" className="h-full w-full object-cover" /> : <ImageIcon className="h-5 w-5 text-muted-foreground" />}
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+                      <div className="h-14 w-14 shrink-0 rounded-xl bg-muted/50 border border-border/40 flex items-center justify-center overflow-hidden">
+                        {formData.logo_url ? <img src={formData.logo_url} alt="Logo preview" className="h-full w-full object-cover" /> : <ImageIcon className="h-6 w-6 text-muted-foreground/50" />}
                       </div>
-                      <Input value={formData.logo_url} onChange={e => setFormData({ ...formData, logo_url: e.target.value })} placeholder="https://exemplo.com/logo.png" className="h-11 flex-1" />
+                      <div className="flex-1 space-y-1">
+                        <Input value={formData.logo_url} onChange={e => setFormData({ ...formData, logo_url: e.target.value })} placeholder="https://exemplo.com/logo.png" className="h-11" />
+                        <p className="text-[11px] text-muted-foreground">Insira o link direto de uma imagem pública para usar como logo.</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Link Público (Slug)</Label>
-                    <Input value={formData.slug} onChange={e => setFormData({ ...formData, slug: e.target.value.toLowerCase() })} className="h-11 font-mono text-sm" />
-                    <p className="text-[10px] text-muted-foreground mt-1 text-amber-500 font-semibold">Aviso: Mudar o link quebra QR Codes e links antigos compartilhados.</p>
-                  </div>
                 </Card>
               </section>
 
-              {/* ADDRESS */}
+              {/* 2. LOCALIZAÇÃO E CONTATO */}
               <section className="space-y-4">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <MapPin className="h-4 w-4" /> Endereço Local
+                  <MapPin className="h-4 w-4" /> Localização e contato
                 </h2>
-                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
-                  <div className="space-y-2">
-                    <Label>Rua e Número</Label>
-                    <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="h-11" />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Cidade</Label>
-                      <Input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Estado (UF)</Label>
-                      <Input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value.toUpperCase() })} maxLength={2} className="h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>CEP</Label>
-                      <Input value={formData.zip} onChange={e => setFormData({ ...formData, zip: e.target.value })} className="h-11" />
-                    </div>
-                  </div>
-                </Card>
-              </section>
-
-              {/* BOOKING SETTINGS */}
-              <section className="space-y-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> Configuração de Agendamento
-                </h2>
-                <Card className="p-4 sm:p-6 bg-card border-border/40 rounded-xl space-y-4">
+                <Card className="p-4 sm:p-6 bg-card border-border/40 shadow-sm space-y-6">
                   
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-2">Endereço</h3>
                     <div className="space-y-2">
-                      <Label>Intervalo de Horários (Min)</Label>
-                      <Input type="number" step="5" min="10" value={formData.slot_interval} onChange={e => setFormData({ ...formData, slot_interval: e.target.value })} className="h-11" />
+                      <Label>Rua e Número</Label>
+                      <Input value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} className="h-11" placeholder="Ex: Av. Paulista, 1000" />
                     </div>
-                    <div className="space-y-2">
-                      <Label>Antecedência Mínima (Horas)</Label>
-                      <Input type="number" min="0" value={formData.min_advance} onChange={e => setFormData({ ...formData, min_advance: e.target.value })} className="h-11" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Antecedência Máx. (Dias)</Label>
-                      <Input type="number" min="1" value={formData.max_advance} onChange={e => setFormData({ ...formData, max_advance: e.target.value })} className="h-11" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Bairro</Label>
+                        <Input value={formData.neighborhood} onChange={e => setFormData({ ...formData, neighborhood: e.target.value })} className="h-11" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cidade</Label>
+                        <Input value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} className="h-11" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Estado (UF)</Label>
+                        <Input value={formData.state} onChange={e => setFormData({ ...formData, state: e.target.value.toUpperCase() })} maxLength={2} className="h-11" placeholder="SP" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>CEP</Label>
+                        <Input value={formData.zip} onChange={e => setFormData({ ...formData, zip: e.target.value })} className="h-11" placeholder="00000-000" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between p-3 border border-border/40 rounded-lg mt-2">
-                    <div className="space-y-0.5">
-                      <Label className="text-sm">Confirmação Automática</Label>
-                      <p className="text-xs text-muted-foreground">Aprovar novos agendamentos online automaticamente</p>
+                  <div className="space-y-4 pt-4 border-t border-border/40">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground mb-2">Contato e Redes Sociais</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Phone className="h-3 w-3" /> Telefone Fixo</Label>
+                        <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} className="h-11" placeholder="(00) 0000-0000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Phone className="h-3 w-3 text-emerald-500" /> WhatsApp</Label>
+                        <Input value={formData.whatsapp} onChange={e => setFormData({ ...formData, whatsapp: e.target.value })} className="h-11" placeholder="(00) 90000-0000" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Instagram className="h-3 w-3 text-pink-500" /> Instagram</Label>
+                        <Input value={formData.instagram} onChange={e => setFormData({ ...formData, instagram: e.target.value })} className="h-11" placeholder="@suabarbearia" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2"><Globe className="h-3 w-3 text-blue-500" /> Website</Label>
+                        <Input value={formData.website} onChange={e => setFormData({ ...formData, website: e.target.value })} className="h-11" placeholder="https://..." type="url" />
+                      </div>
                     </div>
-                    <Switch checked={formData.auto_confirm} onCheckedChange={c => setFormData({ ...formData, auto_confirm: c })} />
                   </div>
 
-                  <div className="space-y-2 pt-2">
-                    <Label>Política de Cancelamento</Label>
-                    <Textarea value={formData.cancellation_policy} onChange={e => setFormData({ ...formData, cancellation_policy: e.target.value })} rows={2} className="resize-none" placeholder="Ex: Cancelamentos apenas com 2 horas de antecedência..." />
-                  </div>
                 </Card>
               </section>
 
-              {/* OPENING HOURS FALLBACK */}
-              <section className="space-y-4">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> Horários de Funcionamento
-                </h2>
-                <div className="p-6 bg-muted/20 border border-dashed border-border/40 rounded-xl text-center flex flex-col items-center">
-                  <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-foreground font-semibold">Configuração de grade de horários flexível será disponibilizada em breve.</p>
-                  <p className="text-xs text-muted-foreground mt-1">Sua agenda continua operando conforme os horários individuais dos profissionais.</p>
-                </div>
-              </section>
-
-              <div className="pt-2">
-                <Button type="submit" className="w-full sm:w-auto h-11 bg-accent text-accent-foreground font-bold px-8" disabled={updateMut.isPending}>
+              {/* SAVE BUTTON */}
+              <div>
+                <Button type="submit" className="w-full sm:w-auto h-11 bg-accent text-accent-foreground font-bold px-8 text-xs uppercase tracking-wider" disabled={updateMut.isPending}>
                   {updateMut.isPending ? "Salvando..." : "Salvar Configurações"}
                 </Button>
               </div>
             </form>
           )}
 
-          {/* DANGER ZONE */}
+          {/* 3. PERFIL VISÍVEL PARA CLIENTES */}
+          {!isLoading && barbershop && (
+            <section className="space-y-4 pt-8">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Perfil visível para clientes</h2>
+              <Card className="p-4 sm:p-6 bg-muted/10 border-border/40 shadow-sm space-y-4">
+                <p className="text-sm text-muted-foreground mb-4">Seu perfil público exibe as seguintes informações quando configuradas:</p>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${barbershop.name ? "text-emerald-500" : "text-muted-foreground/30"}`} />
+                    <span className={barbershop.name ? "text-foreground" : "text-muted-foreground"}>Nome da barbearia</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${formData.address || formData.city ? "text-emerald-500" : "text-muted-foreground/30"}`} />
+                    <span className={formData.address || formData.city ? "text-foreground" : "text-muted-foreground"}>Endereço ou localização</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${onboarding?.isServicesComplete ? "text-emerald-500" : "text-muted-foreground/30"}`} />
+                    <span className={onboarding?.isServicesComplete ? "text-foreground" : "text-muted-foreground"}>Serviços cadastrados</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${onboarding?.isProsComplete ? "text-emerald-500" : "text-muted-foreground/30"}`} />
+                    <span className={onboarding?.isProsComplete ? "text-foreground" : "text-muted-foreground"}>Profissionais cadastrados</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${barbershop.description ? "text-emerald-500" : "text-muted-foreground/30"}`} />
+                    <span className={barbershop.description ? "text-foreground" : "text-muted-foreground"}>Descrição</span>
+                  </div>
+                </div>
+                <div className="pt-4 mt-4 border-t border-border/40">
+                  <Button asChild variant="link" className="px-0 text-xs font-bold uppercase tracking-wider text-accent h-auto">
+                    <Link to="/admin/onboarding">Ver primeiros passos <ArrowRight className="ml-1 h-3 w-3" /></Link>
+                  </Button>
+                </div>
+              </Card>
+            </section>
+          )}
+
+          {/* 4. DANGER ZONE */}
           {isOwner && !isLoading && barbershop && (
             <section className="space-y-4 pt-12 border-t border-border/20">
               <h2 className="text-sm font-bold uppercase tracking-wider text-destructive flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4" /> Zona de Perigo
               </h2>
-              <Card className="p-4 sm:p-6 bg-destructive/5 border-destructive/20 rounded-xl">
-                <h3 className="font-bold text-destructive">Desativar Barbearia</h3>
+              <Card className="p-4 sm:p-6 bg-destructive/5 border-destructive/20 rounded-xl shadow-sm">
+                <h3 className="font-bold text-destructive">Visibilidade</h3>
                 <p className="text-sm text-muted-foreground mt-1 mb-4">
                   Ao desativar, sua barbearia deixará de aparecer para clientes e bloqueará novos agendamentos. Você poderá reativá-la solicitando ao suporte. Nenhum dado será excluído permanentemente nesta ação.
                 </p>
-                <Button variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => {
+                <Button variant="outline" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => {
                   const check = prompt(`Digite "${barbershop.name}" para confirmar a desativação:`);
                   if (check === barbershop.name) deactivateMut.mutate();
                   else if (check !== null) toast.error("Nome incorreto. Ação cancelada.");
-                }}>
-                  Desativar Operação
+                }} disabled={deactivateMut.isPending}>
+                  {deactivateMut.isPending ? "Desativando..." : "Desativar Operação"}
                 </Button>
               </Card>
             </section>
           )}
+
         </div>
       </ScrollArea>
     </div>
   );
 }
+
+
