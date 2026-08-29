@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { barbershopService, Service } from "@/services/barbershop.service";
@@ -7,25 +7,55 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { brl, minutes } from "@/lib/format";
-import { Plus, Pencil, Scissors, Trash2, Clock, DollarSign, GripVertical, Info } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { brl } from "@/lib/format";
+import { 
+  Plus, 
+  Pencil, 
+  Scissors, 
+  Clock, 
+  DollarSign, 
+  AlertTriangle, 
+  RefreshCcw,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  Settings
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/admin/servicos")({ component: Servicos });
+export const Route = createFileRoute("/admin/servicos")({ component: ServicesPage });
 
-function Servicos() {
-  const { shopId, shop } = useCurrentShop();
+function formatDuration(minutes: number): string {
+  if (!minutes || minutes <= 0) return "0 min";
+  if (minutes < 60) return `${minutes} min`;
+  const hrs = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) return `${hrs}h`;
+  return `${hrs}h ${mins}min`;
+}
+
+function ServicesPage() {
+  const { shopId } = useCurrentShop();
   const qc = useQueryClient();
-  const canManage = shop?.role === "owner" || shop?.role === "admin";
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
+
+  // Shop details for the public profile link
+  const { data: barbershop } = useQuery({
+    queryKey: ["admin-config-servicos", shopId],
+    enabled: !!shopId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("barbershops").select("slug").eq("id", shopId!).single();
+      if (error) throw error;
+      return data;
+    }
+  });
 
   const { data: services, isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-services", shopId],
@@ -33,13 +63,15 @@ function Servicos() {
     queryFn: () => barbershopService.getServices(shopId!),
   });
 
-  const deleteMut = useMutation({
-    mutationFn: (id: string) => barbershopService.deleteService(id),
+  const toggleStatusMut = useMutation({
+    mutationFn: async ({ id, active }: { id: string, active: boolean }) => {
+      return barbershopService.updateService(id, { active });
+    },
     onSuccess: () => {
-      toast.success("Serviço excluído.");
+      toast.success("Status atualizado.");
       qc.invalidateQueries({ queryKey: ["admin-services", shopId] });
     },
-    onError: (err: any) => toast.error(err.message || "Erro ao excluir."),
+    onError: () => toast.error("Não foi possível atualizar o status. Tente novamente.")
   });
 
   const handleEdit = (s: Service) => {
@@ -52,129 +84,175 @@ function Servicos() {
     setFormOpen(true);
   };
 
-  const handleClose = () => {
-    setFormOpen(false);
-    setTimeout(() => setEditingService(null), 300);
+  const handleToggleActive = (s: Service) => {
+    if (s.active) {
+      if (window.confirm("Desativar este serviço?\\nClientes deixarão de vê-lo no perfil público enquanto ele estiver inativo.")) {
+        toggleStatusMut.mutate({ id: s.id, active: false });
+      }
+    } else {
+      toggleStatusMut.mutate({ id: s.id, active: true });
+    }
   };
 
-  if (!shopId) return null;
+  if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
+        <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada à sua conta.</h2>
+        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsável pela conta.</p>
+      </div>
+    );
+  }
+
+  const activeCount = services?.filter(s => s.active).length || 0;
+  const totalCount = services?.length || 0;
+  const hasSlug = Boolean(barbershop?.slug);
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
-      {/* HEADER */}
-      <div className="flex items-center justify-between border-b border-border/40 bg-card/40 p-4 sm:p-5 backdrop-blur-md shrink-0">
-        <div>
-          <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground">Serviços</h1>
-          <p className="text-xs sm:text-sm text-muted-foreground">Gerencie o catálogo de serviços da barbearia</p>
+    <div className="space-y-8 max-w-5xl mx-auto pt-4 pb-12 px-4 sm:px-6">
+      <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border/40 pb-6">
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-accent">CATÁLOGO DA UNIDADE</p>
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">Serviços e preços</h1>
+          <p className="text-sm text-muted-foreground max-w-xl">Organize os serviços que sua barbearia oferece e mantenha as informações claras para os clientes.</p>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-md mt-4 w-fit">
+            <Info className="h-3 w-3" />
+            <span>Serviços ativos podem aparecer no perfil público da sua barbearia.</span>
+          </div>
         </div>
-        {canManage && (
-          <Button onClick={handleCreate} className="bg-accent text-accent-foreground shrink-0 h-11 px-4">
-            <Plus className="mr-2 h-4 w-4 hidden sm:block" />
-            <span className="hidden sm:inline">Cadastrar</span>
-            <span className="sm:hidden">Novo</span>
-          </Button>
-        )}
-      </div>
+        <Button onClick={handleCreate} className="h-11 px-6 font-bold uppercase tracking-wider text-xs shrink-0 w-full sm:w-auto">
+          <Plus className="h-4 w-4 mr-2" /> Novo serviço
+        </Button>
+      </header>
 
-      <ScrollArea className="flex-1 bg-background/50">
-        <div className="mx-auto max-w-4xl p-4 sm:p-6 pb-24">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <div className="lg:col-span-2 space-y-6">
+          
           {isLoading ? (
             <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="h-24 animate-pulse rounded-xl border border-border/40 bg-muted/30" />
+              <Skeleton className="h-4 w-32 mb-6" />
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-28 w-full rounded-xl" />
               ))}
             </div>
           ) : isError ? (
-            <div className="flex flex-col items-center justify-center p-12 text-center">
-              <span className="text-muted-foreground mb-4">Ocorreu um erro ao carregar os serviços.</span>
-              <Button onClick={() => refetch()} variant="outline">Tentar novamente</Button>
-            </div>
-          ) : !Array.isArray(services) || services.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/20 py-20 text-center">
-              <Scissors className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="font-serif text-lg font-bold text-foreground">Você ainda não cadastrou serviços.</h3>
-              <p className="text-sm text-muted-foreground max-w-sm mt-1">
-                Adicione cortes, barbas, tratamentos e outros serviços oferecidos.
-              </p>
-              {canManage && (
-                <Button onClick={handleCreate} className="mt-6 bg-accent text-accent-foreground font-bold h-11 px-6">
-                  Cadastrar primeiro serviço
-                </Button>
-              )}
-            </div>
+            <Card className="p-8 text-center bg-card border-destructive/20 space-y-4">
+              <AlertTriangle className="h-10 w-10 text-destructive/40 mx-auto" />
+              <h3 className="text-lg font-bold">Não foi possível carregar os serviços.</h3>
+              <p className="text-muted-foreground text-sm">Tente novamente em alguns instantes.</p>
+              <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
+                <RefreshCcw className="h-4 w-4 mr-2" /> Tentar novamente
+              </Button>
+            </Card>
+          ) : totalCount === 0 ? (
+            <Card className="p-12 text-center bg-card border-dashed border-border/60">
+              <Scissors className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
+              <h3 className="text-xl font-bold font-serif mb-2">Você ainda não cadastrou serviços.</h3>
+              <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">Comece adicionando os serviços principais da sua barbearia.</p>
+              <Button onClick={handleCreate} className="font-bold uppercase tracking-wider text-xs">
+                Cadastrar primeiro serviço
+              </Button>
+            </Card>
           ) : (
-            <div className="space-y-3">
-              {services.map((s) => (
-                <Card key={s.id} className={`group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-border/40 transition-colors hover:border-accent/50 ${!s.active ? 'opacity-60 bg-muted/20' : 'bg-card'}`}>
-                  
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent/10">
-                      <Scissors className="h-6 w-6 text-accent" />
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-foreground text-base">{s.name}</h3>
-                        {!s.active && <Badge variant="outline" className="text-[10px] text-muted-foreground uppercase border-border">Inativo</Badge>}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" /> {minutes(s.duration_min)}
-                        </span>
-                        <span className="flex items-center gap-1 font-semibold text-accent">
-                          <DollarSign className="h-3 w-3" /> {brl(Number(s.price || 0))}
-                        </span>
-                        {s.sort !== null && s.sort > 0 && (
-                          <span className="flex items-center gap-1">
-                            <GripVertical className="h-3 w-3 opacity-50" /> Ordem: {s.sort}
-                          </span>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                <span>{totalCount} {totalCount === 1 ? 'serviço cadastrado' : 'serviços cadastrados'}</span>
+                <span className="h-1 w-1 rounded-full bg-border" />
+                <span className="text-accent">{activeCount} {activeCount === 1 ? 'ativo' : 'ativos'}</span>
+              </div>
+              
+              <div className="grid gap-3">
+                {services.map((s) => (
+                  <Card key={s.id} className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-border/40 transition-colors ${!s.active ? 'opacity-60 bg-muted/10' : 'bg-card hover:border-accent/40'}`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-base truncate">{s.name}</h3>
+                        {s.active ? (
+                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-emerald-500/30 bg-emerald-500/10 text-emerald-500">Ativo</span>
+                        ) : (
+                          <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border border-border bg-muted text-muted-foreground">Inativo</span>
                         )}
                       </div>
+                      
                       {s.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-1 mt-1 opacity-80">{s.description}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1 max-w-xl">{s.description}</p>
                       )}
+                      
+                      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-foreground font-medium">
+                        <span className="flex items-center gap-1.5 opacity-80">
+                          <Clock className="h-3.5 w-3.5" /> {formatDuration(s.duration_min)}
+                        </span>
+                        <span className="flex items-center gap-1.5 font-bold text-accent">
+                          <DollarSign className="h-3.5 w-3.5" /> {brl(Number(s.price || 0))}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-
-                  {canManage && (
-                    <div className="mt-4 flex items-center justify-end gap-2 sm:mt-0 pt-3 sm:pt-0 border-t border-border/40 sm:border-none">
-                      <Button variant="outline" className="h-10 px-3" onClick={() => handleEdit(s)} aria-label={`Editar ${s.name}`}>
-                        <Pencil className="mr-2 h-4 w-4" /> Editar
+                    
+                    <div className="flex items-center gap-2 sm:self-center self-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/20 w-full sm:w-auto">
+                      <Button variant="outline" size="sm" onClick={() => handleToggleActive(s)} className={`flex-1 sm:flex-none text-xs font-bold uppercase tracking-wider h-9 ${s.active ? 'hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30' : 'hover:bg-emerald-500/10 hover:text-emerald-500 hover:border-emerald-500/30'}`}>
+                        {s.active ? 'Desativar' : 'Ativar'}
                       </Button>
-                      <Button 
-                        variant="outline" 
-                        className="text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/20 h-10 w-10 p-0 shrink-0"
-                        aria-label={`Excluir ${s.name}`}
-                        onClick={() => {
-                          if (confirm(`Excluir permanentemente o serviço "${s.name}"? Agendamentos passados não perderão o registro do serviço em seus totais, mas links podem quebrar.`)) {
-                            deleteMut.mutate(s.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(s)} className="flex-1 sm:flex-none text-xs font-bold uppercase tracking-wider h-9">
+                        Editar
                       </Button>
                     </div>
-                  )}
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
         </div>
-      </ScrollArea>
+        
+        {/* PUBLIC PROFILE INFO CARD */}
+        <div className="space-y-6">
+          <Card className="p-5 bg-muted/10 border-border/40 shadow-sm sticky top-24">
+            <h3 className="text-sm font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Eye className="h-4 w-4 text-accent" />
+              Como seus serviços aparecem
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Mantenha nome, duração e preço atualizados para que o perfil da sua barbearia apresente informações mais claras.
+            </p>
+            {hasSlug ? (
+              <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
+                <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil público</Link>
+              </Button>
+            ) : (
+              <div className="space-y-3 pt-3 border-t border-border/40">
+                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pública.</p>
+                <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider">
+                  <Link to="/admin/configuracoes">Editar perfil</Link>
+                </Button>
+              </div>
+            )}
+          </Card>
+        </div>
+      </div>
 
       <ServiceFormDialog 
         open={formOpen} 
-        onClose={handleClose} 
-        shopId={shopId} 
+        onClose={() => setFormOpen(false)} 
         service={editingService} 
-        onSuccess={() => qc.invalidateQueries({ queryKey: ["admin-services", shopId] })}
+        shopId={shopId} 
+        onSuccess={() => refetch()} 
       />
     </div>
   );
 }
 
-// -----------------------------------------------------------------------------
-
-function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
+function ServiceFormDialog({ 
+  open, 
+  onClose, 
+  service, 
+  shopId, 
+  onSuccess 
+}: { 
+  open: boolean; 
+  onClose: () => void; 
+  service: Service | null; 
+  shopId: string;
+  onSuccess: () => void;
+}) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -182,7 +260,6 @@ function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
     duration_min: "30",
     price: "0.00",
     active: true,
-    sort: "",
   });
 
   useEffect(() => {
@@ -194,7 +271,6 @@ function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
           duration_min: String(service.duration_min || 30),
           price: (service.price || 0).toFixed(2),
           active: service.active ?? true,
-          sort: service.sort ? String(service.sort) : "",
         });
       } else {
         setFormData({
@@ -203,7 +279,6 @@ function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
           duration_min: "30",
           price: "0.00",
           active: true,
-          sort: "",
         });
       }
     }
@@ -213,91 +288,92 @@ function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
     e.preventDefault();
     if (!shopId) return;
 
-    const dur = parseInt(formData.duration_min, 10);
-    const prc = parseFloat(formData.price.replace(",", "."));
-    const srt = formData.sort ? parseInt(formData.sort, 10) : null;
+    const name = formData.name.trim();
+    if (!name) return toast.error("Informe o nome do serviço.");
 
-    if (dur <= 0) return toast.error("A duração deve ser maior que zero.");
-    if (prc < 0) return toast.error("O preço não pode ser negativo.");
+    const dur = parseInt(formData.duration_min, 10);
+    if (isNaN(dur) || dur <= 0) return toast.error("Informe uma duração válida.");
+
+    const prc = parseFloat(formData.price.replace(",", "."));
+    if (isNaN(prc) || prc < 0) return toast.error("Informe um preço válido.");
 
     setLoading(true);
     try {
       if (service) {
         await barbershopService.updateService(service.id, {
-          name: formData.name,
-          description: formData.description,
+          name,
+          description: formData.description.trim() || null,
           duration_min: dur,
           price: prc,
           active: formData.active,
-          sort: srt,
         });
-        toast.success("Serviço atualizado!");
+        toast.success("Serviço atualizado com sucesso.");
       } else {
         await barbershopService.createService({
           barbershop_id: shopId,
-          name: formData.name,
-          description: formData.description,
+          name,
+          description: formData.description.trim() || null,
           duration_min: dur,
           price: prc,
           active: formData.active,
-          sort: srt || undefined,
-        } as any); 
-        toast.success("Serviço criado com sucesso!");
+        }); 
+        toast.success("Serviço cadastrado com sucesso.");
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Erro ao salvar serviço.");
+      toast.error("Não foi possível salvar o serviço. Tente novamente.");
+      if (import.meta.env.DEV) {
+        console.error("Service save error:", err);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md w-full max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden rounded-xl">
-        <DialogHeader className="p-5 border-b border-border/40 shrink-0 text-left">
-          <DialogTitle className="text-xl">{service ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
-          <DialogDescription>
-            {service ? "Altere as configurações deste serviço." : "Cadastre um novo serviço para sua barbearia."}
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
+        <DialogHeader className="p-6 pb-4 border-b border-border/40">
+          <DialogTitle className="font-serif text-xl">{service ? "Editar serviço" : "Novo serviço"}</DialogTitle>
+          <DialogDescription className="text-xs">
+            {service ? "Altere as informações deste serviço." : "Cadastre um novo serviço para sua barbearia."}
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 p-5">
-          <form id="service-form" onSubmit={handleSubmit} className="space-y-4">
-            
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="s-name">Nome do Serviço <span className="text-destructive">*</span></Label>
+              <Label htmlFor="s-name">Nome do serviço <span className="text-destructive">*</span></Label>
               <Input 
                 id="s-name" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
                 required 
-                placeholder="Ex: Corte Degradê" 
                 className="h-11"
+                placeholder="Ex: Corte Degradê"
               />
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="s-desc">Descrição <span className="text-muted-foreground font-normal">(Opcional)</span></Label>
+              <Label htmlFor="s-desc">Descrição</Label>
               <Textarea 
                 id="s-desc" 
                 value={formData.description} 
                 onChange={e => setFormData({ ...formData, description: e.target.value })} 
-                placeholder="Detalhes sobre o serviço..."
-                rows={3}
-                className="resize-none"
+                className="resize-none h-20"
+                placeholder="Detalhes opcionais que o cliente verá ao agendar..."
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="s-dur">Duração (minutos) <span className="text-destructive">*</span></Label>
+                <Label htmlFor="s-dur">Duração (Min) <span className="text-destructive">*</span></Label>
                 <Input 
                   id="s-dur" 
                   type="number"
-                  min="1"
-                  step="1"
+                  min="5"
+                  step="5"
                   value={formData.duration_min} 
                   onChange={e => setFormData({ ...formData, duration_min: e.target.value })} 
                   required 
@@ -319,46 +395,30 @@ function ServiceFormDialog({ open, onClose, shopId, service, onSuccess }: any) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="s-sort">Ordem de exibição</Label>
-                <Input 
-                  id="s-sort" 
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="Ex: 1"
-                  value={formData.sort} 
-                  onChange={e => setFormData({ ...formData, sort: e.target.value })} 
-                  className="h-11"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-muted/20 border border-border/40 rounded-xl mt-2">
+            <div className="flex items-center justify-between p-4 border border-border/40 rounded-xl bg-muted/10">
               <div className="space-y-0.5">
-                <Label htmlFor="s-active" className="text-base cursor-pointer">Serviço Ativo</Label>
-                <p className="text-xs text-muted-foreground">Clientes poderão ver e agendar.</p>
+                <Label className="text-sm">Serviço ativo</Label>
+                <p className="text-[10px] text-muted-foreground">Exibir no perfil público</p>
               </div>
               <Switch 
-                id="s-active" 
-                checked={formData.active}
-                onCheckedChange={c => setFormData({ ...formData, active: c })}
+                checked={formData.active} 
+                onCheckedChange={c => setFormData({ ...formData, active: c })} 
               />
             </div>
+          </div>
 
-          </form>
-        </ScrollArea>
-        
-        <div className="p-5 border-t border-border/40 shrink-0 flex flex-col sm:flex-row justify-end gap-3 bg-background">
-          <Button type="button" variant="outline" className="h-11" onClick={onClose} disabled={loading}>
-            Cancelar
-          </Button>
-          <Button type="submit" form="service-form" disabled={loading} className="h-11 bg-accent text-accent-foreground font-bold">
-            {loading ? "Salvando..." : "Salvar Serviço"}
-          </Button>
-        </div>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+            <Button type="button" variant="outline" onClick={onClose} className="h-10 text-xs font-bold uppercase tracking-wider" disabled={loading}>
+              Cancelar
+            </Button>
+            <Button type="submit" className="h-10 text-xs font-bold uppercase tracking-wider px-6" disabled={loading}>
+              {loading ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
 }
+
+
