@@ -20,15 +20,46 @@ import { appointmentService } from "@/services/appointment.service";
 import { z } from "zod";
 
 const searchSchema = z.object({
-  barbershop: z.string().optional(),
-  service: z.string().optional(),
-  professional: z.string().optional(),
+  barbershop: z.string().catch("").optional(),
+  service: z.string().catch("").optional(),
+  professional: z.string().catch("").optional(),
 });
 
 export const Route = createFileRoute("/agendar")({
   validateSearch: (search) => searchSchema.parse(search),
   component: BookingPage,
+  errorComponent: BookingErrorBoundary,
 });
+
+function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => void }) {
+  console.error("Booking route error", error);
+  const isChunkError = error.name === "ChunkLoadError" || error.message.includes("Failed to fetch dynamically imported module") || error.message.includes("Importing a module script failed");
+  if (isChunkError) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-accent mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versão do BARBEOS está disponível.</h2>
+          <p className="text-muted-foreground mb-8">Atualize a página para continuar.</p>
+          <Button onClick={() => window.location.reload()} className="font-bold uppercase tracking-wider text-xs px-6">Atualizar agora</Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+  return (
+    <PublicLayout>
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+        <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
+        <h2 className="text-xl font-bold font-serif mb-2">Não foi possível abrir o agendamento.</h2>
+        <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes ou escolha outra barbearia.</p>
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
+          <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
+          <Button asChild className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
+        </div>
+      </div>
+    </PublicLayout>
+  );
+}
 
 const STEPS = ["Serviço", "Profissional", "Data e horário", "Confirmar"] as const;
 
@@ -175,9 +206,9 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar o agendamento.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar os dados para agendamento.</h2>
           <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
-          <Button onClick={() => window.location.reload()} variant="outline">Tentar novamente</Button>
+          <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
         </div>
       </PublicLayout>
     );
@@ -201,7 +232,31 @@ function BookingPage() {
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <h2 className="text-xl font-bold font-serif mb-2">Barbearia não encontrada.</h2>
           <p className="text-muted-foreground mb-8">Volte para a lista e escolha outra unidade.</p>
-          <Button asChild variant="outline"><Link to="/barbearias">Voltar para lista</Link></Button>
+          <Button asChild variant="outline" className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (!svcsLoading && services.length === 0) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Nenhum serviço disponível para esta barbearia.</h2>
+          <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  if (!prosLoading && pros.length === 0) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
+          <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
+          <h2 className="text-xl font-bold font-serif mb-2">Nenhum profissional disponível para agendamento.</h2>
+          <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
     );
