@@ -30,8 +30,12 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
+import { useOnboardingStatus } from '@/hooks/use-onboarding';
+import { CheckCircle2 as CheckCircle2Icon } from 'lucide-react';
+
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
+  { to: "/admin/onboarding", label: "Primeiros passos", icon: CheckCircle2Icon, exact: true },
   { to: "/admin/agenda", label: "Agenda", icon: Calendar, exact: false },
   { to: "/admin/caixa", label: "Caixa", icon: DollarSign, exact: false },
   { to: "/admin/pdv", label: "PDV", icon: ShoppingCart, exact: false },
@@ -102,8 +106,23 @@ function AdminShell() {
   const loc = useLocation();
   const { user } = useAuth();
   const { shopId, shops, setShopId, refresh } = useCurrentShop();
+  
   const { theme, toggle } = useTheme();
   const [openSidebar, setOpenSidebar] = useState(false);
+  
+  const { data: onboarding } = useOnboardingStatus(shopId);
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return sessionStorage.getItem("onboarding_banner_dismissed") === "true";
+    }
+    return false;
+  });
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    sessionStorage.setItem("onboarding_banner_dismissed", "true");
+  };
+
 
   return (
     <div className="relative min-h-screen bg-background selection:bg-accent/30 selection:text-accent-foreground">
@@ -131,8 +150,27 @@ function AdminShell() {
 
       <AdminSidebar navItems={NAV} open={openSidebar} setOpen={setOpenSidebar} />
 
+      
       <div className="relative z-10 flex flex-col md:pl-64">
+        {onboarding && !onboarding.isFullyComplete && !bannerDismissed && (
+          <div className="bg-accent text-accent-foreground px-4 py-3 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-2">
+              <CheckCircle2Icon className="h-5 w-5" />
+              <p className="text-sm font-semibold">Complete a configuração da sua barbearia para começar a atender online.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link to="/admin/onboarding" className="text-xs font-bold uppercase tracking-wider bg-background/20 hover:bg-background/30 px-3 py-1.5 rounded-lg transition-colors">
+                Continuar configuração
+              </Link>
+              <button onClick={dismissBanner} className="p-1 hover:bg-background/20 rounded-full transition-colors">
+                <span className="sr-only">Fechar</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
         <AdminHeader 
+ 
           shopId={shopId} 
           shops={shops} 
           setShopId={setShopId} 
@@ -208,3 +246,4 @@ function AdminShell() {
     </div>
   );
 }
+
