@@ -22,6 +22,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowRight,
+  Clock,
+  Info,
   Instagram
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
@@ -404,7 +406,25 @@ function ConfigPage() {
             </section>
           )}
 
-          {/* 4. DANGER ZONE */}
+            {/* 4. HORÁRIOS DE FUNCIONAMENTO (EM BREVE) */}
+            {!isLoading && barbershop && (
+              <section className="space-y-4 pt-8">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Horários de funcionamento
+                </h2>
+                <Card className="p-6 bg-muted/10 border-dashed border-border/40 rounded-xl text-center flex flex-col items-center">
+                  <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
+                  <h3 className="font-bold text-foreground">Horários de funcionamento em preparação</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-2 max-w-sm">Esta configuração estará disponível em breve. Enquanto isso, mantenha os serviços e a equipe atualizados.</p>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-md mt-2">
+                    <Info className="h-3 w-3 shrink-0" />
+                    <span>Esses horários representam o funcionamento da unidade e não alteram automaticamente os horários disponíveis para agendamento.</span>
+                  </div>
+                </Card>
+              </section>
+            )}
+
+            {/* 5. DANGER ZONE */}
           {isOwner && !isLoading && barbershop && (
             <section className="space-y-4 pt-12 border-t border-border/20">
               <h2 className="text-sm font-bold uppercase tracking-wider text-destructive flex items-center gap-2">

@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCurrentShop } from "@/hooks/use-current-shop";
 import { useOnboardingStatus } from "@/hooks/use-onboarding";
 import { Card } from "@/components/ui/card";
@@ -153,16 +153,13 @@ function OnboardingPage() {
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold flex items-center gap-2">
                     <Clock className="h-4 w-4 text-muted-foreground" />
-                    Horários de funcionamento
+                    Horários de funcionamento em preparação
                   </h4>
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-2 py-0.5 rounded">Em breve</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">Configuração de grade da loja. A agenda operará com base nos horários dos profissionais.</p>
+                <p className="text-sm text-muted-foreground mt-1">Esta configuração estará disponível em breve. Enquanto isso, mantenha os serviços e a equipe atualizados.</p>
               </div>
             </div>
-            <Button asChild variant="outline" className="shrink-0 w-full sm:w-auto pointer-events-none opacity-50">
-              <Link to="/admin/configuracoes">Configurar horários</Link>
-            </Button>
           </div>
 
           {/* 5. Review */}
