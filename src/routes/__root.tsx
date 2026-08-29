@@ -55,39 +55,14 @@ function getReadableError(error: unknown): string {
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
+  console.error("Unhandled application error", error);
   const router = useRouter();
-  const loc = useRouterState({ select: (s) => s.location });
-  const isDev = import.meta.env.DEV;
+  const isDevelopment = import.meta.env.DEV;
 
-  if (isDev) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="max-w-2xl w-full border border-destructive bg-destructive/10 p-6 backdrop-blur-md overflow-hidden">
-          <h1 className="font-serif text-xl font-bold text-destructive">
-            React Error (Development Only)
-          </h1>
-          <p className="text-xs text-muted-foreground mt-2 mb-4">
-            Path: {loc?.pathname}
-          </p>
-          <pre className="whitespace-pre-wrap break-words text-[11px] font-mono text-destructive/90 bg-black/5 p-4 overflow-auto max-h-[60vh]">
-            {error instanceof Error ? `${error.message}\n\n${error.stack}` : getReadableError(error)}
-          </pre>
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={() => {
-                router.invalidate();
-                reset();
-              }}
-              className="bg-destructive text-destructive-foreground px-4 py-2 text-xs font-bold uppercase tracking-wider hover:bg-destructive/90"
-            >
-              Recarregar
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const safeErrorMessage =
+    error instanceof Error && error.message
+      ? error.message.slice(0, 180)
+      : "Erro inesperado.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -96,11 +71,15 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Ops! Ocorreu um problema ao carregar
         </h1>
         <p className="mt-2 text-xs text-muted-foreground">
-          N√£o se preocupe, tente recarregar ou voltar para a p√°gina inicial.
+          N„o se preocupe, tente recarregar ou voltar para a p·gina inicial.
         </p>
-        <p className="mt-3 text-xs text-muted-foreground break-words text-left bg-muted/30 p-2 rounded">
-          Diagn√≥stico: {error instanceof Error && error.message ? error.message.slice(0, 220) : "Erro inesperado na aplica√ß√£o."}
-        </p>
+        
+        {isDevelopment ? (
+          <p className="mt-4 break-words text-xs text-muted-foreground text-left bg-muted/30 p-2 rounded">
+            DiagnÛstico: {safeErrorMessage}
+          </p>
+        ) : null}
+        
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
@@ -114,8 +93,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-none border border-border bg-card px-5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            onClick={() => reset()}
           >
-            In√≠cio
+            Voltar ao inÌcio
           </Link>
         </div>
       </div>
@@ -231,3 +211,4 @@ function RootComponent() {
     </ThemeProvider>
   );
 }
+
