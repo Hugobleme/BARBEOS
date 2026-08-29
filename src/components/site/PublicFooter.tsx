@@ -20,10 +20,13 @@ export function PublicFooter() {
           </div>
 
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Produto</div>
-            <p className="mt-4 text-sm leading-relaxed">
-              <Link to="/para-barbearias" className="text-muted-foreground hover:text-accent transition-colors">Para Barbearias</Link>
-            </p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Institucional</div>
+            <ul className="mt-4 space-y-3 text-sm leading-relaxed">
+              <li><Link to="/ajuda" className="text-muted-foreground hover:text-accent transition-colors">Ajuda</Link></li>
+              <li><Link to="/privacidade" className="text-muted-foreground hover:text-accent transition-colors">Privacidade</Link></li>
+              <li><Link to="/termos" className="text-muted-foreground hover:text-accent transition-colors">Termos de Uso</Link></li>
+              <li><Link to="/para-barbearias" className="text-muted-foreground hover:text-accent transition-colors">Para barbearias</Link></li>
+            </ul>
           </div>
 
           <div>

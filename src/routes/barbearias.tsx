@@ -19,6 +19,12 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/barbearias")({
+  head: () => ({
+    meta: [
+      { title: "Encontrar Barbearias | BARBEOS" },
+      { name: "description", content: "Encontre as melhores barbearias na sua regiÃ£o e agende seu horÃ¡rio." },
+    ],
+  }),
   validateSearch: (search) => searchSchema.parse(search),
   component: BarbeariasPage,
 });
@@ -158,7 +164,7 @@ function BarbeariasPage() {
           </div>
         ) : error ? (
           <div className="border border-destructive/20 bg-destructive/5 p-8 text-center rounded-xl">
-            <h2 className="text-xl font-bold text-destructive">Não foi possível carregar as barbearias.</h2>
+            <h2 className="text-xl font-bold text-destructive">Nï¿½o foi possï¿½vel carregar as barbearias.</h2>
             <p className="mt-2 text-sm text-muted-foreground">Tente novamente em alguns instantes.</p>
             <Button onClick={() => refetch()} variant="outline" className="mt-4 border-destructive/30 text-destructive">Tentar novamente</Button>
           </div>
