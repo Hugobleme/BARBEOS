@@ -606,7 +606,7 @@ function Landing() {
           </div>
         </div>
       </section>
-      <AuroraFab barbershopId={DEMO_BARBERSHOP_ID} barbershopName="BarberOS Demo" />
+      
     </PublicLayout>
   );
 }
