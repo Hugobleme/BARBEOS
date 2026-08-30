@@ -1,9 +1,24 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+﻿import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   nitro: {
     preset: "vercel",
+  },
+  build: {
+    target: 'esnext',
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-router': ['@tanstack/react-router'],
+          'vendor-query': ['@tanstack/react-query'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-ui': ['framer-motion', 'lucide-react', 'date-fns', 'clsx', 'tailwind-merge', 'zod'],
+        }
+      }
+    }
   },
   plugins: [
     VitePWA({

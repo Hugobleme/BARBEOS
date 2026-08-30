@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -21,9 +21,9 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-[390px] w-full text-center sm:max-w-md">
         <h1 className="text-6xl font-serif font-bold text-accent sm:text-7xl">404</h1>
-        <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">Página não encontrada</h2>
+        <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">PÃ¡gina nÃ£o encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A página que você está procurando não existe ou foi movida.
+          A pÃ¡gina que vocÃª estÃ¡ procurando nÃ£o existe ou foi movida.
         </p>
         {import.meta.env.DEV && loc?.pathname && (
           <p className="mt-2 font-mono text-[10px] text-muted-foreground/50 truncate">
@@ -35,7 +35,7 @@ function NotFoundComponent() {
             to="/"
             className="flex min-h-11 items-center justify-center rounded-none bg-accent px-6 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-colors hover:bg-foreground hover:text-background"
           >
-            Voltar ao Início
+            Voltar ao InÃ­cio
           </Link>
           <Link
             to="/barbearias"
@@ -71,12 +71,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Ops! Ocorreu um problema ao carregar
         </h1>
         <p className="mt-2 text-xs text-muted-foreground">
-          N�o se preocupe, tente recarregar ou voltar para a p�gina inicial.
+          Nï¿½o se preocupe, tente recarregar ou voltar para a pï¿½gina inicial.
         </p>
         
         {isDevelopment ? (
           <p className="mt-4 break-words text-xs text-muted-foreground text-left bg-muted/30 p-2 rounded">
-            Diagn�stico: {safeErrorMessage}
+            Diagnï¿½stico: {safeErrorMessage}
           </p>
         ) : null}
         
@@ -95,7 +95,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             className="inline-flex items-center justify-center rounded-none border border-border bg-card px-5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             onClick={() => reset()}
           >
-            Voltar ao in�cio
+            Voltar ao inï¿½cio
           </Link>
         </div>
       </div>
@@ -108,11 +108,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BarberOS — Gestão e agendamento para barbearias" },
-      { name: "description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro." },
+      { title: "BarberOS â€” GestÃ£o e agendamento para barbearias" },
+      { name: "description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestÃ£o de clientes, equipe e financeiro." },
       { name: "author", content: "BarberOS" },
-      { property: "og:title", content: "BarberOS — Gestão e agendamento para barbearias" },
-      { property: "og:description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro." },
+      { property: "og:title", content: "BarberOS â€” GestÃ£o e agendamento para barbearias" },
+      { property: "og:description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestÃ£o de clientes, equipe e financeiro." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@BarberOS" },
@@ -134,34 +134,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", sizes: "192x192", href: "/icon-192.png" },
       { rel: "apple-touch-icon", sizes: "512x512", href: "/icon-512.png" },
     ],
-    scripts: [
-      {
-        children: `
-          // FORÇAR LIMPEZA DE CACHE E SERVICE WORKER ANTIGO
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-              for(let registration of registrations) {
-                registration.unregister();
-                console.log('Service Worker desregistrado para limpar cache.');
-              }
-            });
-          }
-          if ('caches' in window) {
-            caches.keys().then(function(names) {
-              for (let name of names) {
-                caches.delete(name);
-                console.log('Cache deletado: ', name);
-              }
-            });
-          }
-          // Recarregar a página uma única vez se acabamos de limpar
-          if (!sessionStorage.getItem('cache_cleared_v1')) {
-            sessionStorage.setItem('cache_cleared_v1', 'true');
-            window.location.reload(true);
-          }
-        `,
-      }
-    ],
+    scripts: [],
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -213,4 +186,6 @@ function RootComponent() {
     </ThemeProvider>
   );
 }
+
+
 
