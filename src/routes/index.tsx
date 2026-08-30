@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { barbershopService, BarbershopWithStats } from "@/serviceSábarbershop.service";
+import { barbershopService, BarbershopWithStats } from "@/services/barbershop.service";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -610,5 +610,6 @@ function Landing() {
     </PublicLayout>
   );
 }
+
 
 
