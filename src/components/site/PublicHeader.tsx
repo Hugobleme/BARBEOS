@@ -8,7 +8,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 const NAV_LINKS = [
   { to: "/barbearias", label: "Barbearias" },
-  { to: "/servicos", label: "ServiÃ§os" },
+  { to: "/servicos", label: "Serviços" },
   { to: "/profissionais", label: "Equipe" },
   { to: "/clube", label: "Clube VIP" },
   { to: "/para-barbearias", label: "Para Barbearias" },
