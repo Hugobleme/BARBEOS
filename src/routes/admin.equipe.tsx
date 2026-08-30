@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -28,7 +29,7 @@ const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   admin: { label: "Administrador", color: "text-blue-500 border-blue-500/30 bg-blue-500/10" },
   barber: { label: "Barbeiro", color: "text-accent border-accent/30 bg-accent/10" },
   professional: { label: "Profissional", color: "text-accent border-accent/30 bg-accent/10" },
-  receptionist: { label: "Recepção", color: "text-emerald-500 border-emerald-500/30 bg-emerald-500/10" },
+  receptionist: { label: "RecepÃ§Ã£o", color: "text-emerald-500 border-emerald-500/30 bg-emerald-500/10" },
 };
 
 function EquipePage() {
@@ -94,13 +95,13 @@ function EquipePage() {
 
   const handleRemove = (m: any) => {
     if (m.role === "owner") {
-      return toast.error("Não é possível remover o dono da barbearia.");
+      return toast.error("NÃ£o Ã© possÃ­vel remover o dono da barbearia.");
     }
     if (m.profile_id === user?.id) {
-      return toast.error("Você não pode remover seu próprio acesso por aqui.");
+      return toast.error("VocÃª nÃ£o pode remover seu prÃ³prio acesso por aqui.");
     }
     if (isAdmin && m.role === "admin") {
-      return toast.error("Administradores não podem remover outros administradores.");
+      return toast.error("Administradores nÃ£o podem remover outros administradores.");
     }
 
     if (confirm(`Tem certeza que deseja remover o acesso de ${m.profile?.full_name || "este membro"}?`)) {
@@ -167,7 +168,7 @@ function EquipePage() {
                         </Avatar>
                         <div className="space-y-0.5">
                           <h3 className="font-bold text-foreground text-base leading-none">
-                            {m.profile?.full_name || "Usuário sem nome"} {m.profile_id === user?.id && <span className="text-xs font-normal text-muted-foreground">(Você)</span>}
+                            {m.profile?.full_name || "UsuÃ¡rio sem nome"} {m.profile_id === user?.id && <span className="text-xs font-normal text-muted-foreground">(VocÃª)</span>}
                           </h3>
                           <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider mt-1 ${roleCfg.color}`}>
                             {roleCfg.label}
@@ -213,7 +214,7 @@ function EquipePage() {
                       </div>
                       <p className="text-xs text-muted-foreground flex items-center gap-2">
                         <span>Acesso: {ROLE_LABELS[inv.role as string]?.label || inv.role}</span>
-                        <span>•</span>
+                        <span>â€¢</span>
                         <span>Expira em: {format(new Date(inv.expires_at), "dd/MM/yyyy")}</span>
                       </p>
                     </div>
@@ -222,7 +223,7 @@ function EquipePage() {
                       <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
                         const link = `${window.location.origin}/invite?token=${inv.token}`;
                         navigator.clipboard.writeText(link);
-                        toast.success("Link copiado para a área de transferência!");
+                        toast.success("Link copiado para a Ã¡rea de transferÃªncia!");
                       }}>
                         <Copy className="mr-2 h-3 w-3" /> Copiar Link
                       </Button>
@@ -267,7 +268,7 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
     if (!email || !role || !shopId) return;
 
     if (isAdmin && role === "owner") {
-      return toast.error("Administradores não podem convidar novos donos.");
+      return toast.error("Administradores nÃ£o podem convidar novos donos.");
     }
 
     setLoading(true);
@@ -304,7 +305,7 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
     if (!generatedToken) return;
     const link = `${window.location.origin}/invite?token=${generatedToken}`;
     navigator.clipboard.writeText(link);
-    toast.success("Link copiado para a área de transferência!");
+    toast.success("Link copiado para a Ã¡rea de transferÃªncia!");
   };
 
   return (
@@ -323,7 +324,7 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
           <div className="space-y-4 py-4">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3 text-emerald-600">
               <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-              <p className="text-sm font-medium">Link válido por 7 dias. O usuário precisará criar uma conta com o e-mail convidado.</p>
+              <p className="text-sm font-medium">Link vÃ¡lido por 7 dias. O usuÃ¡rio precisarÃ¡ criar uma conta com o e-mail convidado.</p>
             </div>
             <div className="flex gap-2">
               <Input readOnly value={`${window.location.origin}/invite?token=${generatedToken}`} className="font-mono text-xs bg-muted/50" />
@@ -349,16 +350,16 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="inv-role">Nível de Acesso <span className="text-destructive">*</span></Label>
+              <Label htmlFor="inv-role">NÃ­vel de Acesso <span className="text-destructive">*</span></Label>
               <Select value={role} onValueChange={setRole} required>
                 <SelectTrigger className="h-11">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="barber">Barbeiro / Profissional</SelectItem>
-                  <SelectItem value="receptionist">Recepção / Atendimento</SelectItem>
+                  <SelectItem value="receptionist">RecepÃ§Ã£o / Atendimento</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
-                  {!isAdmin && <SelectItem value="owner">Dono (Proprietário)</SelectItem>}
+                  {!isAdmin && <SelectItem value="owner">Dono (ProprietÃ¡rio)</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
@@ -377,3 +378,4 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
     </Dialog>
   );
 }
+

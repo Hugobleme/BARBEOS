@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,13 +6,12 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { brl, minutes } from "@/lib/format";
 import { useAuth } from "@/hooks/use-auth";
-import { Check, ChevronLeft, ChevronRight, Scissors, User as UserIcon, Calendar as Cal, Clock, AlertCircle } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Scissors, User as UserIcon, Clock, AlertCircle, MapPin } from "lucide-react";
 import { addDays, format, isBefore, startOfDay, parse, addMinutes } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -39,8 +38,8 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-accent mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versão do BARBEOS está disponível.</h2>
-          <p className="text-muted-foreground mb-8">Atualize a página para continuar.</p>
+          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versÃ£o do BARBEOS estÃ¡ disponÃ­vel.</h2>
+          <p className="text-muted-foreground mb-8">Atualize a pÃ¡gina para continuar.</p>
           <Button onClick={() => window.location.reload()} className="font-bold uppercase tracking-wider text-xs px-6">Atualizar agora</Button>
         </div>
       </PublicLayout>
@@ -50,7 +49,7 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
     <PublicLayout>
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
         <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2">Não foi possível abrir o agendamento.</h2>
+        <h2 className="text-xl font-bold font-serif mb-2">NÃ£o foi possÃ­vel abrir o agendamento.</h2>
         <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes ou escolha outra barbearia.</p>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
           <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
@@ -61,7 +60,7 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
   );
 }
 
-const STEPS = ["Serviço", "Profissional", "Data e horário", "Confirmar"] as const;
+const STEPS = ["ServiÃ§o", "Profissional", "Data e horÃ¡rio", "Confirmar"] as const;
 
 type Service = { id: string; name: string; duration_min: number; price: number; description: string | null };
 type Pro = { id: string; display_name: string; avatar_url: string | null; specialties: string[] | null };
@@ -77,7 +76,7 @@ function BookingPage() {
     queryKey: ["book-shop", shopSlug],
     enabled: !!shopSlug,
     queryFn: async () => {
-      const { data, error } = await supabase.from("barbershops").select("id, name, slug, logo_url").eq("slug", shopSlug).eq("active", true).maybeSingle();
+      const { data, error } = await supabase.from("barbershops").select("id, name, slug, logo_url, is_sponsored").eq("slug", shopSlug!).eq("active", true).maybeSingle();
       if (error) {
         if (import.meta.env.DEV) console.error("Booking page load failed: barbershop", error);
         throw error;
@@ -162,25 +161,132 @@ function BookingPage() {
   const totalPrice = pickedServices.reduce((a, b) => a + (Number(b.price) || 0), 0);
 
   // Availability calculation (mocking time slots based on totalDuration for simplicity, but integrating nicely)
-  // In a real app we'd query working_hours and existing appointments. 
-  // We'll generate simple slots here.
-  const { data: slots = [], isLoading: slotsLoading, error: slotsError } = useQuery({
-    queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
-    enabled: !!shop?.id && !!date && pickedServices.length > 0,
-    queryFn: async () => {
-      try {
-        const generated: string[] = [];
-        const base = parse("09:00", "HH:mm", date!);
-        for(let i=0; i<18; i++) {
-          generated.push(format(addMinutes(base, i * 30), "HH:mm"));
+  const { data: slotsData, isLoading: slotsLoading, error: slotsError } = useQuery({
+      queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
+      enabled: !!shop?.id && !!date && pickedServices.length > 0 && pros.length > 0,
+      queryFn: async () => {
+        try {
+          const selectedPros = proId === "any" ? pros : pros.filter(p => p.id === proId);
+          if (selectedPros.length === 0) return { times: [], timeToPros: {} };
+          
+          const proIds = selectedPros.map(p => p.id);
+          const jsDay = date!.getDay();
+          
+          const { data: whData, error: whErr } = await supabase
+            .from("working_hours")
+            .select("*")
+            .in("professional_id", proIds)
+            .eq("weekday", jsDay);
+          if (whErr) throw whErr;
+          
+          const dayStart = startOfDay(date!);
+          const dayEnd = addDays(dayStart, 1);
+          
+          const { data: toData, error: toErr } = await supabase
+            .from("time_off")
+            .select("*")
+            .in("professional_id", proIds)
+            .gte("end_at", dayStart.toISOString())
+            .lt("start_at", dayEnd.toISOString());
+          if (toErr) throw toErr;
+          
+          const { data: appData, error: appErr } = await supabase
+            .from("appointments")
+            .select("professional_id, scheduled_start, scheduled_end, status")
+            .in("professional_id", proIds)
+            .neq("status", "cancelled")
+            .gte("scheduled_end", dayStart.toISOString())
+            .lt("scheduled_start", dayEnd.toISOString());
+          if (appErr) throw appErr;
+
+          const times = new Set<string>();
+          const timeToPros: Record<string, string[]> = {};
+          const now = new Date();
+
+          const parseTime = (tStr: string, base: Date) => {
+            const [h, m] = tStr.split(":");
+            const d = new Date(base);
+            d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
+            return d;
+          };
+
+          for (const pro of selectedPros) {
+            const whList = whData.filter(w => w.professional_id === pro.id);
+            if (whList.length === 0) continue;
+            
+            const toList = toData.filter(t => t.professional_id === pro.id).map(t => ({
+              start: new Date(t.start_at).getTime(),
+              end: new Date(t.end_at).getTime()
+            }));
+            
+            const appList = appData.filter(a => a.professional_id === pro.id).map(a => ({
+              start: new Date(a.scheduled_start).getTime(),
+              end: new Date(a.scheduled_end).getTime()
+            }));
+
+            for (const wh of whList) {
+              const startDateTime = parseTime(wh.start_time, dayStart);
+              const endDateTime = parseTime(wh.end_time, dayStart);
+              let breakStartTime = null;
+              let breakEndTime = null;
+              
+              if (wh.break_start && wh.break_end) {
+                breakStartTime = parseTime(wh.break_start, dayStart);
+                breakEndTime = parseTime(wh.break_end, dayStart);
+              }
+              
+              let current = startDateTime;
+              while (addMinutes(current, totalDuration) <= endDateTime) {
+                const currentEnd = addMinutes(current, totalDuration);
+                
+                if (current < now) {
+                  current = addMinutes(current, 30);
+                  continue;
+                }
+                
+                if (breakStartTime && breakEndTime) {
+                  if (current < breakEndTime && currentEnd > breakStartTime) {
+                    current = addMinutes(current, 30);
+                    continue;
+                  }
+                }
+                
+                const cTime = current.getTime();
+                const eTime = currentEnd.getTime();
+                
+                let conflict = false;
+                for (const t of toList) {
+                  if (cTime < t.end && eTime > t.start) { conflict = true; break; }
+                }
+                if (conflict) { current = addMinutes(current, 30); continue; }
+                
+                for (const a of appList) {
+                  if (cTime < a.end && eTime > a.start) { conflict = true; break; }
+                }
+                if (conflict) { current = addMinutes(current, 30); continue; }
+                
+                const timeStr = format(current, "HH:mm");
+                times.add(timeStr);
+                if (!timeToPros[timeStr]) timeToPros[timeStr] = [];
+                timeToPros[timeStr].push(pro.id);
+                
+                current = addMinutes(current, 30);
+              }
+            }
+          }
+          
+          return {
+            times: Array.from(times).sort(),
+            timeToPros
+          };
+        } catch (err) {
+          if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
+          throw err;
         }
-        return generated;
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
-        throw err;
-      }
-    },
-  });
+      },
+    });
+
+    const slots = slotsData?.times || [];
 
   const canNext = useMemo(() => {
     if (step === 0) return pickedServices.length > 0;
@@ -206,7 +312,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar os dados para agendamento.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">NÃ£o foi possÃ­vel carregar os dados para agendamento.</h2>
           <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
           <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
         </div>
@@ -230,7 +336,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Barbearia não encontrada.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Barbearia nÃ£o encontrada.</h2>
           <p className="text-muted-foreground mb-8">Volte para a lista e escolha outra unidade.</p>
           <Button asChild variant="outline" className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
@@ -243,7 +349,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Nenhum serviço disponível para esta barbearia.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Nenhum serviÃ§o disponÃ­vel para esta barbearia.</h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
@@ -255,7 +361,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Nenhum profissional disponível para agendamento.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Nenhum profissional disponÃ­vel para agendamento.</h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
@@ -288,7 +394,7 @@ function BookingPage() {
         }
       }
 
-      if (!currentUser) throw new Error("Falha na autenticação.");
+      if (!currentUser) throw new Error("Falha na autenticaÃ§Ã£o.");
 
       // Verify or create customer record
       const { data: existingCustomer } = await supabase.from("customers").select("id").eq("profile_id", currentUser.id).eq("barbershop_id", shop.id).maybeSingle();
@@ -312,7 +418,7 @@ function BookingPage() {
       start.setHours(parseInt(hour), parseInt(min), 0, 0);
       const end = addMinutes(start, totalDuration);
 
-      const finalProId = proId === "any" ? pros[Math.floor(Math.random() * pros.length)]?.id : proId;
+      const finalProId = proId === "any" ? (slotsData?.timeToPros[time!]?.[0] || pros[0]?.id) : proId;
 
       await appointmentService.createAppointment({
         barbershopId: shop.id,
@@ -332,7 +438,12 @@ function BookingPage() {
       toast.success("Agendamento solicitado!");
       navigate({ to: "/minha-conta" });
     } catch (err: any) {
-      toast.error(err.message || "Erro ao confirmar agendamento.");
+      const msg = err.message || "";
+      if (msg.includes("row-level security") || err.code === "42501") {
+        toast.error("Não foi possível confirmar o agendamento. Esta barbearia pode não estar aceitando reservas no momento.");
+      } else {
+        toast.error(msg || "Erro ao confirmar agendamento.");
+      }
     } finally {
       setSubmitting(false);
     }
@@ -377,12 +488,27 @@ function BookingPage() {
     );
   }
 
+  if (shop && !shop.is_sponsored) {
+    return (
+      <PublicLayout>
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
+          <AlertCircle className="h-16 w-16 text-amber-500/50 mb-4" />
+          <h1 className="text-2xl font-bold font-serif mb-2">Agendamento indisponível</h1>
+          <p className="text-muted-foreground mb-8">Esta barbearia não aceita agendamentos online pelo aplicativo no momento.</p>
+          <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
+            <Link to="/barbearias">Ver barbearias parceiras</Link>
+          </Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
   return (
     <PublicLayout>
       <div className="bg-muted/30 border-b border-border/40 py-6 md:py-10">
         <div className="mx-auto max-w-3xl px-4 flex items-center justify-between">
           <div>
-            <h1 className="font-serif text-2xl md:text-3xl font-bold">Agendar horário</h1>
+            <h1 className="font-serif text-2xl md:text-3xl font-bold">Agendar horÃ¡rio</h1>
             <p className="text-muted-foreground text-sm flex items-center gap-1.5 mt-1">
               <MapPin className="h-3.5 w-3.5" /> {shop.name}
             </p>
@@ -412,15 +538,15 @@ function BookingPage() {
           
           {step === 0 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-              <h2 className="text-lg font-bold mb-4">Escolha os serviços</h2>
+              <h2 className="text-lg font-bold mb-4">Escolha os serviÃ§os</h2>
               {!svcsLoading && services.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Nenhum serviço disponível para esta barbearia.</p>
+                  <p className="text-muted-foreground text-sm">Nenhum serviÃ§o disponÃ­vel para esta barbearia.</p>
                 ) : svcsLoading ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
               ) : services.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum serviço disponível.</p>
+                <p className="text-muted-foreground text-sm">Nenhum serviÃ§o disponÃ­vel.</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {services.map(s => {
@@ -454,15 +580,15 @@ function BookingPage() {
 
           {step === 1 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-              <h2 className="text-lg font-bold mb-4">Com quem você prefere?</h2>
+              <h2 className="text-lg font-bold mb-4">Com quem vocÃª prefere?</h2>
               {!prosLoading && pros.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Nenhum profissional disponível para agendamento.</p>
+                  <p className="text-muted-foreground text-sm">Nenhum profissional disponÃ­vel para agendamento.</p>
                 ) : prosLoading ? (
                 <div className="grid grid-cols-2 gap-3">
                   {[1,2].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
               ) : pros.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum profissional disponível.</p>
+                <p className="text-muted-foreground text-sm">Nenhum profissional disponÃ­vel.</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <button
@@ -475,7 +601,7 @@ function BookingPage() {
                       <UserIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <span className="font-bold text-sm">Qualquer um</span>
-                    <span className="text-[10px] text-muted-foreground mt-1">Disponível mais cedo</span>
+                    <span className="text-[10px] text-muted-foreground mt-1">DisponÃ­vel mais cedo</span>
                   </button>
                   {pros.map(p => (
                     <button
@@ -512,13 +638,13 @@ function BookingPage() {
               </Card>
 
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">Horário</h2>
+                <h2 className="text-lg font-bold mb-4">HorÃ¡rio</h2>
                 {!date ? (
                   <p className="text-sm text-muted-foreground">Selecione uma data primeiro.</p>
                 ) : slotsLoading ? (
                   <div className="flex justify-center p-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>
                 ) : slots.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum horário disponível para esta data.</p>
+                  <p className="text-sm text-muted-foreground">Nenhum horÃ¡rio disponÃ­vel para esta data.</p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {slots.map(t => (
@@ -544,11 +670,11 @@ function BookingPage() {
                 <h2 className="text-lg font-bold mb-4">Resumo</h2>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Serviços</span>
+                    <span className="text-muted-foreground">ServiÃ§os</span>
                     <span className="text-right font-medium">{pickedServices.map(s => s.name).join(" + ")}</span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">Duração</span>
+                    <span className="text-muted-foreground">DuraÃ§Ã£o</span>
                     <span className="text-right font-medium">{minutes(totalDuration)}</span>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -558,7 +684,7 @@ function BookingPage() {
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">Data/Hora</span>
                     <span className="text-right font-medium text-accent">
-                      {date && format(date, "dd/MM/yyyy", { locale: ptBR })} às {time}
+                      {date && format(date, "dd/MM/yyyy", { locale: ptBR })} Ã s {time}
                     </span>
                   </div>
                   <div className="border-t border-border/40 pt-3 mt-3 flex justify-between items-center text-base">
@@ -570,14 +696,14 @@ function BookingPage() {
 
               {!user && (
                 <Card className="p-4 md:p-6 border-border/40 shadow-sm bg-accent/5">
-                  <h2 className="text-lg font-bold mb-4">Identificação</h2>
+                  <h2 className="text-lg font-bold mb-4">IdentificaÃ§Ã£o</h2>
                   
                   <div className="flex rounded-lg overflow-hidden border border-border/60 mb-4 text-xs font-bold">
                     <button 
                       onClick={() => setAuthMode("login")}
                       className={`flex-1 py-2 text-center transition-colors ${authMode === "login" ? "bg-accent text-accent-foreground" : "bg-card hover:bg-muted"}`}
                     >
-                      Já tenho conta
+                      JÃ¡ tenho conta
                     </button>
                     <button 
                       onClick={() => setAuthMode("register")}
@@ -652,6 +778,10 @@ function BookingPage() {
     </PublicLayout>
   );
 }
+
+
+
+
 
 
 

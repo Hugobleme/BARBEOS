@@ -9,16 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermosRouteImport } from './routes/termos'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ServicosRouteImport } from './routes/servicos'
 import { Route as RecuperarSenhaRouteImport } from './routes/recuperar-senha'
 import { Route as ProfissionaisRouteImport } from './routes/profissionais'
+import { Route as PrivacidadeRouteImport } from './routes/privacidade'
+import { Route as ParaBarbeariasRouteImport } from './routes/para-barbearias'
 import { Route as MinhaContaRouteImport } from './routes/minha-conta'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ClubeRouteImport } from './routes/clube'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as BioRouteImport } from './routes/bio'
 import { Route as BarbeariasRouteImport } from './routes/barbearias'
+import { Route as AjudaRouteImport } from './routes/ajuda'
 import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +36,7 @@ import { Route as AdminProfissionaisRouteImport } from './routes/admin.profissio
 import { Route as AdminPortfolioRouteImport } from './routes/admin.portfolio'
 import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
 import { Route as AdminPacotesRouteImport } from './routes/admin.pacotes'
+import { Route as AdminOnboardingRouteImport } from './routes/admin.onboarding'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminFidelidadeRouteImport } from './routes/admin.fidelidade'
@@ -50,6 +55,11 @@ import { Route as ApiVoiceEndSessionRouteImport } from './routes/api/voice/end-s
 import { Route as ApiVoiceChatRouteImport } from './routes/api/voice/chat'
 import { Route as BSlugPProSlugRouteImport } from './routes/b.$slug.p.$proSlug'
 
+const TermosRoute = TermosRouteImport.update({
+  id: '/termos',
+  path: '/termos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -68,6 +78,16 @@ const RecuperarSenhaRoute = RecuperarSenhaRouteImport.update({
 const ProfissionaisRoute = ProfissionaisRouteImport.update({
   id: '/profissionais',
   path: '/profissionais',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadeRoute = PrivacidadeRouteImport.update({
+  id: '/privacidade',
+  path: '/privacidade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParaBarbeariasRoute = ParaBarbeariasRouteImport.update({
+  id: '/para-barbearias',
+  path: '/para-barbearias',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MinhaContaRoute = MinhaContaRouteImport.update({
@@ -98,6 +118,11 @@ const BioRoute = BioRouteImport.update({
 const BarbeariasRoute = BarbeariasRouteImport.update({
   id: '/barbearias',
   path: '/barbearias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AjudaRoute = AjudaRouteImport.update({
+  id: '/ajuda',
+  path: '/ajuda',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendarRoute = AgendarRouteImport.update({
@@ -163,6 +188,11 @@ const AdminPdvRoute = AdminPdvRouteImport.update({
 const AdminPacotesRoute = AdminPacotesRouteImport.update({
   id: '/pacotes',
   path: '/pacotes',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
@@ -255,16 +285,20 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
+  '/ajuda': typeof AjudaRoute
   '/barbearias': typeof BarbeariasRoute
   '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
   '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
+  '/para-barbearias': typeof ParaBarbeariasRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
@@ -278,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
@@ -296,16 +331,20 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agendar': typeof AgendarRoute
+  '/ajuda': typeof AjudaRoute
   '/barbearias': typeof BarbeariasRoute
   '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
   '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
+  '/para-barbearias': typeof ParaBarbeariasRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
@@ -319,6 +358,7 @@ export interface FileRoutesByTo {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
@@ -339,16 +379,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/agendar': typeof AgendarRoute
+  '/ajuda': typeof AjudaRoute
   '/barbearias': typeof BarbeariasRoute
   '/bio': typeof BioRoute
   '/cadastro': typeof CadastroRoute
   '/clube': typeof ClubeRoute
   '/login': typeof LoginRoute
   '/minha-conta': typeof MinhaContaRoute
+  '/para-barbearias': typeof ParaBarbeariasRoute
+  '/privacidade': typeof PrivacidadeRoute
   '/profissionais': typeof ProfissionaisRoute
   '/recuperar-senha': typeof RecuperarSenhaRoute
   '/servicos': typeof ServicosRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/termos': typeof TermosRoute
   '/admin/agenda': typeof AdminAgendaRoute
   '/admin/avaliacoes': typeof AdminAvaliacoesRoute
   '/admin/caixa': typeof AdminCaixaRoute
@@ -362,6 +406,7 @@ export interface FileRoutesById {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
   '/admin/portfolio': typeof AdminPortfolioRoute
@@ -383,16 +428,20 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agendar'
+    | '/ajuda'
     | '/barbearias'
     | '/bio'
     | '/cadastro'
     | '/clube'
     | '/login'
     | '/minha-conta'
+    | '/para-barbearias'
+    | '/privacidade'
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
     | '/sitemap.xml'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
@@ -406,6 +455,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
@@ -424,16 +474,20 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/agendar'
+    | '/ajuda'
     | '/barbearias'
     | '/bio'
     | '/cadastro'
     | '/clube'
     | '/login'
     | '/minha-conta'
+    | '/para-barbearias'
+    | '/privacidade'
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
     | '/sitemap.xml'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
@@ -447,6 +501,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
@@ -466,16 +521,20 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/agendar'
+    | '/ajuda'
     | '/barbearias'
     | '/bio'
     | '/cadastro'
     | '/clube'
     | '/login'
     | '/minha-conta'
+    | '/para-barbearias'
+    | '/privacidade'
     | '/profissionais'
     | '/recuperar-senha'
     | '/servicos'
     | '/sitemap.xml'
+    | '/termos'
     | '/admin/agenda'
     | '/admin/avaliacoes'
     | '/admin/caixa'
@@ -489,6 +548,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
     | '/admin/portfolio'
@@ -509,16 +569,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AgendarRoute: typeof AgendarRoute
+  AjudaRoute: typeof AjudaRoute
   BarbeariasRoute: typeof BarbeariasRoute
   BioRoute: typeof BioRoute
   CadastroRoute: typeof CadastroRoute
   ClubeRoute: typeof ClubeRoute
   LoginRoute: typeof LoginRoute
   MinhaContaRoute: typeof MinhaContaRoute
+  ParaBarbeariasRoute: typeof ParaBarbeariasRoute
+  PrivacidadeRoute: typeof PrivacidadeRoute
   ProfissionaisRoute: typeof ProfissionaisRoute
   RecuperarSenhaRoute: typeof RecuperarSenhaRoute
   ServicosRoute: typeof ServicosRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  TermosRoute: typeof TermosRoute
   AvaliarAppointmentIdRoute: typeof AvaliarAppointmentIdRoute
   BSlugRoute: typeof BSlugRouteWithChildren
   ConviteTokenRoute: typeof ConviteTokenRoute
@@ -529,6 +593,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/termos': {
+      id: '/termos'
+      path: '/termos'
+      fullPath: '/termos'
+      preLoaderRoute: typeof TermosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -555,6 +626,20 @@ declare module '@tanstack/react-router' {
       path: '/profissionais'
       fullPath: '/profissionais'
       preLoaderRoute: typeof ProfissionaisRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidade': {
+      id: '/privacidade'
+      path: '/privacidade'
+      fullPath: '/privacidade'
+      preLoaderRoute: typeof PrivacidadeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/para-barbearias': {
+      id: '/para-barbearias'
+      path: '/para-barbearias'
+      fullPath: '/para-barbearias'
+      preLoaderRoute: typeof ParaBarbeariasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/minha-conta': {
@@ -597,6 +682,13 @@ declare module '@tanstack/react-router' {
       path: '/barbearias'
       fullPath: '/barbearias'
       preLoaderRoute: typeof BarbeariasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ajuda': {
+      id: '/ajuda'
+      path: '/ajuda'
+      fullPath: '/ajuda'
+      preLoaderRoute: typeof AjudaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agendar': {
@@ -688,6 +780,13 @@ declare module '@tanstack/react-router' {
       path: '/pacotes'
       fullPath: '/admin/pacotes'
       preLoaderRoute: typeof AdminPacotesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/onboarding': {
+      id: '/admin/onboarding'
+      path: '/onboarding'
+      fullPath: '/admin/onboarding'
+      preLoaderRoute: typeof AdminOnboardingRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/franquia': {
@@ -826,6 +925,7 @@ interface AdminRouteChildren {
   AdminFidelidadeRoute: typeof AdminFidelidadeRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
+  AdminOnboardingRoute: typeof AdminOnboardingRoute
   AdminPacotesRoute: typeof AdminPacotesRoute
   AdminPdvRoute: typeof AdminPdvRoute
   AdminPortfolioRoute: typeof AdminPortfolioRoute
@@ -849,6 +949,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFidelidadeRoute: AdminFidelidadeRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
+  AdminOnboardingRoute: AdminOnboardingRoute,
   AdminPacotesRoute: AdminPacotesRoute,
   AdminPdvRoute: AdminPdvRoute,
   AdminPortfolioRoute: AdminPortfolioRoute,
@@ -874,16 +975,20 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AgendarRoute: AgendarRoute,
+  AjudaRoute: AjudaRoute,
   BarbeariasRoute: BarbeariasRoute,
   BioRoute: BioRoute,
   CadastroRoute: CadastroRoute,
   ClubeRoute: ClubeRoute,
   LoginRoute: LoginRoute,
   MinhaContaRoute: MinhaContaRoute,
+  ParaBarbeariasRoute: ParaBarbeariasRoute,
+  PrivacidadeRoute: PrivacidadeRoute,
   ProfissionaisRoute: ProfissionaisRoute,
   RecuperarSenhaRoute: RecuperarSenhaRoute,
   ServicosRoute: ServicosRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  TermosRoute: TermosRoute,
   AvaliarAppointmentIdRoute: AvaliarAppointmentIdRoute,
   BSlugRoute: BSlugRouteWithChildren,
   ConviteTokenRoute: ConviteTokenRoute,

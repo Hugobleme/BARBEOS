@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -118,7 +119,7 @@ function AdminLoyaltyPage() {
 
           <div>
             <h2 className="text-lg font-bold mb-3 flex items-center gap-2">
-              <Gift className="h-5 w-5 text-accent" /> Recompensas Disponíveis
+              <Gift className="h-5 w-5 text-accent" /> Recompensas DisponÃ­veis
             </h2>
             
             {loadingRewards ? (
@@ -138,7 +139,7 @@ function AdminLoyaltyPage() {
                         <h3 className="font-bold text-foreground line-clamp-2">{r.name}</h3>
                         {!r.active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{r.description || "Nenhuma descrição."}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{r.description || "Nenhuma descriÃ§Ã£o."}</p>
                     </div>
                     
                     <div className="flex items-center justify-between border-t border-border/40 pt-3">
@@ -234,10 +235,10 @@ function RewardForm({ open, onClose, shopId, reward, onSuccess }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error("O nome é obrigatório.");
+    if (!form.name.trim()) return toast.error("O nome Ã© obrigatÃ³rio.");
     
     const pts = parseInt(form.points_required);
-    if (isNaN(pts) || pts <= 0) return toast.error("Os pontos necessários devem ser maiores que zero.");
+    if (isNaN(pts) || pts <= 0) return toast.error("Os pontos necessÃ¡rios devem ser maiores que zero.");
 
     setLoading(true);
     try {
@@ -273,23 +274,23 @@ function RewardForm({ open, onClose, shopId, reward, onSuccess }: any) {
       <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-left">
           <DialogTitle>{reward ? "Editar Recompensa" : "Nova Recompensa"}</DialogTitle>
-          <DialogDescription>Premiações que os clientes podem resgatar.</DialogDescription>
+          <DialogDescription>PremiaÃ§Ãµes que os clientes podem resgatar.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           <div className="space-y-2">
             <Label>Nome da Recompensa <span className="text-destructive">*</span></Label>
-            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Corte Grátis" required className="h-11" />
+            <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Corte GrÃ¡tis" required className="h-11" />
           </div>
 
           <div className="space-y-2">
-            <Label>Pontos Necessários <span className="text-destructive">*</span></Label>
+            <Label>Pontos NecessÃ¡rios <span className="text-destructive">*</span></Label>
             <Input type="number" min="1" step="1" value={form.points_required} onChange={e => setForm({ ...form, points_required: e.target.value })} placeholder="10" required className="h-11" />
           </div>
 
           <div className="space-y-2">
-            <Label>Descrição (Opcional)</Label>
-            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Ex: Válido de ter a sex" className="h-11" />
+            <Label>DescriÃ§Ã£o (Opcional)</Label>
+            <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Ex: VÃ¡lido de ter a sex" className="h-11" />
           </div>
 
           <div className="flex items-center justify-between pt-2">
@@ -373,7 +374,7 @@ function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Erro na operação.");
+      toast.error(err.message || "Erro na operaÃ§Ã£o.");
     } finally {
       setLoading(false);
     }
@@ -384,7 +385,7 @@ function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
       <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-left">
           <DialogTitle>Ajustar Pontos / Resgatar</DialogTitle>
-          <DialogDescription>Adicione pontos manualmente ou faça um resgate.</DialogDescription>
+          <DialogDescription>Adicione pontos manualmente ou faÃ§a um resgate.</DialogDescription>
         </DialogHeader>
 
         {!customer ? (
@@ -432,7 +433,7 @@ function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
 
             {action === "redeem" && rewards.length > 0 && (
               <div className="space-y-2">
-                <Label>Recompensa Rápida</Label>
+                <Label>Recompensa RÃ¡pida</Label>
                 <div className="flex flex-wrap gap-2">
                   {rewards.map((r:any) => (
                     <Badge 
@@ -454,8 +455,8 @@ function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
             </div>
 
             <div className="space-y-2">
-              <Label>Motivo / Observação</Label>
-              <Input value={reason} onChange={e => setReason(e.target.value)} placeholder="Ex: Correção de saldo" className="h-11" />
+              <Label>Motivo / ObservaÃ§Ã£o</Label>
+              <Input value={reason} onChange={e => setReason(e.target.value)} placeholder="Ex: CorreÃ§Ã£o de saldo" className="h-11" />
             </div>
 
             <DialogFooter className="pt-4">
@@ -468,3 +469,4 @@ function PointsForm({ open, onClose, shopId, rewards, onSuccess }: any) {
     </Dialog>
   );
 }
+

@@ -201,15 +201,25 @@ function ServicesDirectoryPage() {
                           <span className="font-serif text-xl font-bold text-accent">
                             {brl(Number(s.price))}
                           </span>
-                          <Button
-                            asChild
-                            size="sm"
-                            className="rounded-none bg-accent text-[10px] font-bold uppercase tracking-wider text-accent-foreground hover:bg-foreground hover:text-background"
-                          >
-                            <Link to="/agendar" search={{ barbershop: shop.slug }}>
-                              Agendar <ArrowRight className="ml-1 h-3 w-3" />
-                            </Link>
-                          </Button>
+                          {shop.is_sponsored ? (
+                            <Button
+                              asChild
+                              size="sm"
+                              className="rounded-none bg-amber-500 text-[10px] font-bold uppercase tracking-wider text-amber-950 hover:bg-amber-600"
+                            >
+                              <Link to="/agendar" search={{ barbershop: shop.slug }}>
+                                Agendar <ArrowRight className="ml-1 h-3 w-3" />
+                              </Link>
+                            </Button>
+                          ) : (
+                            <Button
+                              disabled
+                              size="sm"
+                              className="rounded-none bg-muted text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
+                            >
+                              Indisponível
+                            </Button>
+                          )}
                         </div>
                       </article>
                     ))}

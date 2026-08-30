@@ -1,4 +1,4 @@
-﻿import { Link } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { Scissors } from "lucide-react";
 
 export function PublicFooter() {
@@ -14,8 +14,7 @@ export function PublicFooter() {
               <span className="font-serif text-xl tracking-tight text-foreground">BarberOS</span>
             </Link>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Atendimento exclusivo, agendamento sem atritos. A tradiÃ§Ã£o da barbearia elevada ao
-              padrÃ£o contemporÃ¢neo.
+              Atendimento exclusivo, agendamento sem atritos. A tradição da barbearia elevada ao padrão contemporâneo.
             </p>
           </div>
 
@@ -30,30 +29,29 @@ export function PublicFooter() {
           </div>
 
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">EndereÃ§o</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Endereço</div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Rua Augusta, 1500<br />SÃ£o Paulo Â· SP
+              Rua Augusta, 1500<br />São Paulo — SP
             </p>
             <p className="mt-3 text-sm text-muted-foreground">(11) 99999-0000</p>
           </div>
 
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">HorÃ¡rio</div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">Horário</div>
             <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Seg â€“ Sex Â· 09h â€“ 19h<br />SÃ¡bado Â· 09h â€“ 17h
+              Seg — Sex • 09h — 19h<br />Sábado • 09h — 17h
             </p>
             <p className="mt-3 text-xs text-muted-foreground/70">
-              Cancelamento gratuito atÃ© 2h antes.
+              Cancelamento gratuito até 2h antes.
             </p>
           </div>
         </div>
 
         <div className="mt-14 flex flex-col items-center justify-between gap-3 border-t border-border/40 pt-6 text-[11px] uppercase tracking-[0.25em] text-muted-foreground md:flex-row">
-          <span>Â© {new Date().getFullYear()} BarberOS</span>
-          <span>Crafted with precision in SÃ£o Paulo</span>
+          <span>© {new Date().getFullYear()} BarberOS</span>
+          <span>Crafted with precision in São Paulo</span>
         </div>
       </div>
     </footer>
   );
 }
-

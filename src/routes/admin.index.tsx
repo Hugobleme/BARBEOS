@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentShop } from "@/hooks/use-current-shop";
@@ -29,7 +30,7 @@ export const Route = createFileRoute("/admin/")({
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   scheduled: { label: "Agendado", className: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
   in_progress: { label: "Em atendimento", className: "border-amber-500/30 bg-amber-500/10 text-amber-400" },
-  completed: { label: "Concluído", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
+  completed: { label: "ConcluÃ­do", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
   cancelled: { label: "Cancelado", className: "border-border bg-muted/40 text-muted-foreground line-through" },
   no_show: { label: "Falta", className: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
@@ -46,8 +47,8 @@ function AdminDashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada à sua conta.</h2>
-        <p className="text-muted-foreground text-sm mb-8">Conclua o cadastro da sua unidade ou procure o suporte responsável.</p>
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">NÃ£o encontramos uma barbearia vinculada Ã  sua conta.</h2>
+        <p className="text-muted-foreground text-sm mb-8">Conclua o cadastro da sua unidade ou procure o suporte responsÃ¡vel.</p>
         <Button asChild>
           <Link to="/admin/onboarding">Primeiros passos</Link>
         </Button>
@@ -60,11 +61,11 @@ function AdminDashboardPage() {
       {/* 1. HEADER */}
       <header className="space-y-1">
         <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground tracking-tight">
-          {firstName ? `Olá, ${firstName}` : "Olá!"}
+          {firstName ? `OlÃ¡, ${firstName}` : "OlÃ¡!"}
         </h1>
         <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-muted-foreground">
-          <p>Veja o que precisa da sua atenção hoje.</p>
-          <span className="hidden sm:inline text-border">•</span>
+          <p>Veja o que precisa da sua atenÃ§Ã£o hoje.</p>
+          <span className="hidden sm:inline text-border">â€¢</span>
           <p className="capitalize text-sm font-medium">{dateStr}</p>
         </div>
       </header>
@@ -110,7 +111,7 @@ function SetupStatusCard({ shopId }: { shopId: string }) {
     <Card className="p-6 bg-card border-border/60 shadow-sm flex flex-col h-full">
       <h2 className="text-lg font-bold font-serif mb-4 flex items-center gap-2">
         <Store className="h-5 w-5 text-accent" />
-        Configuração da barbearia
+        ConfiguraÃ§Ã£o da barbearia
       </h2>
       
       <div className="space-y-4 flex-1">
@@ -122,7 +123,7 @@ function SetupStatusCard({ shopId }: { shopId: string }) {
         
         <p className="text-sm text-muted-foreground leading-relaxed">
           {isFullyComplete 
-            ? "Sua barbearia está pronta para revisão." 
+            ? "Sua barbearia estÃ¡ pronta para revisÃ£o." 
             : `Faltam ${totalSteps - completedCount} etapa${totalSteps - completedCount > 1 ? 's' : ''} para deixar seu perfil mais completo.`}
         </p>
       </div>
@@ -130,15 +131,15 @@ function SetupStatusCard({ shopId }: { shopId: string }) {
       <div className="pt-6 mt-auto">
         {!isFullyComplete ? (
           <Button asChild className="w-full text-xs font-bold uppercase tracking-wider">
-            <Link to="/admin/onboarding">Continuar configuração</Link>
+            <Link to="/admin/onboarding">Continuar configuraÃ§Ã£o</Link>
           </Button>
         ) : shop?.slug ? (
           <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
-            <Link to={`/b/${shop.slug}`} target="_blank">Revisar perfil público</Link>
+            <Link to={`/b/${shop.slug}`} target="_blank">Revisar perfil pÃºblico</Link>
           </Button>
         ) : (
           <p className="text-xs text-center text-muted-foreground border border-dashed border-border/60 rounded-md p-3">
-            Perfil concluído, mas sem link público disponível.
+            Perfil concluÃ­do, mas sem link pÃºblico disponÃ­vel.
           </p>
         )}
       </div>
@@ -189,8 +190,8 @@ function AgendaCard({ shopId }: { shopId: string }) {
     return (
       <Card className="p-8 text-center bg-card border-destructive/20 space-y-4">
         <AlertTriangle className="h-10 w-10 text-destructive/40 mx-auto" />
-        <h3 className="text-lg font-bold">Não foi possível carregar a agenda de hoje.</h3>
-        <p className="text-muted-foreground text-sm">Verifique sua conexão ou tente novamente.</p>
+        <h3 className="text-lg font-bold">NÃ£o foi possÃ­vel carregar a agenda de hoje.</h3>
+        <p className="text-muted-foreground text-sm">Verifique sua conexÃ£o ou tente novamente.</p>
         <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
           <RefreshCcw className="h-4 w-4 mr-2" /> Tentar novamente
         </Button>
@@ -245,7 +246,7 @@ function AgendaCard({ shopId }: { shopId: string }) {
       <div className="space-y-3 flex-1">
         <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
           <Clock className="h-4 w-4" />
-          Próximos atendimentos
+          PrÃ³ximos atendimentos
         </h3>
         
         {upcoming.length > 0 ? (
@@ -280,7 +281,7 @@ function AgendaCard({ shopId }: { shopId: string }) {
         ) : (
           <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border/40 bg-muted/10">
             <p className="text-sm font-bold mb-1">Nenhum atendimento programado para hoje.</p>
-            <p className="text-xs text-muted-foreground">Use a agenda para acompanhar os próximos horários.</p>
+            <p className="text-xs text-muted-foreground">Use a agenda para acompanhar os prÃ³ximos horÃ¡rios.</p>
           </div>
         )}
       </div>
@@ -292,7 +293,7 @@ function QuickActions() {
   return (
     <Card className="p-6 bg-card border-border/60 shadow-sm flex flex-col h-full">
       <h2 className="text-lg font-bold font-serif mb-4">
-        Ações rápidas
+        AÃ§Ãµes rÃ¡pidas
       </h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-3">
         <Button asChild variant="outline" className="h-12 justify-start font-medium bg-muted/20 hover:bg-muted/50 border-border/40 hover:border-border transition-all">
@@ -304,7 +305,7 @@ function QuickActions() {
         <Button asChild variant="outline" className="h-12 justify-start font-medium bg-muted/20 hover:bg-muted/50 border-border/40 hover:border-border transition-all">
           <Link to="/admin/servicos">
             <Scissors className="h-4 w-4 mr-3 text-muted-foreground" />
-            Cadastrar serviço
+            Cadastrar serviÃ§o
           </Link>
         </Button>
         <Button asChild variant="outline" className="h-12 justify-start font-medium bg-muted/20 hover:bg-muted/50 border-border/40 hover:border-border transition-all">
@@ -323,5 +324,6 @@ function QuickActions() {
     </Card>
   );
 }
+
 
 

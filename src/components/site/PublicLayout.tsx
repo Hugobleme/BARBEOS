@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 import { PublicHeader } from "./PublicHeader";
 import { PublicFooter } from "./PublicFooter";
+import { BottomNavigation } from "./BottomNavigation";
 
 /**
  * Wraps public-facing pages in the Midnight Prestige dark theme.
@@ -9,10 +10,13 @@ import { PublicFooter } from "./PublicFooter";
 export function PublicLayout({ children }: { children: ReactNode }) {
   return (
     <div className="dark">
-      <div className="min-h-screen bg-background text-foreground selection:bg-accent/30">
+      <div className="min-h-screen bg-background text-foreground selection:bg-amber-500/30 pb-[60px] md:pb-0 flex flex-col">
         <PublicHeader />
-        {children}
+        <main className="flex-1">
+          {children}
+        </main>
         <PublicFooter />
+        <BottomNavigation />
       </div>
     </div>
   );

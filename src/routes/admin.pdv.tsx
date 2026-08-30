@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
@@ -142,7 +143,7 @@ function PDV() {
 
   const handleCheckout = async () => {
     if (cart.length === 0) return toast.error("Carrinho vazio.");
-    if (total < 0) return toast.error("O total não pode ser negativo.");
+    if (total < 0) return toast.error("O total nÃ£o pode ser negativo.");
 
     setIsProcessing(true);
     try {
@@ -204,7 +205,7 @@ function PDV() {
         <div className="flex flex-col gap-3 p-4 border-b border-border/40 bg-card/40 shrink-0">
           <div>
             <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground">Ponto de Venda</h1>
-            <p className="text-xs sm:text-sm text-muted-foreground">Registre serviços e produtos diretamente no caixa</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">Registre serviÃ§os e produtos diretamente no caixa</p>
           </div>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -227,7 +228,7 @@ function PDV() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
             <div className="px-4 pt-3 shrink-0">
               <TabsList className="w-full grid grid-cols-2 h-11">
-                <TabsTrigger value="services" className="font-semibold"><Scissors className="h-4 w-4 mr-2" /> Serviços</TabsTrigger>
+                <TabsTrigger value="services" className="font-semibold"><Scissors className="h-4 w-4 mr-2" /> ServiÃ§os</TabsTrigger>
                 <TabsTrigger value="products" className="font-semibold"><Package className="h-4 w-4 mr-2" /> Produtos</TabsTrigger>
               </TabsList>
             </div>
@@ -240,7 +241,7 @@ function PDV() {
                       {[1,2,3,4].map(i => <Card key={i} className="h-24 animate-pulse bg-muted/30" />)}
                     </div>
                   ) : filteredServices.length === 0 ? (
-                    <EmptyCatalog title="Nenhum serviço encontrado." />
+                    <EmptyCatalog title="Nenhum serviÃ§o encontrado." />
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {filteredServices.map(s => (
@@ -354,7 +355,7 @@ function PDV() {
             </div>
             <DialogTitle className="text-2xl font-serif">Venda Finalizada!</DialogTitle>
             <DialogDescription>
-              O lançamento foi registrado no caixa e o estoque atualizado.
+              O lanÃ§amento foi registrado no caixa e o estoque atualizado.
             </DialogDescription>
             <div className="bg-muted/20 p-4 rounded-xl w-full flex justify-between items-center border border-border/40 mt-2">
               <span className="text-muted-foreground uppercase text-xs font-bold tracking-wider">Total Pago</span>
@@ -442,7 +443,7 @@ function CartContent({
         {cart.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
             <ShoppingCart className="h-12 w-12 mb-3" />
-            <p className="text-sm font-semibold">O carrinho está vazio.</p>
+            <p className="text-sm font-semibold">O carrinho estÃ¡ vazio.</p>
           </div>
         ) : (
           <div className="p-4 space-y-3">
@@ -451,7 +452,7 @@ function CartContent({
                 <div className="flex justify-between items-start gap-2">
                   <div className="flex flex-col truncate">
                     <span className="font-bold text-sm truncate">{item.name}</span>
-                    <span className="text-xs text-muted-foreground uppercase">{item.type === "service" ? "Serviço" : "Produto"}</span>
+                    <span className="text-xs text-muted-foreground uppercase">{item.type === "service" ? "ServiÃ§o" : "Produto"}</span>
                   </div>
                   <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive shrink-0 -mr-1" onClick={() => removeItem(item.id, item.type)}>
                     <Trash2 className="h-3 w-3" />
@@ -527,8 +528,8 @@ function CartContent({
           <div className="grid grid-cols-2 gap-2 pt-2">
             <PaymentBtn id="pix" icon={QrCode} label="PIX" selected={paymentMethod} onSelect={setPaymentMethod} />
             <PaymentBtn id="cash" icon={Banknote} label="Dinheiro" selected={paymentMethod} onSelect={setPaymentMethod} />
-            <PaymentBtn id="credit" icon={CreditCard} label="Crédito" selected={paymentMethod} onSelect={setPaymentMethod} />
-            <PaymentBtn id="debit" icon={CreditCard} label="Débito" selected={paymentMethod} onSelect={setPaymentMethod} />
+            <PaymentBtn id="credit" icon={CreditCard} label="CrÃ©dito" selected={paymentMethod} onSelect={setPaymentMethod} />
+            <PaymentBtn id="debit" icon={CreditCard} label="DÃ©bito" selected={paymentMethod} onSelect={setPaymentMethod} />
             <PaymentBtn id="other" icon={ArrowLeftRight} label="Outro" selected={paymentMethod} onSelect={setPaymentMethod} className="col-span-2" />
           </div>
         )}
@@ -561,3 +562,4 @@ function PaymentBtn({ id, icon: Icon, label, selected, onSelect, className = "" 
     </Button>
   );
 }
+

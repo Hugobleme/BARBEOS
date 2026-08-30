@@ -210,7 +210,8 @@ export type Database = {
       barbershops: {
         Row: {
           active: boolean
-          address: Json | null
+            is_sponsored: boolean
+            address: Json | null
           banner_url: string | null
           contacts: Json | null
           created_at: string
@@ -225,7 +226,8 @@ export type Database = {
         }
         Insert: {
           active?: boolean
-          address?: Json | null
+            is_sponsored?: boolean
+            address?: Json | null
           banner_url?: string | null
           contacts?: Json | null
           created_at?: string
@@ -240,7 +242,8 @@ export type Database = {
         }
         Update: {
           active?: boolean
-          address?: Json | null
+            is_sponsored?: boolean
+            address?: Json | null
           banner_url?: string | null
           contacts?: Json | null
           created_at?: string
@@ -1668,3 +1671,4 @@ export const Constants = {
     },
   },
 } as const
+

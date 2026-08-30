@@ -71,12 +71,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           Ops! Ocorreu um problema ao carregar
         </h1>
         <p className="mt-2 text-xs text-muted-foreground">
-          Não se preocupe, tente recarregar ou voltar para a página inicial.
+          Nï¿½o se preocupe, tente recarregar ou voltar para a pï¿½gina inicial.
         </p>
         
         {isDevelopment ? (
           <p className="mt-4 break-words text-xs text-muted-foreground text-left bg-muted/30 p-2 rounded">
-            Diagnóstico: {safeErrorMessage}
+            Diagnï¿½stico: {safeErrorMessage}
           </p>
         ) : null}
         
@@ -95,7 +95,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
             className="inline-flex items-center justify-center rounded-none border border-border bg-card px-5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             onClick={() => reset()}
           >
-            Voltar ao início
+            Voltar ao inï¿½cio
           </Link>
         </div>
       </div>
@@ -175,7 +175,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <HeadContent />
+        <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+          <HeadContent />
       </head>
       <body>
         {children}
