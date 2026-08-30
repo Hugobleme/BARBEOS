@@ -1,8 +1,8 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { barbershopService, BarbershopWithStats } from "@/services/barbershop.service";
+import { barbershopService, BarbershopWithStats } from "@/serviceSábarbershop.service";
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,10 +25,10 @@ export const Route = createFileRoute("/")({
   validateSearch: (search) => searchSchema.parse(search),
   head: () => ({
     meta: [
-      { title: "BarberOS — Encontre e Agende nas Melhores Barbearias" },
-      { name: "description", content: "Atendimento exclusivo nas melhores barbearias do Brasil. Agende online em 30 segundos, disponível 24/7." },
-      { property: "og:title", content: "BarberOS — Barbearias Premium" },
-      { property: "og:description", content: "Reserve sua experiência em 30 segundos, 24/7." },
+      { title: "BarberOS â€” Encontre e Agende nas MelhoreSábarbearias" },
+      { name: "description", content: "Atendimento exclusivo nas melhoreSábarbearias do Brasil. Agende online em 30 segundos, disponÃ­vel 24/7." },
+      { property: "og:title", content: "BarberOS â€” Barbearias Premium" },
+      { property: "og:description", content: "Reserve sua experiÃªncia em 30 segundos, 24/7." },
       { property: "og:url", content: "/" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -96,7 +96,7 @@ function Landing() {
     staleTime: 1000 * 60 * 60,
   });
 
-  function handleSearchSubmit(e: React.FormEvent) {
+  function handleSearchSábmit(e: React.FormEvent) {
     e.preventDefault();
     navigate({
       to: "/barbearias",
@@ -109,7 +109,7 @@ function Landing() {
 
   return (
     <PublicLayout>
-      {/* Hero — Midnight Prestige */}
+      {/* Hero â€” Midnight Prestige */}
       <header className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-accent/10 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-4 py-16 md:px-6 md:py-24 lg:grid-cols-2">
@@ -128,22 +128,22 @@ function Landing() {
             </h1>
 
             <p className="max-w-md text-lg font-light leading-relaxed text-muted-foreground md:text-xl">
-              Encontre as melhores barbearias e reserve seu horário em 30 segundos. Sem ligações, sem espera — 24 horas por dia.
+              Encontre as melhoreSábarbearias e reserve seu horÃ¡rio em 30 segundos. Sem ligaÃ§Ãµes, sem espera â€” 24 horas por dia.
             </p>
 
-            {/* Caixa de Busca Rápida por Cidade/Bairro */}
-            <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3 sm:flex-row max-w-lg w-full">
+            {/* Caixa de Busca RÃ¡pida por Cidade/Bairro */}
+            <form onSábmit={handleSearchSábmit} className="flex flex-col gap-3 sm:flex-row max-w-lg w-full">
               <div className="relative flex-1 w-full">
                 <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
                 <Input
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  placeholder="Cidade ou bairro (ex: São Paulo, Jardins)..."
-                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur focus-visible:ring-accent w-full"
+                  placeholder="Cidade ou bairro (ex: SÃ£o Paulo, Jardins)..."
+                  className="h-14 rounded-none border-border bg-card/60 pl-11 text-sm backdrop-blur focus-viSáble:ring-accent w-full"
                 />
               </div>
               <Button
-                type="submit"
+                type="Sábmit"
                 size="lg"
                 className="h-14 min-h-11 w-full sm:w-auto rounded-none bg-accent px-8 text-[11px] font-bold uppercase tracking-[0.2em] text-accent-foreground hover:bg-foreground hover:text-background active:scale-95"
               >
@@ -154,7 +154,7 @@ function Landing() {
             {/* Chips de Cidades Populares */}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
               <span className="text-[10px] uppercase font-bold text-muted-foreground">Populares:</span>
-              {["São Paulo", "Rio de Janeiro", "Curitiba", "Belo Horizonte"].map((c) => (
+              {["SÃ£o Paulo", "Rio de Janeiro", "Curitiba", "Belo Horizonte"].map((c) => (
                 <Link
                   key={c}
                   to="/barbearias"
@@ -192,7 +192,7 @@ function Landing() {
                   ))}
                 </div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  4.9 em milhares de avaliações
+                  4.9 em milhares de avaliaÃ§Ãµes
                 </p>
               </div>
               <div className="h-10 w-px bg-border/60" />
@@ -201,7 +201,7 @@ function Landing() {
                   Agendamento 24/7
                 </span>
                 <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  Confirmação instantânea
+                  ConfirmaÃ§Ã£o instantÃ¢nea
                 </p>
               </div>
             </div>
@@ -219,7 +219,7 @@ function Landing() {
                 backgroundPosition: "center"
               }}
             >
-              {/* Gradient overlay sutil para manter a imagem brilhante e visível */}
+              {/* Gradient overlay sutil para manter a imagem brilhante e visÃ­vel */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none transition-opacity duration-1000 group-hover:opacity-90" />
 
               {/* Badge superior */}
@@ -227,7 +227,7 @@ function Landing() {
                 <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-black/60 px-3.5 py-1.5 backdrop-blur-md">
                   <Sparkles className="h-3.5 w-3.5 text-accent" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-white">
-                    Experiência Exclusiva
+                    ExperiÃªncia Exclusiva
                   </span>
                 </div>
               </div>
@@ -258,7 +258,7 @@ function Landing() {
         </div>
       </header>
 
-      {/* Seção: Barbearias em Destaque */}
+      {/* SeÃ§Ã£o: Barbearias em Destaque */}
       <section className="border-y border-border/60 bg-card/20 py-20 md:py-28">
         <div className="mx-auto max-w-7xl px-4 md:px-6">
           <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -270,7 +270,7 @@ function Landing() {
                 Barbearias em <span className="italic font-normal">Destaque</span>
               </h2>
               <p className="text-sm text-muted-foreground">
-                As unidades mais bem avaliadas para você agendar sua experiência.
+                As unidades maiSábem avaliadas para vocÃª agendar sua experiÃªncia.
               </p>
             </div>
 
@@ -281,7 +281,7 @@ function Landing() {
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent className="rounded-none border-border">
-                  <SelectItem value="rating">Mais bem avaliadas</SelectItem>
+                  <SelectItem value="rating">MaiSábem avaliadas</SelectItem>
                   <SelectItem value="popular">Mais populares</SelectItem>
                   <SelectItem value="recent">Mais recentes</SelectItem>
                 </SelectContent>
@@ -297,15 +297,15 @@ function Landing() {
             </div>
           ) : !featuredShops || featuredShops.length === 0 ? (
             <div className="border border-border p-12 text-center text-muted-foreground">
-              Nenhuma barbearia encontrada para esta localização.
+              Nenhuma barbearia encontrada para esta localizaÃ§Ã£o.
             </div>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {featuredShops.map((shop) => {
                 const addr = (shop.address ?? {}) as any;
-                const cityState = [addr.neighborhood || addr.district, addr.city || "São Paulo", addr.state || "SP"]
+                const cityState = [addr.neighborhood || addr.district, addr.city || "SÃ£o Paulo", addr.state || "SP"]
                   .filter(Boolean)
-                  .join(" · ");
+                  .join(" Â· ");
 
                 return (
                   <article
@@ -340,7 +340,7 @@ function Landing() {
                       </div>
 
                       <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                        {shop.description || "Atendimento premium com os melhores profissionais da região."}
+                        {shop.description || "Atendimento premium com os melhores profissionais da regiÃ£o."}
                       </p>
                     </div>
 
@@ -350,7 +350,7 @@ function Landing() {
                           <Star className="h-4 w-4 fill-current" />
                         </div>
                         <span className="font-mono text-sm font-bold">{shop.rating?.toFixed(1) ?? "5.0"}</span>
-                        <span className="text-[10px] text-muted-foreground">({shop.review_count || 12} avaliações)</span>
+                        <span className="text-[10px] text-muted-foreground">({shop.review_count || 12} avaliaÃ§Ãµes)</span>
                       </div>
 
                       <Button
@@ -371,31 +371,31 @@ function Landing() {
 
           <div className="mt-12 text-center">
             <Button asChild variant="outline" className="rounded-none border-border px-8 text-xs uppercase tracking-[0.2em]">
-              <Link to="/barbearias">Explorar todas as barbearias</Link>
+              <Link to="/barbearias">Explorar todas aSábarbearias</Link>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Serviços — grade com hairline */}
+      {/* ServiÃ§os â€” grade com hairline */}
       <section className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
         <div className="mb-14 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div className="space-y-4">
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
-              — Nossa curadoria
+              â€” Nossa curadoria
             </div>
             <h2 className="font-serif text-4xl font-bold md:text-5xl">
-              Serviços <span className="italic font-normal">selecionados</span>
+              ServiÃ§os <span className="italic font-normal">selecionados</span>
             </h2>
             <p className="max-w-md text-muted-foreground">
-              Onde a tradição encontra o requinte contemporâneo.
+              Onde a tradiÃ§Ã£o encontra o requinte contemporÃ¢neo.
             </p>
           </div>
           <Link
             to="/servicos"
             className="group inline-flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.25em] text-accent transition-colors hover:text-foreground"
           >
-            Ver catálogo completo
+            Ver catÃ¡logo completo
             <span className="h-px w-8 bg-accent transition-all group-hover:w-12" />
           </Link>
         </div>
@@ -449,7 +449,7 @@ function Landing() {
               Nossa <span className="italic font-normal">equipe</span>
             </h2>
             <p className="text-muted-foreground">
-              Profissionais com olhar técnico e paixão pelo ofício.
+              Profissionais com olhar tÃ©cnico e paixÃ£o pelo ofÃ­cio.
             </p>
           </div>
           <div className="grid gap-px border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
@@ -470,7 +470,7 @@ function Landing() {
                 <div className="min-w-0">
                   <div className="font-serif text-lg">{p.display_name}</div>
                   <div className="truncate text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                    {p.specialties?.slice(0, 2).join(" · ")}
+                    {p.specialties?.slice(0, 2).join(" Â· ")}
                   </div>
                 </div>
               </div>
@@ -479,17 +479,17 @@ function Landing() {
         </div>
       </section>
 
-      {/* Seção: Depoimentos & Confiança */}
+      {/* SeÃ§Ã£o: Depoimentos & ConfianÃ§a */}
       <section className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
         <div className="mb-14 flex flex-col gap-4 text-center">
           <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
-            — Opinião de quem frequenta
+            â€” OpiniÃ£o de quem frequenta
           </div>
           <h2 className="font-serif text-4xl font-bold md:text-5xl">
             Aprovado por <span className="italic font-normal">homens exigentes</span>
           </h2>
           <p className="mx-auto max-w-md text-sm text-muted-foreground">
-            Confira a experiência de clientes reais que agendam suas sessões pelo BarberOS.
+            Confira a experiÃªncia de clientes reais que agendam suas sessÃµes pelo BarberOS.
           </p>
         </div>
 
@@ -497,21 +497,21 @@ function Landing() {
           {[
             {
               name: "Guilherme Sampaio",
-              city: "São Paulo, SP",
+              city: "SÃ£o Paulo, SP",
               rating: 5,
-              text: "Melhor experiência de barbearia que já tive. Agendei em menos de um minuto pelo celular, cheguei no horário e o barbeiro já estava pronto me esperando com um café espresso.",
+              text: "Melhor experiÃªncia de barbearia que jÃ¡ tive. Agendei em menos de um minuto pelo celular, cheguei no horÃ¡rio e o barbeiro jÃ¡ estava pronto me esperando com um cafÃ© espresso.",
             },
             {
-              name: "Rodrigo Mendonça",
+              name: "Rodrigo MendonÃ§a",
               city: "Rio de Janeiro, RJ",
               rating: 5,
-              text: "A qualidade do corte degradê e o cuidado com a barba foram impecáveis. Sem fila, sem estresse. O lembrete no WhatsApp 24h antes ajudou demais!",
+              text: "A qualidade do corte degradêª e o cuidado com a barba foram impecÃ¡veis. Sem fila, sem estresse. O lembrete no WhatsApp 24h antes ajudou demais!",
             },
             {
               name: "Lucas Vasconcelos",
               city: "Belo Horizonte, MG",
               rating: 5,
-              text: "Ambiente de primeiro mundo e profissionais extremamente atenciosos. Já assinei o plano de recorrência e não troco de barbearia por nada.",
+              text: "Ambiente de primeiro mundo e profissionais extremamente atenciosos. JÃ¡ assinei o plano de recorrÃªncia e nÃ£o troco de barbearia por nada.",
             },
           ].map((t, idx) => (
             <div
@@ -538,7 +538,7 @@ function Landing() {
                 </div>
                 <div>
                   <div className="font-serif font-bold text-sm text-foreground">{t.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{t.city} · Cliente Verificado</div>
+                  <div className="text-[10px] text-muted-foreground">{t.city} Â· Cliente Verificado</div>
                 </div>
               </div>
             </div>
@@ -546,25 +546,25 @@ function Landing() {
         </div>
       </section>
 
-      {/* Sobre + CTA */}
+      {/* Sábre + CTA */}
       <section className="mx-auto max-w-7xl px-4 py-20 md:px-6 md:py-28">
         <div className="grid gap-12 md:grid-cols-2">
           <div className="space-y-6">
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
-              — A casa
+            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— A casa</div>
             </div>
             <h2 className="font-serif text-4xl font-bold md:text-5xl">
-              Sobre a <span className="italic font-normal">BarberOS</span>
+              Sábre a <span className="italic font-normal">BarberOS</span>
             </h2>
             <p className="max-w-md text-muted-foreground">
-              Mais que uma barbearia: uma experiência. Combinamos tradição e modernidade
+              Mais que uma barbearia: uma experiÃªncia. Combinamos tradiÃ§Ã£o e modernidade
               num ambiente acolhedor para o homem que cuida da imagem.
             </p>
             <div className="space-y-4 border-t border-border/60 pt-6 text-sm">
               <div className="flex items-center gap-4">
                 <MapPin className="h-4 w-4 shrink-0 text-accent" />
                 <span className="text-muted-foreground">
-                  Rua Augusta, 1500 — São Paulo / SP
+                  Rua Augusta, 1500 â€” SÃ£o Paulo / SP
                 </span>
               </div>
               <div className="flex items-center gap-4">
@@ -573,7 +573,7 @@ function Landing() {
               </div>
               <div className="flex items-center gap-4">
                 <Calendar className="h-4 w-4 shrink-0 text-accent" />
-                <span className="text-muted-foreground">Seg a Sáb</span>
+                <span className="text-muted-foreground">Seg a SÃ¡b</span>
               </div>
             </div>
           </div>
@@ -590,7 +590,7 @@ function Landing() {
                 Pronto para um novo visual?
               </h3>
               <p className="mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground">
-                Reserve sua experiência em poucos toques. Disponibilidade em tempo real.
+                Reserve sua experiÃªncia em poucos toques. Disponibilidade em tempo real.
               </p>
               <Button
                 asChild
@@ -600,7 +600,7 @@ function Landing() {
                 <Link to="/barbearias">Agendar agora</Link>
               </Button>
               <div className="flex items-center justify-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                <Clock className="h-3 w-3" /> Confirmação instantânea
+                <Clock className="h-3 w-3" /> ConfirmaÃ§Ã£o instantÃ¢nea
               </div>
             </div>
           </div>
@@ -610,3 +610,5 @@ function Landing() {
     </PublicLayout>
   );
 }
+
+
