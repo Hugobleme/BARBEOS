@@ -209,7 +209,7 @@ function MinhaContaPage() {
             )
           ) : tab === "historico" ? (
             history.length === 0 ? (
-              <div className="p-12 text-center text-muted-foreground border border-border/40 rounded-xl">Seu histórico está vazio.</div>
+              <div className="flex flex-col items-center justify-center p-12 text-center border border-border/40 rounded-xl bg-card/20"><p className="text-muted-foreground mb-4">Você ainda não possui agendamentos no histórico.</p><Button asChild variant="outline" className="uppercase tracking-wider text-xs font-bold"><Link to="/barbearias">Explorar barbearias</Link></Button></div>
             ) : (
               <div className="grid gap-4">
                 {history.map(a => (

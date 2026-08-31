@@ -142,7 +142,7 @@ function Dashboard() {
     }
   });
 
-  // 4. Resumo da Semana
+  // 4. Performance Semanal
   const { data: weekSummary, isLoading: loadingWeek } = useQuery({
     queryKey: ["admin-week-summary", shopId],
     enabled: Boolean(shopId),
@@ -399,8 +399,8 @@ function Dashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center p-10 text-center">
                 <CheckCircle2 className="h-10 w-10 text-emerald-500/50 mb-3" />
-                <p className="text-sm font-medium text-foreground">Nenhum atendimento programado para hoje.</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-4">Use a agenda para acompanhar os próximos horários.</p>
+                <p className="text-sm font-medium text-foreground">Sua agenda está livre por enquanto.</p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">Que tal compartilhar seu link de agendamento nas redes sociais para atrair mais clientes hoje?</p>
                 <Button asChild variant="outline" size="sm" className="rounded-xl">
                   <Link to="/admin/agenda">Ver agenda</Link>
                 </Button>
@@ -417,7 +417,7 @@ function Dashboard() {
 
           {/* Alertas */}
           <div className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Atenção Hoje</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Alertas Operacionais</h2>
             <Card className="p-4 border-border/40 bg-card/40 backdrop-blur-md">
               {loadingAlerts ? (
                 <div className="space-y-3">
@@ -439,7 +439,7 @@ function Dashboard() {
                     <Link to="/admin/estoque" className="flex items-center justify-between rounded-xl bg-amber-500/10 p-3 border border-amber-500/20 hover:bg-amber-500/20 transition-colors group">
                       <div className="flex items-center gap-3">
                         <ShoppingBag className="h-4 w-4 text-amber-500" />
-                        <span className="text-sm font-medium text-amber-100">{alertsData.lowStock} produtos com estoque baixo</span>
+                        <span className="text-sm font-medium text-amber-100">{alertsData.lowStock} produtos no nível crítico de estoque</span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-amber-500 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </Link>
@@ -457,7 +457,7 @@ function Dashboard() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500/50 mb-2" />
-                  <p className="text-sm font-medium text-muted-foreground">Tudo sob controle por aqui.</p>
+                  <p className="text-sm font-medium text-muted-foreground">Operação 100% sob controle. Excelente trabalho hoje!</p>
                 </div>
               )}
             </Card>
@@ -477,7 +477,7 @@ function Dashboard() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
                     <span className="text-sm text-muted-foreground">Atendimentos</span>
-                    <span className="font-serif font-bold text-foreground">{weekSummary?.completed || 0} concluídos</span>
+                    <span className="font-serif font-bold text-foreground">{weekSummary?.completed || 0} atendimentos realizados</span>
                   </div>
                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
                     <span className="text-sm text-muted-foreground">Faturamento</span>
@@ -485,7 +485,7 @@ function Dashboard() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Novos clientes</span>
-                    <span className="font-serif font-bold text-blue-400">+{weekSummary?.newCustomers || 0} na semana</span>
+                    <span className="font-serif font-bold text-blue-400">+{weekSummary?.newCustomers || 0} clientes conquistados</span>
                   </div>
                 </div>
               )}
@@ -519,10 +519,10 @@ function SetupStatusCard({ shopId }: { shopId: string }) {
         </div>
         <Progress value={progressPercent} className="h-2" />
         <p className="text-xs text-muted-foreground">
-          Faltam {totalSteps - completedCount} etapa{totalSteps - completedCount > 1 ? 's' : ''} para deixar seu perfil mais completo.
+          Faltam apenas {totalSteps - completedCount} etapa{totalSteps - completedCount > 1 ? 's' : ''} para liberar 100% do poder da sua página de agendamento.
         </p>
         <Button asChild className="w-full text-xs font-bold uppercase tracking-wider mt-2">
-          <Link to="/admin/onboarding">Continuar configuração</Link>
+          <Link to="/admin/onboarding">Finalizar configurações agora</Link>
         </Button>
       </Card>
     </div>

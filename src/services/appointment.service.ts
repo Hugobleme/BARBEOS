@@ -37,7 +37,7 @@ export interface CreateAppointmentInput {
 
 export const appointmentService = {
   /**
-   * Verifica se o horÃ¡rio possui conflito com outro agendamento existente
+   * Verifica se o horário possui conflito com outro agendamento existente
    */
   async checkSlotAvailable(params: {
     barbershopId: string;
@@ -48,9 +48,9 @@ export const appointmentService = {
   }): Promise<boolean> {
     const { barbershopId, professionalId, start, end, excludeAppointmentId } = params;
 
-    // 1. NÃ£o permitir agendamento no passado
+    // 1. Não permitir agendamento no passado
     if (start < new Date()) {
-      throw new Error("NÃ£o Ã© possÃ­vel agendar no passado");
+      throw new Error("Não Ã© possível agendar no passado");
     }
 
     // 2. Verificar sobreposiÃ§Ã£o com agendamentos existentes
@@ -110,19 +110,19 @@ export const appointmentService = {
 
     const startsAt = input.startsAt || input.scheduledStart;
     if (!startsAt) {
-      throw new Error("Data e horÃ¡rio de inÃ­cio sÃ£o obrigatÃ³rios.");
+      throw new Error("Data e horário de inÃ­cio são obrigatÃ³rios.");
     }
 
     // 1. ValidaÃ§Ã£o de agendamento no passado
     if (startsAt < new Date()) {
-      throw new Error("NÃ£o Ã© possÃ­vel agendar no passado");
+      throw new Error("Não Ã© possível agendar no passado");
     }
 
     if (!services || services.length === 0) {
-      throw new Error("Selecione pelo menos um serviÃ§o.");
+      throw new Error("Selecione pelo menos um serviço.");
     }
 
-    // 2. CÃ¡lculo do horÃ¡rio de tÃ©rmino baseado na duraÃ§Ã£o dos serviÃ§os
+    // 2. CÃ¡lculo do horário de tÃ©rmino baseado na duraÃ§Ã£o dos serviços
     const totalDurationMinutes = services.reduce((acc, s) => {
       return acc + Number(s.duration_min ?? s.durationMinutes ?? 30);
     }, 0);
@@ -138,7 +138,7 @@ export const appointmentService = {
     });
 
     if (!isAvailable) {
-      throw new Error("O horÃ¡rio selecionado jÃ¡ estÃ¡ reservado ou o profissional estÃ¡ indisponÃ­vel.");
+      throw new Error("O horário selecionado já estÃ¡ reservado ou o profissional estÃ¡ indisponível.");
     }
 
     // 4. Obter ou registrar o cliente
@@ -199,7 +199,7 @@ export const appointmentService = {
 
     if (apptErr) throw apptErr;
 
-    // 6. Vincular serviÃ§os ao agendamento
+    // 6. Vincular serviços ao agendamento
     const apptServices = services.map((s) => ({
       appointment_id: appt.id,
       service_id: s.id,
@@ -299,7 +299,7 @@ export const appointmentService = {
       kind: "sale",
       method: params.method as any,
       amount: params.amount,
-      description: "ServiÃ§o realizado (Agenda)",
+      description: "Serviço realizado (Agenda)",
       created_by: params.userId,
     }).select().single();
     if (txErr) throw txErr;

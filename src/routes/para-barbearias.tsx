@@ -42,18 +42,18 @@ function ParaBarbeariasPage() {
 
           <div className="relative z-10 max-w-3xl mx-auto space-y-6">
             <p className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-accent">
-              Barbeos para Barbearias
+              BARBEROS PARA NEGÓCIOS
             </p>
             <h1 className="text-4xl md:text-6xl font-serif font-bold tracking-tight leading-[1.1]">
-              Sua barbearia organizada. Sua agenda sempre em movimento.
+              A plataforma definitiva para barbearias de alta performance.
             </h1>
             <p className="text-muted-foreground text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
-              Centralize serviços, profissionais, agenda e relacionamento com clientes em uma experiência feita para o dia a dia da sua barbearia.
+              Transforme sua gestão, elimine horários vazios e entregue uma experiência de agendamento premium que fideliza clientes 24h por dia.
             </p>
             
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <Button asChild size="lg" className="w-full sm:w-auto h-14 px-8 bg-accent text-accent-foreground hover:bg-foreground hover:text-background text-sm font-bold uppercase tracking-wider transition-all">
-                <Link to="/cadastro">Começar agora</Link>
+                <Link to="/cadastro">Criar minha conta gratuitamente</Link>
               </Button>
               <Button onClick={scrollToFeatures} variant="outline" size="lg" className="w-full sm:w-auto h-14 px-8 text-sm font-bold uppercase tracking-wider">
                 Conhecer recursos <ChevronDown className="ml-2 h-4 w-4" />
@@ -63,15 +63,15 @@ function ParaBarbeariasPage() {
             <div className="flex flex-wrap justify-center gap-6 pt-10 text-xs text-muted-foreground font-medium">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
-                <span>Agenda em um só lugar</span>
+                <span>Fim do agendamento manual</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
-                <span>Gestão de equipe</span>
+                <span>Controle total da operação</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
-                <span>Perfil público da barbearia</span>
+                <span>Presença digital premium</span>
               </div>
             </div>
           </div>
@@ -89,21 +89,21 @@ function ParaBarbeariasPage() {
                 <Calendar className="h-10 w-10 text-accent mb-6" />
                 <h3 className="text-xl font-bold mb-3">Agenda sob controle</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Visualize os horários e acompanhe os atendimentos da sua equipe.
+                  Automatize 100% da sua agenda e liberte-se do WhatsApp. Seus clientes agendam em segundos, sem fricção.
                 </p>
               </Card>
               <Card className="p-8 bg-card border-border/40 hover:border-accent/30 transition-colors">
                 <Users className="h-10 w-10 text-accent mb-6" />
                 <h3 className="text-xl font-bold mb-3">Equipe alinhada</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Organize profissionais, serviços e a operação de cada unidade.
+                  Acompanhe comissões, desempenho da equipe e faturamento em tempo real num dashboard construído para o dono.
                 </p>
               </Card>
               <Card className="p-8 bg-card border-border/40 hover:border-accent/30 transition-colors">
                 <Globe className="h-10 w-10 text-accent mb-6" />
                 <h3 className="text-xl font-bold mb-3">Presença digital</h3>
                 <p className="text-muted-foreground leading-relaxed">
-                  Mostre sua barbearia, seus serviços e seus profissionais em um perfil público.
+                  Não seja apenas mais uma barbearia. Tenha uma página de agendamento exclusiva, que valoriza sua marca e converte visitantes em clientes.
                 </p>
               </Card>
             </div>
@@ -199,7 +199,7 @@ function ParaBarbeariasPage() {
 
             <div className="pt-8">
               <Button asChild size="lg" className="h-14 px-10 bg-foreground text-background hover:bg-foreground/90 text-sm font-bold uppercase tracking-wider">
-                <Link to="/cadastro">Configurar minha barbearia</Link>
+                <Link to="/cadastro">Criar minha conta agora</Link>
               </Button>
             </div>
           </div>

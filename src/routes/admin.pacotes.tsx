@@ -77,7 +77,7 @@ function AdminPackagesPage() {
           <h1 className="font-serif text-xl sm:text-2xl font-bold flex items-center gap-2">
             <PackageOpen className="h-6 w-6 text-accent" /> Pacotes
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie pacotes e planos de serviÃ§os recorrentes</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gerencie pacotes e planos de serviços recorrentes</p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {canManage && (
@@ -103,7 +103,7 @@ function AdminPackagesPage() {
             <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/40 rounded-xl bg-muted/10 mt-8">
               <PackageOpen className="h-10 w-10 text-muted-foreground/40 mb-3" />
               <h3 className="font-bold">Nenhum pacote configurado</h3>
-              <p className="text-sm text-muted-foreground max-w-md mt-1">Crie pacotes de serviÃ§os para fidelizar clientes (ex: Pacote de 4 Cortes).</p>
+              <p className="text-sm text-muted-foreground max-w-md mt-1">Crie pacotes de serviços para fidelizar clientes (ex: Pacote de 4 Cortes).</p>
               {canManage && (
                 <Button onClick={openNew} variant="outline" className="mt-6 text-accent border-accent/30 hover:bg-accent/10">
                   Criar Primeiro Pacote
@@ -186,7 +186,7 @@ function PackageForm({ open, onClose, shopId, pkg, onSuccess }: any) {
     if (isNaN(priceNum) || priceNum <= 0) return toast.error("O preÃ§o deve ser maior que zero.");
     
     const sess = parseInt(form.sessions_total);
-    if (isNaN(sess) || sess <= 0) return toast.error("O pacote precisa ter pelo menos 1 sessÃ£o.");
+    if (isNaN(sess) || sess <= 0) return toast.error("O pacote precisa ter pelo menos 1 sessão.");
 
     setLoading(true);
     try {
@@ -221,7 +221,7 @@ function PackageForm({ open, onClose, shopId, pkg, onSuccess }: any) {
       <DialogContent className="max-w-md w-[95vw] rounded-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="text-left">
           <DialogTitle>{pkg ? "Editar Pacote" : "Novo Pacote"}</DialogTitle>
-          <DialogDescription>ConfiguraÃ§Ã£o do pacote de serviÃ§os.</DialogDescription>
+          <DialogDescription>Configuração do pacote de serviços.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
@@ -366,7 +366,7 @@ function SellForm({ open, onClose, shopId, packages }: any) {
             <div className="space-y-2">
               <Label>Selecione o Pacote <span className="text-destructive">*</span></Label>
               {packages.length === 0 ? (
-                <div className="text-sm text-destructive">NÃ£o hÃ¡ pacotes ativos cadastrados.</div>
+                <div className="text-sm text-destructive">Não hÃ¡ pacotes ativos cadastrados.</div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {packages.map((p:any) => (

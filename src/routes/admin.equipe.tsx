@@ -95,13 +95,13 @@ function EquipePage() {
 
   const handleRemove = (m: any) => {
     if (m.role === "owner") {
-      return toast.error("NÃ£o Ã© possÃ­vel remover o dono da barbearia.");
+      return toast.error("Não Ã© possível remover o dono da barbearia.");
     }
     if (m.profile_id === user?.id) {
-      return toast.error("VocÃª nÃ£o pode remover seu prÃ³prio acesso por aqui.");
+      return toast.error("Você não pode remover seu prÃ³prio acesso por aqui.");
     }
     if (isAdmin && m.role === "admin") {
-      return toast.error("Administradores nÃ£o podem remover outros administradores.");
+      return toast.error("Administradores não podem remover outros administradores.");
     }
 
     if (confirm(`Tem certeza que deseja remover o acesso de ${m.profile?.full_name || "este membro"}?`)) {
@@ -168,7 +168,7 @@ function EquipePage() {
                         </Avatar>
                         <div className="space-y-0.5">
                           <h3 className="font-bold text-foreground text-base leading-none">
-                            {m.profile?.full_name || "UsuÃ¡rio sem nome"} {m.profile_id === user?.id && <span className="text-xs font-normal text-muted-foreground">(VocÃª)</span>}
+                            {m.profile?.full_name || "Usuário sem nome"} {m.profile_id === user?.id && <span className="text-xs font-normal text-muted-foreground">(Você)</span>}
                           </h3>
                           <Badge variant="outline" className={`text-[10px] uppercase font-bold tracking-wider mt-1 ${roleCfg.color}`}>
                             {roleCfg.label}
@@ -268,7 +268,7 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
     if (!email || !role || !shopId) return;
 
     if (isAdmin && role === "owner") {
-      return toast.error("Administradores nÃ£o podem convidar novos donos.");
+      return toast.error("Administradores não podem convidar novos donos.");
     }
 
     setLoading(true);
@@ -324,7 +324,7 @@ function InviteDialog({ open, onClose, shopId, userId, isAdmin, generatedToken, 
           <div className="space-y-4 py-4">
             <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-start gap-3 text-emerald-600">
               <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-              <p className="text-sm font-medium">Link vÃ¡lido por 7 dias. O usuÃ¡rio precisarÃ¡ criar uma conta com o e-mail convidado.</p>
+              <p className="text-sm font-medium">Link vÃ¡lido por 7 dias. O usuário precisarÃ¡ criar uma conta com o e-mail convidado.</p>
             </div>
             <div className="flex gap-2">
               <Input readOnly value={`${window.location.origin}/invite?token=${generatedToken}`} className="font-mono text-xs bg-muted/50" />

@@ -38,8 +38,8 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-accent mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versÃ£o do BARBEOS estÃ¡ disponÃ­vel.</h2>
-          <p className="text-muted-foreground mb-8">Atualize a pÃ¡gina para continuar.</p>
+          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versão do BARBEOS estÃ¡ disponível.</h2>
+          <p className="text-muted-foreground mb-8">Atualize a página para acessar a melhor experiência.</p>
           <Button onClick={() => window.location.reload()} className="font-bold uppercase tracking-wider text-xs px-6">Atualizar agora</Button>
         </div>
       </PublicLayout>
@@ -49,18 +49,18 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
     <PublicLayout>
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
         <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2">NÃ£o foi possÃ­vel abrir o agendamento.</h2>
-        <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes ou escolha outra barbearia.</p>
+        <h2 className="text-xl font-bold font-serif mb-2">Não conseguimos acessar a agenda neste momento.</h2>
+        <p className="text-muted-foreground mb-8">Aconteceu um erro inesperado. Tente novamente ou retorne para a lista.</p>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto justify-center">
           <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
-          <Button asChild className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
+          <Button asChild className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Encontrar outro local</Link></Button>
         </div>
       </div>
     </PublicLayout>
   );
 }
 
-const STEPS = ["ServiÃ§o", "Profissional", "Data e horÃ¡rio", "Confirmar"] as const;
+const STEPS = ["Serviço", "Profissional", "3. Escolha o dia e horário", "Confirmar"] as const;
 
 type Service = { id: string; name: string; duration_min: number; price: number; description: string | null };
 type Pro = { id: string; display_name: string; avatar_url: string | null; specialties: string[] | null };
@@ -300,8 +300,8 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Escolha uma barbearia para agendar.</h2>
-          <Button asChild className="mt-4"><Link to="/barbearias">Ver barbearias</Link></Button>
+          <h2 className="text-xl font-bold font-serif mb-2">Descubra sua próxima barbearia.</h2>
+          <Button asChild className="mt-4"><Link to="/barbearias">Explorar locais</Link></Button>
         </div>
       </PublicLayout>
     );
@@ -312,7 +312,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">NÃ£o foi possÃ­vel carregar os dados para agendamento.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Tivemos um problema ao conectar com a barbearia.</h2>
           <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
           <Button onClick={() => window.location.reload()} variant="outline" className="font-bold uppercase tracking-wider text-xs">Tentar novamente</Button>
         </div>
@@ -336,8 +336,8 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Barbearia nÃ£o encontrada.</h2>
-          <p className="text-muted-foreground mb-8">Volte para a lista e escolha outra unidade.</p>
+          <h2 className="text-xl font-bold font-serif mb-2">Ops, não encontramos este local.</h2>
+          <p className="text-muted-foreground mb-8">A barbearia que você procura parece estar indisponível. Veja outras excelentes opções.</p>
           <Button asChild variant="outline" className="font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
@@ -349,7 +349,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Nenhum serviÃ§o disponÃ­vel para esta barbearia.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">A barbearia ainda não configurou seus serviços online.</h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
@@ -361,7 +361,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Nenhum profissional disponÃ­vel para agendamento.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">No momento, nenhum profissional está com a agenda aberta nesta unidade.</h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs"><Link to="/barbearias">Voltar para barbearias</Link></Button>
         </div>
       </PublicLayout>
@@ -456,7 +456,7 @@ function BookingPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <Scissors className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <h1 className="text-2xl font-bold font-serif mb-2">Escolha uma barbearia para agendar</h1>
-          <p className="text-muted-foreground mb-8">Para continuar, selecione uma barbearia parceira.</p>
+          <p className="text-muted-foreground mb-8">Escolha a unidade desejada para agendar o seu horário exclusivo.</p>
           <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
             <Link to="/barbearias">Ver barbearias</Link>
           </Button>
@@ -479,7 +479,7 @@ function BookingPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
           <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
           <h1 className="text-2xl font-bold font-serif mb-2">Barbearia não encontrada</h1>
-          <p className="text-muted-foreground mb-8">A barbearia que você tentou acessar não existe ou está inativa.</p>
+          <p className="text-muted-foreground mb-8">O link que você acessou expirou ou a barbearia pausou os agendamentos online.</p>
           <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
             <Link to="/barbearias">Ver barbearias</Link>
           </Button>
@@ -508,7 +508,7 @@ function BookingPage() {
       <div className="bg-muted/30 border-b border-border/40 py-6 md:py-10">
         <div className="mx-auto max-w-3xl px-4 flex items-center justify-between">
           <div>
-            <h1 className="font-serif text-2xl md:text-3xl font-bold">Agendar horÃ¡rio</h1>
+            <h1 className="font-serif text-2xl md:text-3xl font-bold">Agendar horário</h1>
             <p className="text-muted-foreground text-sm flex items-center gap-1.5 mt-1">
               <MapPin className="h-3.5 w-3.5" /> {shop.name}
             </p>
@@ -538,15 +538,15 @@ function BookingPage() {
           
           {step === 0 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-              <h2 className="text-lg font-bold mb-4">Escolha os serviÃ§os</h2>
+              <h2 className="text-lg font-bold mb-4">1. O que vamos fazer hoje?</h2>
               {!svcsLoading && services.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Nenhum serviÃ§o disponÃ­vel para esta barbearia.</p>
+                  <p className="text-muted-foreground text-sm">Nenhum serviço disponível para esta barbearia.</p>
                 ) : svcsLoading ? (
                 <div className="space-y-3">
                   {[1,2,3].map(i => <div key={i} className="h-16 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
               ) : services.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum serviÃ§o disponÃ­vel.</p>
+                <p className="text-muted-foreground text-sm">Nenhum serviço disponível.</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {services.map(s => {
@@ -580,15 +580,15 @@ function BookingPage() {
 
           {step === 1 && (
             <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-              <h2 className="text-lg font-bold mb-4">Com quem vocÃª prefere?</h2>
+              <h2 className="text-lg font-bold mb-4">2. Escolha o profissional</h2>
               {!prosLoading && pros.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">Nenhum profissional disponÃ­vel para agendamento.</p>
+                  <p className="text-muted-foreground text-sm">Nenhum profissional disponível para agendamento.</p>
                 ) : prosLoading ? (
                 <div className="grid grid-cols-2 gap-3">
                   {[1,2].map(i => <div key={i} className="h-24 bg-muted/50 rounded-xl animate-pulse" />)}
                 </div>
               ) : pros.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum profissional disponÃ­vel.</p>
+                <p className="text-muted-foreground text-sm">Nenhum profissional disponível.</p>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <button
@@ -638,13 +638,13 @@ function BookingPage() {
               </Card>
 
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">HorÃ¡rio</h2>
+                <h2 className="text-lg font-bold mb-4">4. Selecione o horário</h2>
                 {!date ? (
-                  <p className="text-sm text-muted-foreground">Selecione uma data primeiro.</p>
+                  <p className="text-sm text-muted-foreground">Por favor, escolha o dia do seu atendimento.</p>
                 ) : slotsLoading ? (
                   <div className="flex justify-center p-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" /></div>
                 ) : slots.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Nenhum horÃ¡rio disponÃ­vel para esta data.</p>
+                  <p className="text-sm text-muted-foreground">Agenda lotada para este dia. Que tal verificar os dias seguintes?</p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {slots.map(t => (
@@ -667,10 +667,10 @@ function BookingPage() {
           {step === 3 && (
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">Resumo</h2>
+                <h2 className="text-lg font-bold mb-4">5. Confirme seu agendamento</h2>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">ServiÃ§os</span>
+                    <span className="text-muted-foreground">Serviços</span>
                     <span className="text-right font-medium">{pickedServices.map(s => s.name).join(" + ")}</span>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -703,7 +703,7 @@ function BookingPage() {
                       onClick={() => setAuthMode("login")}
                       className={`flex-1 py-2 text-center transition-colors ${authMode === "login" ? "bg-accent text-accent-foreground" : "bg-card hover:bg-muted"}`}
                     >
-                      JÃ¡ tenho conta
+                      Já tenho conta
                     </button>
                     <button 
                       onClick={() => setAuthMode("register")}

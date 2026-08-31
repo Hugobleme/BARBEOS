@@ -11,7 +11,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
-      { title: "Entrar — BarberOS" },
+      { title: "Fazer login — BarberOS" },
       { name: "description", content: "Acesse sua conta BarberOS para gerenciar agendamentos e preferências." },
       { property: "og:title", content: "Entrar — BarberOS" },
       { property: "og:description", content: "Acesso seguro à sua conta BarberOS." },
@@ -123,7 +123,7 @@ function LoginPage() {
               Entrar
             </h1>
             <p className="mt-3 text-sm text-muted-foreground">
-              Continue de onde parou.
+              Acesse sua conta para realizar agendamentos ou gerenciar sua barbearia.
             </p>
           </div>
 

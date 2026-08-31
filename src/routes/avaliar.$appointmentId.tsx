@@ -51,7 +51,7 @@ function ReviewPage() {
       const { data: customers } = await supabase.from("customers").select("id").eq("profile_id", user!.id);
       const custIds = (customers || []).map(c => c.id);
       
-      if (custIds.length === 0) throw new Error("UsuÃ¡rio sem registro de cliente.");
+      if (custIds.length === 0) throw new Error("Usuário sem registro de cliente.");
 
       const { data, error } = await supabase.from("appointments").select(`
         id, scheduled_start, status, barbershop_id, customer_id, professional_id,
@@ -61,14 +61,14 @@ function ReviewPage() {
       `).eq("id", appointmentId).in("customer_id", custIds).maybeSingle();
 
       if (error) throw error;
-      if (!data) throw new Error("Agendamento nÃ£o encontrado ou nÃ£o pertence a vocÃª.");
+      if (!data) throw new Error("Agendamento não encontrado ou não pertence a você.");
 
       const isCanceled = ["cancelled", "no_show"].includes(data.status || "");
       const past = isPast(new Date(data.scheduled_start));
 
       if (isCanceled) throw new Error("Este agendamento foi cancelado.");
-      if (!past) throw new Error("Este agendamento ainda nÃ£o aconteceu.");
-      if (data.satisfaction_surveys) throw new Error("VocÃª jÃ¡ avaliou este agendamento.");
+      if (!past) throw new Error("Este agendamento ainda não aconteceu.");
+      if (data.satisfaction_surveys) throw new Error("Você já avaliou este agendamento.");
 
       return data;
     },
@@ -121,7 +121,7 @@ function ReviewPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h1 className="text-xl font-bold font-serif mb-2">NÃ£o Ã© possÃ­vel avaliar</h1>
+          <h1 className="text-xl font-bold font-serif mb-2">Não Ã© possível avaliar</h1>
           <p className="text-muted-foreground mb-8">{(error as Error)?.message || "Agendamento invÃ¡lido."}</p>
           <Button asChild className="h-12 w-full bg-accent text-accent-foreground font-bold">
             <Link to="/minha-conta">Voltar para Minha Conta</Link>
@@ -137,7 +137,7 @@ function ReviewPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <CheckCircle2 className="h-20 w-20 text-emerald-500 mb-6" />
           <h1 className="text-3xl font-bold font-serif mb-2">Obrigado!</h1>
-          <p className="text-muted-foreground mb-8">Sua avaliaÃ§Ã£o ajuda a melhorar nossos serviÃ§os.</p>
+          <p className="text-muted-foreground mb-8">Sua avaliaÃ§Ã£o ajuda a melhorar nossos serviços.</p>
           <Button asChild className="h-12 w-full bg-foreground text-background font-bold">
             <Link to="/minha-conta">Voltar para Minha Conta</Link>
           </Button>
@@ -171,7 +171,7 @@ function ReviewPage() {
               <Textarea 
                 value={comment} 
                 onChange={e => setComment(e.target.value)} 
-                placeholder="Conte o que achou do serviÃ§o..."
+                placeholder="Conte o que achou do serviço..."
                 className="min-h-[120px] bg-background text-base resize-none"
               />
             </div>

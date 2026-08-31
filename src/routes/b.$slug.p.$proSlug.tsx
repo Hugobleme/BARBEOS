@@ -88,8 +88,8 @@ function ProfessionalProfilePage() {
       <PublicLayout>
         <div className="mx-auto max-w-2xl px-4 py-16 text-center">
           <User className="mx-auto h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h1 className="font-serif text-3xl font-bold mb-2">Profissional nÃ£o encontrado</h1>
-          <p className="text-muted-foreground mb-8">Este profissional nÃ£o estÃ¡ disponÃ­vel ou nÃ£o existe.</p>
+          <h1 className="font-serif text-3xl font-bold mb-2">Profissional não encontrado</h1>
+          <p className="text-muted-foreground mb-8">Este profissional não estÃ¡ disponível ou não existe.</p>
           <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
             <Link to="/b/$slug" params={{ slug }}>Voltar Ã  barbearia</Link>
           </Button>
@@ -122,7 +122,7 @@ function ProfessionalProfilePage() {
                 {shop_rating && (
                   <Badge variant="secondary" className="mt-3 flex w-fit items-center gap-1 font-bold">
                     <Star className="h-3.5 w-3.5 fill-accent text-accent" />
-                    {shop_rating.toFixed(1)} ({reviews.length} avaliaÃ§Ãµes)
+                    {shop_rating.toFixed(1)} ({reviews.length} avaliações)
                   </Badge>
                 )}
               </div>
@@ -152,7 +152,7 @@ function ProfessionalProfilePage() {
         {/* Services */}
         {services.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">ServiÃ§os realizados</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Serviços realizados</h2>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
               {services.map(s => (
                 <Card key={s.id} className="p-4 border-border/40 hover:border-accent/40 transition-colors">
@@ -208,7 +208,7 @@ function ProfessionalProfilePage() {
       <div className="md:hidden fixed bottom-0 left-0 w-full p-4 bg-background/90 backdrop-blur-md border-t border-border/40 z-40">
         <Button asChild className="w-full h-12 font-bold text-base bg-accent text-accent-foreground shadow-lg">
           <Link to="/agendar" search={{ barbershop: shop.slug, professional: pro.id }}>
-            Agendar HorÃ¡rio <Calendar className="ml-2 h-5 w-5" />
+            Agendar Horário <Calendar className="ml-2 h-5 w-5" />
           </Link>
         </Button>
       </div>

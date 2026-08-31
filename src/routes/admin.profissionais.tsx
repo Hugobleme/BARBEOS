@@ -77,7 +77,7 @@ function ProfessionalsPage() {
       toast.success("Status atualizado.");
       qc.invalidateQueries({ queryKey: ["admin-pros", shopId] });
     },
-    onError: () => toast.error("NÃ£o foi possÃ­vel atualizar o status. Tente novamente.")
+    onError: () => toast.error("Não foi possível atualizar o status. Tente novamente.")
   });
 
   const handleEdit = (p: Professional) => {
@@ -104,7 +104,7 @@ function ProfessionalsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">NÃ£o encontramos uma barbearia vinculada Ã  sua conta.</h2>
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada Ã  sua conta.</h2>
         <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsÃ¡vel pela conta.</p>
       </div>
     );
@@ -123,7 +123,7 @@ function ProfessionalsPage() {
           <p className="text-sm text-muted-foreground max-w-xl">Organize os profissionais da sua barbearia e mantenha o perfil da equipe atualizado.</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-md mt-4 w-fit">
             <Info className="h-3 w-3" />
-            <span>Profissionais ativos podem aparecer no perfil pÃºblico da sua barbearia.</span>
+            <span>Profissionais ativos podem aparecer no perfil público da sua barbearia.</span>
           </div>
         </div>
         <Button onClick={handleCreate} className="h-11 px-6 font-bold uppercase tracking-wider text-xs shrink-0 w-full sm:w-auto">
@@ -144,7 +144,7 @@ function ProfessionalsPage() {
           ) : isError ? (
             <Card className="p-8 text-center bg-card border-destructive/20 space-y-4">
               <AlertTriangle className="h-10 w-10 text-destructive/40 mx-auto" />
-              <h3 className="text-lg font-bold">NÃ£o foi possÃ­vel carregar os profissionais.</h3>
+              <h3 className="text-lg font-bold">Não foi possível carregar os profissionais.</h3>
               <p className="text-muted-foreground text-sm">Tente novamente em alguns instantes.</p>
               <Button onClick={() => refetch()} variant="outline" size="sm" className="mt-2">
                 <RefreshCcw className="h-4 w-4 mr-2" /> Tentar novamente
@@ -153,7 +153,7 @@ function ProfessionalsPage() {
           ) : totalCount === 0 ? (
             <Card className="p-12 text-center bg-card border-dashed border-border/60">
               <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-4" />
-              <h3 className="text-xl font-bold font-serif mb-2">VocÃª ainda nÃ£o cadastrou profissionais.</h3>
+              <h3 className="text-xl font-bold font-serif mb-2">Você ainda não cadastrou profissionais.</h3>
               <p className="text-muted-foreground text-sm mb-6 max-w-sm mx-auto">Adicione os integrantes da sua equipe para deixar o perfil da barbearia mais completo.</p>
               <Button onClick={handleCreate} className="font-bold uppercase tracking-wider text-xs">
                 Adicionar primeiro profissional
@@ -227,11 +227,11 @@ function ProfessionalsPage() {
             </p>
             {hasSlug ? (
               <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
-                <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil pÃºblico</Link>
+                <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil público</Link>
               </Button>
             ) : (
               <div className="space-y-3 pt-3 border-t border-border/40">
-                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua pÃ¡gina pÃºblica.</p>
+                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pÃºblica.</p>
                 <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider">
                   <Link to="/admin/configuracoes">Editar perfil</Link>
                 </Button>
@@ -330,7 +330,7 @@ function ProfessionalFormDialog({
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error("NÃ£o foi possÃ­vel salvar o profissional. Tente novamente.");
+      toast.error("Não foi possível salvar o profissional. Tente novamente.");
       if (import.meta.env.DEV) {
         console.error("Professional save error:", err);
       }
@@ -402,7 +402,7 @@ function ProfessionalFormDialog({
                 value={formData.bio} 
                 onChange={e => setFormData({ ...formData, bio: e.target.value })} 
                 className="resize-none h-20"
-                placeholder="Conte um pouco sobre a experiÃªncia do profissional..."
+                placeholder="Conte um pouco sobre a experiência do profissional..."
               />
             </div>
 

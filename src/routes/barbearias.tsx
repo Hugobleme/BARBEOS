@@ -171,7 +171,7 @@ function BarbeariasPage() {
         ) : shops.length === 0 ? (
           <div className="border border-border/40 bg-card/20 p-12 text-center rounded-xl">
             <Scissors className="mx-auto h-12 w-12 text-muted-foreground/30 mb-4" />
-            <h2 className="text-xl font-bold">Nenhuma barbearia encontrada</h2>
+            <h2 className="text-xl font-bold">Nenhum local encontrado com estes filtros.</h2>
             <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
               Tente outra cidade ou remova os filtros.
             </p>

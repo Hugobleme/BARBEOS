@@ -122,9 +122,9 @@ function Landing() {
             </div>
 
             <h1 className="font-serif text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl lg:text-8xl">
-              Cortes que
+              O requinte que
               <br />
-              <span className="italic font-normal text-accent">marcam.</span>
+              <span className="italic font-normal text-accent">destaca.</span>
             </h1>
 
             <p className="max-w-md text-lg font-light leading-relaxed text-muted-foreground md:text-xl">
@@ -180,7 +180,7 @@ function Landing() {
                 variant="outline"
                 className="h-auto min-h-11 w-full sm:w-auto rounded-none border-border bg-transparent px-10 py-5 text-[11px] font-bold uppercase tracking-[0.25em] backdrop-blur-sm hover:border-accent hover:bg-transparent hover:text-accent"
               >
-                <Link to="/barbearias">Ver barbearias</Link>
+                <Link to="/barbearias">Explorar locais</Link>
               </Button>
             </div>
 
@@ -371,7 +371,7 @@ function Landing() {
 
           <div className="mt-12 text-center">
             <Button asChild variant="outline" className="rounded-none border-border px-8 text-xs uppercase tracking-[0.2em]">
-              <Link to="/barbearias">Explorar todas as barbearias</Link>
+              <Link to="/barbearias">Ver todas as barbearias premium</Link>
             </Button>
           </div>
         </div>
@@ -388,7 +388,7 @@ function Landing() {
               Serviços <span className="italic font-normal">selecionados</span>
             </h2>
             <p className="max-w-md text-muted-foreground">
-              Onde a tradição encontra o requinte contemporâneo.
+              Sua melhor versão exige os melhores profissionais. Encontre barbearias de alto padrão e reserve seu horário em 30 segundos.
             </p>
           </div>
           <Link
@@ -511,7 +511,7 @@ function Landing() {
               name: "Lucas Vasconcelos",
               city: "Belo Horizonte, MG",
               rating: 5,
-              text: "Ambiente de primeiro mundo e profissionais extremamente atenciosos. JÃ¡ assinei o plano de recorrência e não troco de barbearia por nada.",
+              text: "Ambiente de primeiro mundo e profissionais extremamente atenciosos. Já assinei o plano de recorrência e não troco de barbearia por nada.",
             },
           ].map((t, idx) => (
             <div

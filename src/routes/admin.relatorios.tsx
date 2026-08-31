@@ -83,7 +83,7 @@ function RelatoriosPage() {
     csv += `Faturamento Total;${revData.totalRevenue}\n`;
     csv += `Total de Vendas/Agendamentos;${revData.transactionsCount}\n`;
     csv += `Ticket MÃ©dio;${avgTicket.toFixed(2)}\n`;
-    csv += `Taxa de ConclusÃ£o (%);${completionRate.toFixed(1)}%\n\n`;
+    csv += `Taxa de Conclusão (%);${completionRate.toFixed(1)}%\n\n`;
 
     csv += "POR MÃ‰TODO DE PAGAMENTO\n";
     csv += "MÃ©todo;Valor\n";
@@ -94,7 +94,7 @@ function RelatoriosPage() {
 
     if (topSvc && topSvc.length > 0) {
       csv += "TOP SERVIÃ‡OS\n";
-      csv += "ServiÃ§o;Quantidade;Receita\n";
+      csv += "Serviço;Quantidade;Receita\n";
       topSvc.forEach(s => csv += `${s.name};${s.bookingsCount};${s.totalRevenue}\n`);
       csv += "\n";
     }
@@ -144,8 +144,8 @@ function RelatoriosPage() {
             <SelectContent>
               <SelectItem value="hoje">Hoje</SelectItem>
               <SelectItem value="7d">Ãšltimos 7 dias</SelectItem>
-              <SelectItem value="mes">Este mÃªs</SelectItem>
-              <SelectItem value="mes_passado">MÃªs passado</SelectItem>
+              <SelectItem value="mes">Este mês</SelectItem>
+              <SelectItem value="mes_passado">Mês passado</SelectItem>
               <SelectItem value="custom">Personalizado...</SelectItem>
             </SelectContent>
           </Select>
@@ -153,7 +153,7 @@ function RelatoriosPage() {
           {period === "custom" && (
             <div className="flex items-center gap-2">
               <Input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)} className="w-[140px] h-10 bg-background" />
-              <span className="text-muted-foreground">atÃ©</span>
+              <span className="text-muted-foreground">até</span>
               <Input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)} className="w-[140px] h-10 bg-background" />
             </div>
           )}
@@ -184,7 +184,7 @@ function RelatoriosPage() {
                 <KPICard title="Faturamento" value={brl(revData.totalRevenue)} icon={DollarSign} color="text-emerald-500" />
                 <KPICard title="OperaÃ§Ãµes (Vendas)" value={revData.transactionsCount} icon={TrendingUp} color="text-accent" />
                 <KPICard title="Ticket MÃ©dio" value={brl(avgTicket)} icon={BarChart3} color="text-blue-500" />
-                <KPICard title="Taxa de ConclusÃ£o" value={`${completionRate.toFixed(1)}%`} icon={CheckCircle2} color="text-purple-500" />
+                <KPICard title="Taxa de Conclusão" value={`${completionRate.toFixed(1)}%`} icon={CheckCircle2} color="text-purple-500" />
               </div>
 
               {/* LISTS / BREAKDOWNS */}
@@ -214,11 +214,11 @@ function RelatoriosPage() {
                 {/* Top Services */}
                 <Card className="p-4 bg-card border-border/40 flex flex-col h-full rounded-xl">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <Scissors className="h-4 w-4" /> Top ServiÃ§os
+                    <Scissors className="h-4 w-4" /> Top Serviços
                   </h3>
                   <div className="flex-1 space-y-3">
                     {!topSvc || topSvc.length === 0 ? (
-                      <EmptyState text="Nenhum serviÃ§o concluÃ­do." />
+                      <EmptyState text="Nenhum serviço concluído." />
                     ) : (
                       topSvc.map((svc: any) => (
                         <div key={svc.id} className="flex justify-between items-center text-sm border-b border-border/40 pb-2 last:border-0 last:pb-0">

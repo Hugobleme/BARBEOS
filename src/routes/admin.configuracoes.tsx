@@ -142,13 +142,13 @@ function ConfigPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-config", shopId] });
       qc.invalidateQueries({ queryKey: ["onboarding-status", shopId] });
-      toast.success("InformaÃ§Ãµes da barbearia atualizadas.");
+      toast.success("Informações da barbearia atualizadas.");
     },
     onError: (err: any) => {
       if (err.message === "SLUG_EXISTS") {
-        toast.error("Este link (slug) jÃ¡ estÃ¡ em uso por outra barbearia.");
+        toast.error("Este link (slug) já estÃ¡ em uso por outra barbearia.");
       } else {
-        toast.error("NÃ£o foi possÃ­vel salvar as alteraÃ§Ãµes. Tente novamente.");
+        toast.error("Não foi possível salvar as alteraÃ§Ãµes. Tente novamente.");
         if (import.meta.env.DEV) {
           console.error("Save error:", err);
         }
@@ -184,7 +184,7 @@ function ConfigPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">NÃ£o encontramos uma barbearia vinculada Ã  sua conta.</h2>
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada Ã  sua conta.</h2>
         <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsÃ¡vel pela conta.</p>
       </div>
     );
@@ -214,7 +214,7 @@ function ConfigPage() {
                 </div>
                 <div>
                   <p className="font-bold text-sm">
-                    {hasSlug ? "Perfil pÃºblico disponÃ­vel" : "Seu perfil pÃºblico ainda precisa de um endereÃ§o."}
+                    {hasSlug ? "Perfil público disponível" : "Seu perfil público ainda precisa de um endereÃ§o."}
                   </p>
                   {hasSlug && (
                     <a href={publicUrl} target="_blank" rel="noreferrer" className="text-xs text-muted-foreground hover:text-accent truncate max-w-[200px] sm:max-w-xs inline-block">
@@ -226,7 +226,7 @@ function ConfigPage() {
               <div className="shrink-0">
                 {hasSlug ? (
                   <Button asChild variant="outline" size="sm" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
-                    <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil pÃºblico</Link>
+                    <Link to={`/b/${barbershop.slug}`} target="_blank">Ver perfil público</Link>
                   </Button>
                 ) : (
                   <Button size="sm" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider" onClick={() => {
@@ -364,7 +364,7 @@ function ConfigPage() {
               {/* SAVE BUTTON */}
               <div>
                 <Button type="submit" className="w-full sm:w-auto h-11 bg-accent text-accent-foreground font-bold px-8 text-xs uppercase tracking-wider" disabled={updateMut.isPending}>
-                  {updateMut.isPending ? "Salvando..." : "Salvar ConfiguraÃ§Ãµes"}
+                  {updateMut.isPending ? "Salvando..." : "Salvar Configurações"}
                 </Button>
               </div>
             </form>
@@ -373,9 +373,9 @@ function ConfigPage() {
           {/* 3. PERFIL VISÃVEL PARA CLIENTES */}
           {!isLoading && barbershop && (
             <section className="space-y-4 pt-8">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Perfil visÃ­vel para clientes</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Perfil visível para clientes</h2>
               <Card className="p-4 sm:p-6 bg-muted/10 border-border/40 shadow-sm space-y-4">
-                <p className="text-sm text-muted-foreground mb-4">Seu perfil pÃºblico exibe as seguintes informaÃ§Ãµes quando configuradas:</p>
+                <p className="text-sm text-muted-foreground mb-4">Seu perfil público exibe as seguintes informaÃ§Ãµes quando configuradas:</p>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${barbershop.name ? "text-emerald-500" : "text-muted-foreground/30"}`} />
@@ -387,7 +387,7 @@ function ConfigPage() {
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${onboarding?.isServicesComplete ? "text-emerald-500" : "text-muted-foreground/30"}`} />
-                    <span className={onboarding?.isServicesComplete ? "text-foreground" : "text-muted-foreground"}>ServiÃ§os cadastrados</span>
+                    <span className={onboarding?.isServicesComplete ? "text-foreground" : "text-muted-foreground"}>Serviços cadastrados</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${onboarding?.isProsComplete ? "text-emerald-500" : "text-muted-foreground/30"}`} />
@@ -411,15 +411,15 @@ function ConfigPage() {
             {!isLoading && barbershop && (
               <section className="space-y-4 pt-8">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> HorÃ¡rios de funcionamento
+                  <Clock className="h-4 w-4" /> Horários de funcionamento
                 </h2>
                 <Card className="p-6 bg-muted/10 border-dashed border-border/40 rounded-xl text-center flex flex-col items-center">
                   <Clock className="h-8 w-8 text-muted-foreground/40 mb-3" />
-                  <h3 className="font-bold text-foreground">HorÃ¡rios de funcionamento em preparaÃ§Ã£o</h3>
-                  <p className="text-sm text-muted-foreground mt-1 mb-2 max-w-sm">Esta configuraÃ§Ã£o estarÃ¡ disponÃ­vel em breve. Enquanto isso, mantenha os serviÃ§os e a equipe atualizados.</p>
+                  <h3 className="font-bold text-foreground">Horários de funcionamento em preparação</h3>
+                  <p className="text-sm text-muted-foreground mt-1 mb-2 max-w-sm">Esta configuraÃ§Ã£o estarÃ¡ disponível em breve. Enquanto isso, mantenha os serviços e a equipe atualizados.</p>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-md mt-2">
                     <Info className="h-3 w-3 shrink-0" />
-                    <span>Esses horÃ¡rios representam o funcionamento da unidade e nÃ£o alteram automaticamente os horÃ¡rios disponÃ­veis para agendamento.</span>
+                    <span>Esses horários representam o funcionamento da unidade e não alteram automaticamente os horários disponÃ­veis para agendamento.</span>
                   </div>
                 </Card>
               </section>
@@ -434,12 +434,12 @@ function ConfigPage() {
               <Card className="p-4 sm:p-6 bg-destructive/5 border-destructive/20 rounded-xl shadow-sm">
                 <h3 className="font-bold text-destructive">Visibilidade</h3>
                 <p className="text-sm text-muted-foreground mt-1 mb-4">
-                  Ao desativar, sua barbearia deixarÃ¡ de aparecer para clientes e bloquearÃ¡ novos agendamentos. VocÃª poderÃ¡ reativÃ¡-la solicitando ao suporte. Nenhum dado serÃ¡ excluÃ­do permanentemente nesta aÃ§Ã£o.
+                  Ao desativar, sua barbearia deixarÃ¡ de aparecer para clientes e bloquearÃ¡ novos agendamentos. Você poderÃ¡ reativÃ¡-la solicitando ao suporte. Nenhum dado serÃ¡ excluÃ­do permanentemente nesta aÃ§Ã£o.
                 </p>
                 <Button variant="outline" className="w-full sm:w-auto text-xs font-bold uppercase tracking-wider border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => {
                   const check = prompt(`Digite "${barbershop.name}" para confirmar a desativaÃ§Ã£o:`);
                   if (check === barbershop.name) deactivateMut.mutate();
-                  else if (check !== null) toast.error("Nome incorreto. AÃ§Ã£o cancelada.");
+                  else if (check !== null) toast.error("Nome incorreto. Ação cancelada.");
                 }} disabled={deactivateMut.isPending}>
                   {deactivateMut.isPending ? "Desativando..." : "Desativar OperaÃ§Ã£o"}
                 </Button>

@@ -12,7 +12,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/cadastro")({
   head: () => ({
     meta: [
-      { title: "Criar conta — BarberOS" },
+      { title: "Criar minha conta — BarberOS" },
       { name: "description", content: "Crie sua conta BarberOS e agende em segundos, com histórico e lembretes." },
       { property: "og:title", content: "Criar conta — BarberOS" },
       { property: "og:description", content: "Cadastro gratuito para agendar online 24/7." },
@@ -138,7 +138,7 @@ function SignupPage() {
           <div className="text-center">
             <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Cadastro</p>
             <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Criar conta</h1>
-            <p className="mt-3 text-sm text-muted-foreground">Reserve sua experiência em segundos.</p>
+            <p className="mt-3 text-sm text-muted-foreground">Crie sua conta em 30 segundos para agendar horários ou gerenciar seu negócio.</p>
           </div>
 
           <div className="mt-10 border border-border/60 bg-card/40 p-8 backdrop-blur-sm">
@@ -151,7 +151,7 @@ function SignupPage() {
                   autoComplete="name"
                   value={f.name}
                   onChange={(e) => setF({ ...f, name: e.target.value })}
-                  placeholder="Ex: João da Silva"
+                  placeholder="Como você quer ser chamado?"
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>
