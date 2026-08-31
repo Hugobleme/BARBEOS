@@ -122,9 +122,9 @@ function Landing() {
             </div>
 
             <h1 className="font-serif text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl lg:text-8xl">
-              O requinte que
+              Cortes que
               <br />
-              <span className="italic font-normal text-accent">destaca.</span>
+              <span className="italic font-normal text-accent">marcam.</span>
             </h1>
 
             <p className="max-w-md text-lg font-light leading-relaxed text-muted-foreground md:text-xl">
