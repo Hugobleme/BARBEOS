@@ -57,6 +57,18 @@ function getReadableError(error: unknown): string {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error("Unhandled application error", error);
+  
+  if (
+    error.message?.includes("Failed to fetch dynamically imported module") ||
+    error.message?.includes("Importing a module script failed") ||
+    error.name === "ChunkLoadError"
+  ) {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+      return <div className="p-8 text-center text-muted-foreground">Atualizando aplicativo...</div>;
+    }
+  }
+
   const router = useRouter();
   const isDevelopment = import.meta.env.DEV;
 
