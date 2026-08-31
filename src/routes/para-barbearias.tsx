@@ -37,7 +37,7 @@ function ParaBarbeariasPage() {
         <section className="relative px-4 py-20 md:py-32 flex flex-col items-center text-center overflow-hidden">
           {/* Subtle background glow */}
           <div className="absolute inset-0 z-0 flex items-center justify-center pointer-events-none opacity-40">
-            <div className="w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-accent/20 rounded-full blur-[100px]" />
+            <div className="w-full max-w-[300px] h-[300px] md:w-full max-w-[600px] md:h-[600px] bg-accent/20 rounded-full blur-[100px]" />
           </div>
 
           <div className="relative z-10 max-w-3xl mx-auto space-y-6">

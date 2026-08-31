@@ -135,7 +135,7 @@ function AdminShell() {
             y: [0, -20, 0]
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -left-32 top-0 h-[600px] w-[600px] rounded-full bg-accent/10 blur-[120px]" 
+          className="absolute -left-32 top-0 h-[600px] w-full max-w-[600px] rounded-full bg-accent/10 blur-[120px]" 
         />
         <motion.div 
           animate={{ 
@@ -144,7 +144,7 @@ function AdminShell() {
             y: [0, 30, 0]
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -right-32 bottom-0 h-[500px] w-[500px] rounded-full bg-accent/5 blur-[140px]" 
+          className="absolute -right-32 bottom-0 h-[500px] w-full max-w-[500px] rounded-full bg-accent/5 blur-[140px]" 
         />
       </div>
 

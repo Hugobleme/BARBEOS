@@ -20,8 +20,8 @@ function NotFoundComponent() {
   
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-[390px] w-full text-center sm:max-w-md">
-        <h1 className="text-6xl font-serif font-bold text-accent sm:text-7xl">404</h1>
+      <div className="max-w-full max-w-[390px] w-full text-center sm:max-w-md">
+        <h1 className="text-4xl md:text-6xl font-serif font-bold text-accent sm:text-7xl">404</h1>
         <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">Página não encontrada</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           O caminho que você buscou não existe ou foi movido. Vamos te ajudar a encontrar o que procura.
@@ -153,7 +153,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
           <HeadContent />
       </head>
-      <body>
+      <body className="overflow-x-hidden antialiased bg-background text-foreground">
         {children}
         <Scripts />
       </body>

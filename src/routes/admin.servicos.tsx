@@ -334,7 +334,7 @@ function ServiceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
+      <DialogContent className="sm:max-w-full max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
         <DialogHeader className="p-6 pb-4 border-b border-border/40">
           <DialogTitle className="font-serif text-xl">{service ? "Editar serviço" : "Novo serviço"}</DialogTitle>
           <DialogDescription className="text-xs">

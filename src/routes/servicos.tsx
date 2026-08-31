@@ -99,7 +99,7 @@ function ServicesDirectoryPage() {
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
               — Catálogo Completo
             </div>
-            <h1 className="font-serif text-5xl font-bold tracking-tight md:text-6xl">
+            <h1 className="font-serif text-3xl md:text-5xl font-bold tracking-tight md:text-6xl">
               Serviços <span className="italic font-normal">por barbearia</span>
             </h1>
             <p className="text-muted-foreground">

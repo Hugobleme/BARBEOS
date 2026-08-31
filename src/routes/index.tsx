@@ -111,7 +111,7 @@ function Landing() {
     <PublicLayout>
       {/* Hero — Midnight Prestige */}
       <header className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-[480px] -translate-x-1/2 rounded-full bg-accent/10 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-[480px] w-full max-w-full max-w-[480px] -translate-x-1/2 rounded-full bg-accent/10 blur-[120px]" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-16 px-4 py-16 md:px-6 md:py-24 lg:grid-cols-2">
           <div className="space-y-10">
             <div className="inline-flex items-center gap-3 rounded-full border border-border bg-card/40 px-4 py-1.5 backdrop-blur">
@@ -121,7 +121,7 @@ function Landing() {
               </span>
             </div>
 
-            <h1 className="font-serif text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl lg:text-8xl">
+            <h1 className="font-serif text-4xl sm:text-5xl font-bold leading-[1.05] tracking-tight md:text-7xl lg:text-8xl">
               Cortes que
               <br />
               <span className="italic font-normal text-accent">marcam.</span>

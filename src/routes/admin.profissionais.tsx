@@ -341,7 +341,7 @@ function ProfessionalFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
+      <DialogContent className="sm:max-w-full max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
         <DialogHeader className="p-6 pb-4 border-b border-border/40 text-left">
           <DialogTitle className="font-serif text-xl">{pro ? "Editar profissional" : "Adicionar profissional"}</DialogTitle>
           <DialogDescription className="text-xs">

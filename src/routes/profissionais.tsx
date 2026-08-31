@@ -42,7 +42,7 @@ function Page() {
           <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
             — Os artesãos
           </div>
-          <h1 className="font-serif text-5xl font-bold tracking-tight md:text-6xl">
+          <h1 className="font-serif text-3xl md:text-5xl font-bold tracking-tight md:text-6xl">
             Nossa <span className="italic font-normal">equipe</span>
           </h1>
           <p className="text-muted-foreground">Conheça os barbeiros que assinam cada corte.</p>

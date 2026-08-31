@@ -273,7 +273,7 @@ function PDV() {
       </div>
 
       {/* RIGHT: DESKTOP CART */}
-      <div className="hidden lg:flex w-[400px] xl:w-[450px] flex-col bg-card shrink-0">
+      <div className="hidden lg:flex w-full max-w-[400px] xl:w-full max-w-[450px] flex-col bg-card shrink-0">
         <CartContent 
           cart={cart}
           customerId={customerId}
