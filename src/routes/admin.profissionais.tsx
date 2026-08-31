@@ -92,7 +92,7 @@ function ProfessionalsPage() {
 
   const handleToggleActive = (p: Professional) => {
     if (p.active) {
-      if (window.confirm("Desativar este profissional?\\nEle deixarÃ¡ de aparecer nas Ã¡reas pÃºblicas que consideram profissionais ativos.")) {
+      if (window.confirm("Desativar este profissional?\\nEle deixará de aparecer nas áreas públicas que consideram profissionais ativos.")) {
         toggleStatusMut.mutate({ id: p.id, active: false });
       }
     } else {
@@ -105,7 +105,7 @@ function ProfessionalsPage() {
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada Ã  sua conta.</h2>
-        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsÃ¡vel pela conta.</p>
+        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsável pela conta.</p>
       </div>
     );
   }
@@ -190,7 +190,7 @@ function ProfessionalsPage() {
                         
                         {p.specialties && p.specialties.length > 0 && (
                           <div className="text-xs text-accent font-medium mb-1.5 truncate">
-                            {p.specialties.join(" â€¢ ")}
+                            {p.specialties.join(" ”¢ ")}
                           </div>
                         )}
                         
@@ -231,7 +231,7 @@ function ProfessionalsPage() {
               </Button>
             ) : (
               <div className="space-y-3 pt-3 border-t border-border/40">
-                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pÃºblica.</p>
+                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pública.</p>
                 <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider">
                   <Link to="/admin/configuracoes">Editar perfil</Link>
                 </Button>
@@ -345,7 +345,7 @@ function ProfessionalFormDialog({
         <DialogHeader className="p-6 pb-4 border-b border-border/40 text-left">
           <DialogTitle className="font-serif text-xl">{pro ? "Editar profissional" : "Adicionar profissional"}</DialogTitle>
           <DialogDescription className="text-xs">
-            {pro ? "Altere as informaÃ§Ãµes deste integrante da equipe." : "Cadastre um novo membro para sua barbearia."}
+            {pro ? "Altere as informações deste integrante da equipe." : "Cadastre um novo membro para sua barbearia."}
           </DialogDescription>
         </DialogHeader>
         
@@ -353,25 +353,25 @@ function ProfessionalFormDialog({
           <div className="space-y-4">
             
             <div className="space-y-2">
-              <Label htmlFor="p-name">Nome de exibiÃ§Ã£o <span className="text-destructive">*</span></Label>
+              <Label htmlFor="p-name">Nome de exibição <span className="text-destructive">*</span></Label>
               <Input 
                 id="p-name" 
                 value={formData.display_name} 
                 onChange={e => setFormData({ ...formData, display_name: e.target.value })} 
                 required 
                 className="h-11"
-                placeholder="Ex: JoÃ£o Silva"
+                placeholder="Ex: João Silva"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="p-specs">Especialidades <span className="text-muted-foreground font-normal">(Separadas por vÃ­rgula)</span></Label>
+              <Label htmlFor="p-specs">Especialidades <span className="text-muted-foreground font-normal">(Separadas por vírgula)</span></Label>
               <Input 
                 id="p-specs" 
                 value={formData.specialties} 
                 onChange={e => setFormData({ ...formData, specialties: e.target.value })} 
                 className="h-11"
-                placeholder="Ex: DegradÃª, Barba lenhador"
+                placeholder="Ex: Degradê, Barba lenhador"
               />
             </div>
 
@@ -409,7 +409,7 @@ function ProfessionalFormDialog({
             <div className="flex items-center justify-between p-4 border border-border/40 rounded-xl bg-muted/10">
               <div className="space-y-0.5">
                 <Label className="text-sm">Profissional ativo</Label>
-                <p className="text-[10px] text-muted-foreground">Profissionais inativos deixam de aparecer nas Ã¡reas pÃºblicas que usam essa configuraÃ§Ã£o.</p>
+                <p className="text-[10px] text-muted-foreground">Profissionais inativos deixam de aparecer nas áreas públicas que usam essa configuração.</p>
               </div>
               <Switch 
                 checked={formData.active} 

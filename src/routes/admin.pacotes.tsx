@@ -120,12 +120,12 @@ function AdminPackagesPage() {
                       {!p.active && <Badge variant="outline" className="text-[10px]">Inativo</Badge>}
                     </div>
                     <p className="font-black text-2xl text-accent mb-2">{brl(p.price)}</p>
-                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{p.description || "Sem descriÃ§Ã£o"}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2 min-h-[40px]">{p.description || "Sem descrição"}</p>
                   </div>
                   
                   <div className="flex items-center justify-between border-t border-border/40 pt-3">
                     <span className="font-bold text-sm bg-muted px-2 py-1 rounded-md">
-                      {p.sessions_total} SessÃµes
+                      {p.sessions_total} Sessões
                     </span>
                     {canManage && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -180,10 +180,10 @@ function PackageForm({ open, onClose, shopId, pkg, onSuccess }: any) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim()) return toast.error("O nome Ã© obrigatÃ³rio.");
+    if (!form.name.trim()) return toast.error("O nome é obrigatório.");
     
     const priceNum = parseFloat(form.price);
-    if (isNaN(priceNum) || priceNum <= 0) return toast.error("O preÃ§o deve ser maior que zero.");
+    if (isNaN(priceNum) || priceNum <= 0) return toast.error("O preço deve ser maior que zero.");
     
     const sess = parseInt(form.sessions_total);
     if (isNaN(sess) || sess <= 0) return toast.error("O pacote precisa ter pelo menos 1 sessão.");
@@ -232,12 +232,12 @@ function PackageForm({ open, onClose, shopId, pkg, onSuccess }: any) {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>PreÃ§o (R$) <span className="text-destructive">*</span></Label>
+              <Label>Preço (R$) <span className="text-destructive">*</span></Label>
               <Input type="number" step="0.01" min="0.01" value={form.price} onChange={e => setForm({ ...form, price: e.target.value })} placeholder="100.00" required className="h-11" />
             </div>
             
             <div className="space-y-2">
-              <Label>Quantidade de SessÃµes <span className="text-destructive">*</span></Label>
+              <Label>Quantidade de Sessões <span className="text-destructive">*</span></Label>
               <Input type="number" min="1" step="1" value={form.sessions_total} onChange={e => setForm({ ...form, sessions_total: e.target.value })} placeholder="4" required className="h-11" />
             </div>
           </div>
@@ -248,7 +248,7 @@ function PackageForm({ open, onClose, shopId, pkg, onSuccess }: any) {
           </div>
 
           <div className="space-y-2">
-            <Label>DescriÃ§Ã£o (Opcional)</Label>
+            <Label>Descrição (Opcional)</Label>
             <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Detalhes do pacote..." className="h-11" />
           </div>
 
@@ -302,7 +302,7 @@ function SellForm({ open, onClose, shopId, packages }: any) {
     if (!selectedPkgId) return toast.error("Selecione um pacote.");
 
     const pkg = packages.find((p:any) => p.id === selectedPkgId);
-    if (!pkg) return toast.error("Pacote invÃ¡lido.");
+    if (!pkg) return toast.error("Pacote inválido.");
     
     if (!confirm(`Confirmar venda do "${pkg.name}" para ${customer.full_name}?`)) return;
 
@@ -318,7 +318,7 @@ function SellForm({ open, onClose, shopId, packages }: any) {
         notes: "Venda efetuada pelo painel administrativo"
       });
       
-      toast.success("Venda registrada com sucesso! Cliente agora possui as sessÃµes.");
+      toast.success("Venda registrada com sucesso! Cliente agora possui as sessões.");
       onClose();
     } catch (err: any) {
       toast.error(err.message || "Erro ao registrar venda.");
@@ -366,7 +366,7 @@ function SellForm({ open, onClose, shopId, packages }: any) {
             <div className="space-y-2">
               <Label>Selecione o Pacote <span className="text-destructive">*</span></Label>
               {packages.length === 0 ? (
-                <div className="text-sm text-destructive">Não hÃ¡ pacotes ativos cadastrados.</div>
+                <div className="text-sm text-destructive">Não há pacotes ativos cadastrados.</div>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {packages.map((p:any) => (
@@ -379,7 +379,7 @@ function SellForm({ open, onClose, shopId, packages }: any) {
                         <span className="font-bold text-sm">{p.name}</span>
                         <span className="font-bold text-accent">{brl(p.price)}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">{p.sessions_total} sessÃµes</p>
+                      <p className="text-xs text-muted-foreground">{p.sessions_total} sessões</p>
                     </div>
                   ))}
                 </div>

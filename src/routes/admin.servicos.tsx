@@ -87,7 +87,7 @@ function ServicesPage() {
 
   const handleToggleActive = (s: Service) => {
     if (s.active) {
-      if (window.confirm("Desativar este serviço?\\nClientes deixarÃ£o de vÃª-lo no perfil público enquanto ele estiver inativo.")) {
+      if (window.confirm("Desativar este serviço?\\nClientes deixarão de vê-lo no perfil público enquanto ele estiver inativo.")) {
         toggleStatusMut.mutate({ id: s.id, active: false });
       }
     } else {
@@ -100,7 +100,7 @@ function ServicesPage() {
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertTriangle className="h-16 w-16 text-muted-foreground/30 mb-4" />
         <h2 className="text-xl font-bold font-serif mb-2 text-foreground">Não encontramos uma barbearia vinculada Ã  sua conta.</h2>
-        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsÃ¡vel pela conta.</p>
+        <p className="text-muted-foreground text-sm">Conclua o cadastro da unidade ou procure o responsável pela conta.</p>
       </div>
     );
   }
@@ -114,8 +114,8 @@ function ServicesPage() {
       <header className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-border/40 pb-6">
         <div className="space-y-1">
           <p className="text-[10px] font-bold uppercase tracking-widest text-accent">CATÃLOGO DA UNIDADE</p>
-          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">Serviços e preÃ§os</h1>
-          <p className="text-sm text-muted-foreground max-w-xl">Organize os serviços que sua barbearia oferece e mantenha as informaÃ§Ãµes claras para os clientes.</p>
+          <h1 className="text-2xl md:text-3xl font-serif font-bold text-foreground">Serviços e preços</h1>
+          <p className="text-sm text-muted-foreground max-w-xl">Organize os serviços que sua barbearia oferece e mantenha as informações claras para os clientes.</p>
           <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/20 px-3 py-1.5 rounded-md mt-4 w-fit">
             <Info className="h-3 w-3" />
             <span>Serviços ativos podem aparecer no perfil público da sua barbearia.</span>
@@ -212,7 +212,7 @@ function ServicesPage() {
               Como seus serviços aparecem
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Mantenha nome, duraÃ§Ã£o e preÃ§o atualizados para que o perfil da sua barbearia apresente informaÃ§Ãµes mais claras.
+              Mantenha nome, duração e preço atualizados para que o perfil da sua barbearia apresente informações mais claras.
             </p>
             {hasSlug ? (
               <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider border-accent/40 text-accent hover:bg-accent/10">
@@ -220,7 +220,7 @@ function ServicesPage() {
               </Button>
             ) : (
               <div className="space-y-3 pt-3 border-t border-border/40">
-                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pÃºblica.</p>
+                <p className="text-xs text-amber-500 font-medium">Complete o perfil da barbearia para revisar sua página pública.</p>
                 <Button asChild variant="outline" className="w-full text-xs font-bold uppercase tracking-wider">
                   <Link to="/admin/configuracoes">Editar perfil</Link>
                 </Button>
@@ -293,10 +293,10 @@ function ServiceFormDialog({
     if (!name) return toast.error("Informe o nome do serviço.");
 
     const dur = parseInt(formData.duration_min, 10);
-    if (isNaN(dur) || dur <= 0) return toast.error("Informe uma duraÃ§Ã£o vÃ¡lida.");
+    if (isNaN(dur) || dur <= 0) return toast.error("Informe uma duração válida.");
 
     const prc = parseFloat(formData.price.replace(",", "."));
-    if (isNaN(prc) || prc < 0) return toast.error("Informe um preÃ§o vÃ¡lido.");
+    if (isNaN(prc) || prc < 0) return toast.error("Informe um preço válido.");
 
     setLoading(true);
     try {
@@ -338,7 +338,7 @@ function ServiceFormDialog({
         <DialogHeader className="p-6 pb-4 border-b border-border/40">
           <DialogTitle className="font-serif text-xl">{service ? "Editar serviço" : "Novo serviço"}</DialogTitle>
           <DialogDescription className="text-xs">
-            {service ? "Altere as informaÃ§Ãµes deste serviço." : "Cadastre um novo serviço para sua barbearia."}
+            {service ? "Altere as informações deste serviço." : "Cadastre um novo serviço para sua barbearia."}
           </DialogDescription>
         </DialogHeader>
         
@@ -352,24 +352,24 @@ function ServiceFormDialog({
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
                 required 
                 className="h-11"
-                placeholder="Ex: Corte DegradÃª"
+                placeholder="Ex: Corte Degradê"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="s-desc">DescriÃ§Ã£o</Label>
+              <Label htmlFor="s-desc">Descrição</Label>
               <Textarea 
                 id="s-desc" 
                 value={formData.description} 
                 onChange={e => setFormData({ ...formData, description: e.target.value })} 
                 className="resize-none h-20"
-                placeholder="Detalhes opcionais que o cliente verÃ¡ ao agendar..."
+                placeholder="Detalhes opcionais que o cliente verá ao agendar..."
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="s-dur">DuraÃ§Ã£o (Min) <span className="text-destructive">*</span></Label>
+                <Label htmlFor="s-dur">Duração (Min) <span className="text-destructive">*</span></Label>
                 <Input 
                   id="s-dur" 
                   type="number"
@@ -382,7 +382,7 @@ function ServiceFormDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="s-price">PreÃ§o (R$) <span className="text-destructive">*</span></Label>
+                <Label htmlFor="s-price">Preço (R$) <span className="text-destructive">*</span></Label>
                 <Input 
                   id="s-price" 
                   type="number"

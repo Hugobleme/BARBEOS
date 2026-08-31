@@ -355,7 +355,7 @@ function PDV() {
             </div>
             <DialogTitle className="text-2xl font-serif">Venda Finalizada!</DialogTitle>
             <DialogDescription>
-              O lanÃ§amento foi registrado no caixa e o estoque atualizado.
+              O lançamento foi registrado no caixa e o estoque atualizado.
             </DialogDescription>
             <div className="bg-muted/20 p-4 rounded-xl w-full flex justify-between items-center border border-border/40 mt-2">
               <span className="text-muted-foreground uppercase text-xs font-bold tracking-wider">Total Pago</span>
@@ -443,7 +443,7 @@ function CartContent({
         {cart.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center opacity-50">
             <ShoppingCart className="h-12 w-12 mb-3" />
-            <p className="text-sm font-semibold">O carrinho estÃ¡ vazio.</p>
+            <p className="text-sm font-semibold">O carrinho está vazio.</p>
           </div>
         ) : (
           <div className="p-4 space-y-3">
@@ -528,8 +528,8 @@ function CartContent({
           <div className="grid grid-cols-2 gap-2 pt-2">
             <PaymentBtn id="pix" icon={QrCode} label="PIX" selected={paymentMethod} onSelect={setPaymentMethod} />
             <PaymentBtn id="cash" icon={Banknote} label="Dinheiro" selected={paymentMethod} onSelect={setPaymentMethod} />
-            <PaymentBtn id="credit" icon={CreditCard} label="CrÃ©dito" selected={paymentMethod} onSelect={setPaymentMethod} />
-            <PaymentBtn id="debit" icon={CreditCard} label="DÃ©bito" selected={paymentMethod} onSelect={setPaymentMethod} />
+            <PaymentBtn id="credit" icon={CreditCard} label="Crédito" selected={paymentMethod} onSelect={setPaymentMethod} />
+            <PaymentBtn id="debit" icon={CreditCard} label="Débito" selected={paymentMethod} onSelect={setPaymentMethod} />
             <PaymentBtn id="other" icon={ArrowLeftRight} label="Outro" selected={paymentMethod} onSelect={setPaymentMethod} className="col-span-2" />
           </div>
         )}

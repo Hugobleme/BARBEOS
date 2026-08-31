@@ -89,7 +89,7 @@ function ProfessionalProfilePage() {
         <div className="mx-auto max-w-2xl px-4 py-16 text-center">
           <User className="mx-auto h-16 w-16 text-muted-foreground/30 mb-4" />
           <h1 className="font-serif text-3xl font-bold mb-2">Profissional não encontrado</h1>
-          <p className="text-muted-foreground mb-8">Este profissional não estÃ¡ disponível ou não existe.</p>
+          <p className="text-muted-foreground mb-8">Este profissional não está disponível ou não existe.</p>
           <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
             <Link to="/b/$slug" params={{ slug }}>Voltar Ã  barbearia</Link>
           </Button>
@@ -170,7 +170,7 @@ function ProfessionalProfilePage() {
         {/* Portfolio */}
         {portfolio.length > 0 && (
           <section>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Trabalhos (PortfÃ³lio)</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Trabalhos (Portfólio)</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {portfolio.map(img => (
                 <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-muted border border-border/40 shadow-sm">
@@ -184,7 +184,7 @@ function ProfessionalProfilePage() {
         {/* Reviews */}
         {reviews.length > 0 && (
           <section className="max-w-3xl">
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">AvaliaÃ§Ãµes de Clientes</h2>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">Avaliações de Clientes</h2>
             <div className="space-y-4">
               {reviews.map(r => (
                 <div key={r.id} className="p-4 bg-card/30 border border-border/40 rounded-xl">

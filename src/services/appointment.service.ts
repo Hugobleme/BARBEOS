@@ -50,10 +50,10 @@ export const appointmentService = {
 
     // 1. Não permitir agendamento no passado
     if (start < new Date()) {
-      throw new Error("Não Ã© possível agendar no passado");
+      throw new Error("Não é possível agendar no passado");
     }
 
-    // 2. Verificar sobreposiÃ§Ã£o com agendamentos existentes
+    // 2. Verificar sobreposição com agendamentos existentes
     let query = supabase
       .from("appointments")
       .select("id")
@@ -94,7 +94,7 @@ export const appointmentService = {
   },
 
   /**
-   * Cria um novo agendamento com validaÃ§Ã£o completa de disponibilidade e cÃ¡lculo de tÃ©rmino
+   * Cria um novo agendamento com validação completa de disponibilidade e cálculo de término
    */
   async createAppointment(input: CreateAppointmentInput) {
     const {
@@ -110,26 +110,26 @@ export const appointmentService = {
 
     const startsAt = input.startsAt || input.scheduledStart;
     if (!startsAt) {
-      throw new Error("Data e horário de inÃ­cio são obrigatÃ³rios.");
+      throw new Error("Data e horário de início são obrigatórios.");
     }
 
-    // 1. ValidaÃ§Ã£o de agendamento no passado
+    // 1. Validação de agendamento no passado
     if (startsAt < new Date()) {
-      throw new Error("Não Ã© possível agendar no passado");
+      throw new Error("Não é possível agendar no passado");
     }
 
     if (!services || services.length === 0) {
       throw new Error("Selecione pelo menos um serviço.");
     }
 
-    // 2. CÃ¡lculo do horário de tÃ©rmino baseado na duraÃ§Ã£o dos serviços
+    // 2. Cálculo do horário de término baseado na duração dos serviços
     const totalDurationMinutes = services.reduce((acc, s) => {
       return acc + Number(s.duration_min ?? s.durationMinutes ?? 30);
     }, 0);
 
     const endsAt = new Date(startsAt.getTime() + totalDurationMinutes * 60000);
 
-    // 3. VerificaÃ§Ã£o de disponibilidade
+    // 3. Verificação de disponibilidade
     const isAvailable = await this.checkSlotAvailable({
       barbershopId,
       professionalId: professionalId || null,
@@ -138,7 +138,7 @@ export const appointmentService = {
     });
 
     if (!isAvailable) {
-      throw new Error("O horário selecionado já estÃ¡ reservado ou o profissional estÃ¡ indisponível.");
+      throw new Error("O horário selecionado já está reservado ou o profissional está indisponível.");
     }
 
     // 4. Obter ou registrar o cliente
@@ -153,7 +153,7 @@ export const appointmentService = {
 
       if (existingCustomer) {
         if (existingCustomer.blocked) {
-          throw new Error("Seu cadastro estÃ¡ temporariamente bloqueado. Entre em contato com a barbearia.");
+          throw new Error("Seu cadastro está temporariamente bloqueado. Entre em contato com a barbearia.");
         }
         customerId = existingCustomer.id;
       }

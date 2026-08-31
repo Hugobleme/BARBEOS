@@ -76,24 +76,24 @@ function RelatoriosPage() {
     
     // Create CSV content (UTF-8 BOM)
     let csv = "\uFEFF";
-    csv += "RelatÃ³rio Gerencial - Barbeos\n";
-    csv += `PerÃ­odo: ${format(dateRange.s, "dd/MM/yyyy")} a ${format(dateRange.e, "dd/MM/yyyy")}\n\n`;
+    csv += "Relatório Gerencial - Barbeos\n";
+    csv += `Período: ${format(dateRange.s, "dd/MM/yyyy")} a ${format(dateRange.e, "dd/MM/yyyy")}\n\n`;
     
     csv += "RESUMO\n";
     csv += `Faturamento Total;${revData.totalRevenue}\n`;
     csv += `Total de Vendas/Agendamentos;${revData.transactionsCount}\n`;
-    csv += `Ticket MÃ©dio;${avgTicket.toFixed(2)}\n`;
+    csv += `Ticket Médio;${avgTicket.toFixed(2)}\n`;
     csv += `Taxa de Conclusão (%);${completionRate.toFixed(1)}%\n\n`;
 
-    csv += "POR MÃ‰TODO DE PAGAMENTO\n";
-    csv += "MÃ©todo;Valor\n";
+    csv += "POR MÉTODO DE PAGAMENTO\n";
+    csv += "Método;Valor\n";
     Object.entries(revData.byPaymentMethod).forEach(([k, v]) => {
       csv += `${k};${v}\n`;
     });
     csv += "\n";
 
     if (topSvc && topSvc.length > 0) {
-      csv += "TOP SERVIÃ‡OS\n";
+      csv += "TOP SERVIÇOS\n";
       csv += "Serviço;Quantidade;Receita\n";
       topSvc.forEach(s => csv += `${s.name};${s.bookingsCount};${s.totalRevenue}\n`);
       csv += "\n";
@@ -126,9 +126,9 @@ function RelatoriosPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5">
           <div>
             <h1 className="font-serif text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="h-6 w-6 text-accent" /> RelatÃ³rios
+              <BarChart3 className="h-6 w-6 text-accent" /> Relatórios
             </h1>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">MÃ©tricas e performance da barbearia</p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Métricas e performance da barbearia</p>
           </div>
           
           <Button onClick={exportCSV} disabled={isLoading || isError} variant="outline" className="border-accent/30 text-accent hover:bg-accent/10 h-11">
@@ -143,7 +143,7 @@ function RelatoriosPage() {
             <SelectTrigger className="w-[160px] h-10 bg-background"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="hoje">Hoje</SelectItem>
-              <SelectItem value="7d">Ãšltimos 7 dias</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
               <SelectItem value="mes">Este mês</SelectItem>
               <SelectItem value="mes_passado">Mês passado</SelectItem>
               <SelectItem value="custom">Personalizado...</SelectItem>
@@ -175,15 +175,15 @@ function RelatoriosPage() {
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <span className="text-muted-foreground mb-4">Erro ao carregar dados do relatÃ³rio.</span>
+              <span className="text-muted-foreground mb-4">Erro ao carregar dados do relatório.</span>
             </div>
           ) : (
             <>
               {/* KPIs */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                 <KPICard title="Faturamento" value={brl(revData.totalRevenue)} icon={DollarSign} color="text-emerald-500" />
-                <KPICard title="OperaÃ§Ãµes (Vendas)" value={revData.transactionsCount} icon={TrendingUp} color="text-accent" />
-                <KPICard title="Ticket MÃ©dio" value={brl(avgTicket)} icon={BarChart3} color="text-blue-500" />
+                <KPICard title="Operações (Vendas)" value={revData.transactionsCount} icon={TrendingUp} color="text-accent" />
+                <KPICard title="Ticket Médio" value={brl(avgTicket)} icon={BarChart3} color="text-blue-500" />
                 <KPICard title="Taxa de Conclusão" value={`${completionRate.toFixed(1)}%`} icon={CheckCircle2} color="text-purple-500" />
               </div>
 
@@ -197,7 +197,7 @@ function RelatoriosPage() {
                   </h3>
                   <div className="flex-1 space-y-3">
                     {Object.keys(revData.byPaymentMethod).length === 0 ? (
-                      <EmptyState text="Nenhuma transaÃ§Ã£o no perÃ­odo." />
+                      <EmptyState text="Nenhuma transação no período." />
                     ) : (
                       Object.entries(revData.byPaymentMethod)
                         .sort((a,b) => (b[1] as number) - (a[1] as number))
@@ -240,7 +240,7 @@ function RelatoriosPage() {
                   </h3>
                   <div className="flex-1 space-y-3">
                     {!topCust || topCust.length === 0 ? (
-                      <EmptyState text="Nenhum cliente no perÃ­odo." />
+                      <EmptyState text="Nenhum cliente no período." />
                     ) : (
                       topCust.map((c: any) => (
                         <div key={c.customer?.id || Math.random()} className="flex justify-between items-center text-sm border-b border-border/40 pb-2 last:border-0 last:pb-0">

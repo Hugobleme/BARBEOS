@@ -38,7 +38,7 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-accent mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versão do BARBEOS estÃ¡ disponível.</h2>
+          <h2 className="text-xl font-bold font-serif mb-2">Uma nova versão do BARBEOS está disponível.</h2>
           <p className="text-muted-foreground mb-8">Atualize a página para acessar a melhor experiência.</p>
           <Button onClick={() => window.location.reload()} className="font-bold uppercase tracking-wider text-xs px-6">Atualizar agora</Button>
         </div>
@@ -394,7 +394,7 @@ function BookingPage() {
         }
       }
 
-      if (!currentUser) throw new Error("Falha na autenticaÃ§Ã£o.");
+      if (!currentUser) throw new Error("Falha na autenticação.");
 
       // Verify or create customer record
       const { data: existingCustomer } = await supabase.from("customers").select("id").eq("profile_id", currentUser.id).eq("barbershop_id", shop.id).maybeSingle();
@@ -601,7 +601,7 @@ function BookingPage() {
                       <UserIcon className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <span className="font-bold text-sm">Qualquer um</span>
-                    <span className="text-[10px] text-muted-foreground mt-1">DisponÃ­vel mais cedo</span>
+                    <span className="text-[10px] text-muted-foreground mt-1">Disponível mais cedo</span>
                   </button>
                   {pros.map(p => (
                     <button
@@ -674,7 +674,7 @@ function BookingPage() {
                     <span className="text-right font-medium">{pickedServices.map(s => s.name).join(" + ")}</span>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <span className="text-muted-foreground">DuraÃ§Ã£o</span>
+                    <span className="text-muted-foreground">Duração</span>
                     <span className="text-right font-medium">{minutes(totalDuration)}</span>
                   </div>
                   <div className="flex justify-between gap-4">
@@ -696,7 +696,7 @@ function BookingPage() {
 
               {!user && (
                 <Card className="p-4 md:p-6 border-border/40 shadow-sm bg-accent/5">
-                  <h2 className="text-lg font-bold mb-4">IdentificaÃ§Ã£o</h2>
+                  <h2 className="text-lg font-bold mb-4">Identificação</h2>
                   
                   <div className="flex rounded-lg overflow-hidden border border-border/60 mb-4 text-xs font-bold">
                     <button 

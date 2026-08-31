@@ -33,8 +33,8 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    "OPERAÇÃO": true,
-    "GESTÃO": true,
+    "OPERAÇão": true,
+    "GESTão": true,
     "CRESCIMENTO": true,
     "CONFIGURAÇÕES": true,
   });
@@ -50,13 +50,13 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
 
   const navGroups: NavGroup[] = useMemo(() => {
     const map: Record<string, string[]> = {
-      "OPERAÇÃO": [
+      "OPERAÇão": [
         "/admin",
         "/admin/agenda",
         "/admin/pdv",
         "/admin/caixa",
       ],
-      "GESTÃO": [
+      "GESTão": [
         "/admin/clientes",
         "/admin/servicos",
         "/admin/profissionais",

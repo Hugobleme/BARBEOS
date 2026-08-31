@@ -53,7 +53,7 @@ function OnboardingPage() {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto h-[60vh]">
         <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
-        <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar o andamento da configuraÃ§Ã£o.</h2>
+        <h2 className="text-xl font-bold font-serif mb-2">Não foi possível carregar o andamento da configuração.</h2>
         <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
         <Button onClick={() => refetch()} variant="outline">Tentar novamente</Button>
       </div>
@@ -77,8 +77,8 @@ function OnboardingPage() {
       <Card className="p-6 md:p-8 bg-card shadow-sm border-border/40">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h3 className="text-lg font-bold">Progresso da configuraÃ§Ã£o</h3>
-            <p className="text-sm text-muted-foreground">{completedCount} de {totalSteps} etapas concluÃ­das</p>
+            <h3 className="text-lg font-bold">Progresso da configuração</h3>
+            <p className="text-sm text-muted-foreground">{completedCount} de {totalSteps} etapas concluídas</p>
           </div>
           <div className="w-full md:w-1/3 flex items-center gap-3">
             <Progress value={progressPercent} className="h-2 flex-1" />
@@ -98,7 +98,7 @@ function OnboardingPage() {
                   <Store className="h-4 w-4 text-muted-foreground" />
                   Perfil da barbearia
                 </h4>
-                <p className="text-sm text-muted-foreground mt-1">Nome, logotipo e informaÃ§Ãµes de contato.</p>
+                <p className="text-sm text-muted-foreground mt-1">Nome, logotipo e informações de contato.</p>
               </div>
             </div>
             <Button asChild variant={hasProfile ? "outline" : "default"} className="shrink-0 w-full sm:w-auto">
@@ -136,7 +136,7 @@ function OnboardingPage() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                   Profissionais
                 </h4>
-                <p className="text-sm text-muted-foreground mt-1">Adicione a equipe que realizarÃ¡ os atendimentos.</p>
+                <p className="text-sm text-muted-foreground mt-1">Adicione a equipe que realizará os atendimentos.</p>
               </div>
             </div>
             <Button asChild variant={hasProfessionals ? "outline" : "default"} className="shrink-0 w-full sm:w-auto">
@@ -158,7 +158,7 @@ function OnboardingPage() {
                   </h4>
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-2 py-0.5 rounded">Em breve</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">Esta configuraÃ§Ã£o estarÃ¡ disponível em breve. Enquanto isso, mantenha os serviços e a equipe atualizados.</p>
+                <p className="text-sm text-muted-foreground mt-1">Esta configuração estará disponível em breve. Enquanto isso, mantenha os serviços e a equipe atualizados.</p>
               </div>
             </div>
           </div>

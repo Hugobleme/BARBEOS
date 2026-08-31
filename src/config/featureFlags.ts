@@ -1,8 +1,8 @@
 ﻿/**
  * Feature Flags Configuration
  * 
- * ATENÇÃO SEGURANÇA: 
- * Ocultar um módulo no frontend via Feature Flags NÃO substitui a necessidade 
+ * ATENÇão SEGURANÇA: 
+ * Ocultar um módulo no frontend via Feature Flags Não substitui a necessidade 
  * de Row Level Security (RLS) no banco de dados. 
  * Ocultar no frontend é apenas uma redução da superfície de UX (User Experience). 
  * Hackers ainda podem fazer requisições diretas para a API. A trava de segurança

@@ -90,9 +90,9 @@ function ReviewPage() {
     },
     onSuccess: () => {
       setSuccess(true);
-      toast.success("AvaliaÃ§Ã£o enviada!");
+      toast.success("Avaliação enviada!");
     },
-    onError: (err: any) => toast.error(err.message || "Erro ao enviar avaliaÃ§Ã£o.")
+    onError: (err: any) => toast.error(err.message || "Erro ao enviar avaliação.")
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -121,8 +121,8 @@ function ReviewPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h1 className="text-xl font-bold font-serif mb-2">Não Ã© possível avaliar</h1>
-          <p className="text-muted-foreground mb-8">{(error as Error)?.message || "Agendamento invÃ¡lido."}</p>
+          <h1 className="text-xl font-bold font-serif mb-2">Não é possível avaliar</h1>
+          <p className="text-muted-foreground mb-8">{(error as Error)?.message || "Agendamento inválido."}</p>
           <Button asChild className="h-12 w-full bg-accent text-accent-foreground font-bold">
             <Link to="/minha-conta">Voltar para Minha Conta</Link>
           </Button>
@@ -137,7 +137,7 @@ function ReviewPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <CheckCircle2 className="h-20 w-20 text-emerald-500 mb-6" />
           <h1 className="text-3xl font-bold font-serif mb-2">Obrigado!</h1>
-          <p className="text-muted-foreground mb-8">Sua avaliaÃ§Ã£o ajuda a melhorar nossos serviços.</p>
+          <p className="text-muted-foreground mb-8">Sua avaliação ajuda a melhorar nossos serviços.</p>
           <Button asChild className="h-12 w-full bg-foreground text-background font-bold">
             <Link to="/minha-conta">Voltar para Minha Conta</Link>
           </Button>
@@ -158,7 +158,7 @@ function ReviewPage() {
             <Scissors className="h-8 w-8 text-accent mx-auto mb-3" />
             <h1 className="font-serif text-2xl md:text-3xl font-bold mb-2">Como foi o atendimento?</h1>
             <p className="text-sm text-muted-foreground">
-              {appt.barbershop?.name} â€¢ {appt.professional?.display_name} <br/>
+              {appt.barbershop?.name} ”¢ {appt.professional?.display_name} <br/>
               {format(new Date(appt.scheduled_start), "dd 'de' MMMM", { locale: ptBR })}
             </p>
           </div>
@@ -167,7 +167,7 @@ function ReviewPage() {
             <Stars value={rating} onChange={setRating} />
 
             <div className="space-y-2">
-              <Label className="text-base font-bold">ComentÃ¡rio (opcional)</Label>
+              <Label className="text-base font-bold">Comentário (opcional)</Label>
               <Textarea 
                 value={comment} 
                 onChange={e => setComment(e.target.value)} 
@@ -181,7 +181,7 @@ function ReviewPage() {
               disabled={submitMut.isPending || rating === 0} 
               className="w-full h-12 md:h-14 bg-accent text-accent-foreground font-bold text-lg shadow-lg hover:scale-[1.02] transition-transform"
             >
-              {submitMut.isPending ? "Enviando..." : "Enviar AvaliaÃ§Ã£o"}
+              {submitMut.isPending ? "Enviando..." : "Enviar Avaliação"}
             </Button>
           </form>
         </Card>
