@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { InstallAppButton } from "@/components/site/InstallAppButton";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { AnimatedOutlet } from "@/components/ui/animated-outlet";
 
 function NotFoundComponent() {
   const loc = useRouterState({ select: (s) => s.location });
@@ -179,7 +180,7 @@ function RootComponent() {
             `}</style>
           </div>
         )}
-        <Outlet />
+        <AnimatedOutlet />
         <Toaster richColors position="top-right" />
         <InstallAppButton />
       </QueryClientProvider>
