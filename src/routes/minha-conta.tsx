@@ -191,7 +191,7 @@ function MinhaContaPage() {
         )}
 
         {/* Tabs Mobile First */}
-        <div className="flex overflow-x-auto no-scrollbar gap-2 mb-6 border-b border-border/40 pb-2">
+                <div className="flex overflow-x-auto no-scrollbar gap-2 mb-6 border-b border-border/40 pb-2">
           <button 
             onClick={() => setTab("proximos")} 
             className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "proximos" ? "bg-card border border-border shadow-sm text-foreground" : "text-muted-foreground hover:bg-muted"}`}
@@ -209,6 +209,12 @@ function MinhaContaPage() {
             className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "perfil" ? "bg-card border border-border shadow-sm text-foreground" : "text-muted-foreground hover:bg-muted"}`}
           >
             Editar Perfil
+          </button>
+          <button 
+            onClick={() => setTab("negocio")} 
+            className={`h-11 px-4 text-sm font-bold whitespace-nowrap rounded-lg transition-colors ${tab === "negocio" ? "bg-accent text-accent-foreground shadow-sm" : "text-muted-foreground hover:bg-muted"}`}
+          >
+            Meu Negócio
           </button>
         </div>
 
@@ -245,6 +251,26 @@ function MinhaContaPage() {
                 ))}
               </div>
             )
+          
+          ) : tab === "negocio" ? (
+            <Card className="p-5 md:p-8 max-w-xl border-border/60">
+              <h2 className="font-bold text-xl mb-2">Painel para Barbearias</h2>
+              <p className="text-muted-foreground text-sm mb-6">Cadastre sua barbearia para começar a gerenciar agendamentos, profissionais e clientes pelo sistema.</p>
+              
+              <form onSubmit={handleCreateBarbershop} className="space-y-5 bg-card/50 p-6 rounded-xl border border-border/50">
+                <div className="space-y-2">
+                  <Label>Nome da sua Barbearia</Label>
+                  <Input required value={bsName} onChange={e => setBsName(e.target.value)} className="h-11 bg-background" placeholder="Ex: Barbearia Elite" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Telefone / WhatsApp (Opcional)</Label>
+                  <Input value={bsPhone} onChange={e => setBsPhone(phoneMask(e.target.value))} className="h-11 bg-background" placeholder="(11) 90000-0000" />
+                </div>
+                <Button type="submit" disabled={creatingBs} className="w-full h-12 bg-accent text-accent-foreground font-bold text-sm tracking-wider uppercase mt-2">
+                  {creatingBs ? "Criando sistema..." : "Criar Minha Barbearia"}
+                </Button>
+              </form>
+            </Card>
           ) : (
             <Card className="p-5 md:p-8 max-w-xl border-border/60">
               <h2 className="font-bold text-lg mb-6">Meus Dados</h2>
