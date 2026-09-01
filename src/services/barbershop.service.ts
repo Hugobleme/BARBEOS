@@ -349,44 +349,61 @@ export const barbershopService = {
     description?: string | null;
     duration_min: number;
     price?: number;
-    price_cents?: number;
     active?: boolean;
+    sort?: number;
   }): Promise<Service> {
-    const finalPrice = data.price ?? (data.price_cents ? data.price_cents / 100 : 0);
+    const finalPrice = data.price ?? 0;
+
+    const payload = {
+      barbershop_id: data.barbershop_id,
+      name: data.name.trim(),
+      description: data.description?.trim() || null,
+      duration_min: data.duration_min,
+      price: finalPrice,
+      active: data.active ?? true,
+      sort: data.sort ?? 0,
+    };
 
     const { data: service, error } = await supabase
       .from("services")
-      .insert({
-        barbershop_id: data.barbershop_id,
-        name: data.name.trim(),
-        description: data.description?.trim() || null,
-        duration_min: data.duration_min,
-        price: finalPrice,
-        active: data.active ?? true,
-      })
-      .select()
+      .insert(payload)
+      .select("id, barbershop_id, name, description, duration_min, price, active, sort")
       .single();
 
-    if (error) throw error;
-    return service;
+    if (error) {
+      if (import.meta.env.DEV) {
+        console.error("[admin/servicos] create failed", {
+          code: error?.code,
+          message: error?.message,
+          details: error?.details,
+        });
+      }
+      throw error;
+    }
+    return service as Service;
   },
 
-  async updateService(id: string, data: Partial<Service> & { price_cents?: number }): Promise<Service> {
+  async updateService(id: string, data: Partial<Service>): Promise<Service> {
     const updatePayload: any = { ...data };
-    if (data.price_cents !== undefined) {
-      updatePayload.price = data.price_cents / 100;
-      delete updatePayload.price_cents;
-    }
-
+    
     const { data: updated, error } = await supabase
       .from("services")
       .update(updatePayload)
       .eq("id", id)
-      .select()
+      .select("id, barbershop_id, name, description, duration_min, price, active, sort")
       .single();
 
-    if (error) throw error;
-    return updated;
+    if (error) {
+      if (import.meta.env.DEV) {
+        console.error("[admin/servicos] update failed", {
+          code: error?.code,
+          message: error?.message,
+          details: error?.details,
+        });
+      }
+      throw error;
+    }
+    return updated as Service;
   },
 
   async deleteService(id: string) {
