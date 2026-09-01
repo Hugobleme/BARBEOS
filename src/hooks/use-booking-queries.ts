@@ -12,7 +12,6 @@ export function useBookingQueries(shopSlug: string | undefined, date: Date | und
     enabled: !!shopSlug,
     queryFn: async () => {
       const data = await barbershopService.getPublicBarbershopBySlug(shopSlug!);
-      if (error) throw error;
       return data;
     },
   });

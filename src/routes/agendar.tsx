@@ -78,10 +78,6 @@ function BookingPage() {
     enabled: !!shopSlug,
     queryFn: async () => {
       const data = await barbershopService.getPublicBarbershopBySlug(shopSlug!);
-      if (error) {
-        if (import.meta.env.DEV) console.error("Booking page load failed: barbershop", error);
-        throw error;
-      }
       return data;
     },
   });
