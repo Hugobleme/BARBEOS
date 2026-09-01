@@ -37,6 +37,7 @@ import { Route as AdminPortfolioRouteImport } from './routes/admin.portfolio'
 import { Route as AdminPdvRouteImport } from './routes/admin.pdv'
 import { Route as AdminPacotesRouteImport } from './routes/admin.pacotes'
 import { Route as AdminOnboardingRouteImport } from './routes/admin.onboarding'
+import { Route as AdminHorariosRouteImport } from './routes/admin.horarios'
 import { Route as AdminFranquiaRouteImport } from './routes/admin.franquia'
 import { Route as AdminFolgasRouteImport } from './routes/admin.folgas'
 import { Route as AdminFidelidadeRouteImport } from './routes/admin.fidelidade'
@@ -195,6 +196,11 @@ const AdminOnboardingRoute = AdminOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminHorariosRoute = AdminHorariosRouteImport.update({
+  id: '/horarios',
+  path: '/horarios',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFranquiaRoute = AdminFranquiaRouteImport.update({
   id: '/franquia',
   path: '/franquia',
@@ -312,6 +318,7 @@ export interface FileRoutesByFullPath {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/horarios': typeof AdminHorariosRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
@@ -358,6 +365,7 @@ export interface FileRoutesByTo {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/horarios': typeof AdminHorariosRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/admin/fidelidade': typeof AdminFidelidadeRoute
   '/admin/folgas': typeof AdminFolgasRoute
   '/admin/franquia': typeof AdminFranquiaRoute
+  '/admin/horarios': typeof AdminHorariosRoute
   '/admin/onboarding': typeof AdminOnboardingRoute
   '/admin/pacotes': typeof AdminPacotesRoute
   '/admin/pdv': typeof AdminPdvRoute
@@ -455,6 +464,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/horarios'
     | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
@@ -501,6 +511,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/horarios'
     | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
@@ -548,6 +559,7 @@ export interface FileRouteTypes {
     | '/admin/fidelidade'
     | '/admin/folgas'
     | '/admin/franquia'
+    | '/admin/horarios'
     | '/admin/onboarding'
     | '/admin/pacotes'
     | '/admin/pdv'
@@ -789,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOnboardingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/horarios': {
+      id: '/admin/horarios'
+      path: '/horarios'
+      fullPath: '/admin/horarios'
+      preLoaderRoute: typeof AdminHorariosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/franquia': {
       id: '/admin/franquia'
       path: '/franquia'
@@ -925,6 +944,7 @@ interface AdminRouteChildren {
   AdminFidelidadeRoute: typeof AdminFidelidadeRoute
   AdminFolgasRoute: typeof AdminFolgasRoute
   AdminFranquiaRoute: typeof AdminFranquiaRoute
+  AdminHorariosRoute: typeof AdminHorariosRoute
   AdminOnboardingRoute: typeof AdminOnboardingRoute
   AdminPacotesRoute: typeof AdminPacotesRoute
   AdminPdvRoute: typeof AdminPdvRoute
@@ -949,6 +969,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminFidelidadeRoute: AdminFidelidadeRoute,
   AdminFolgasRoute: AdminFolgasRoute,
   AdminFranquiaRoute: AdminFranquiaRoute,
+  AdminHorariosRoute: AdminHorariosRoute,
   AdminOnboardingRoute: AdminOnboardingRoute,
   AdminPacotesRoute: AdminPacotesRoute,
   AdminPdvRoute: AdminPdvRoute,

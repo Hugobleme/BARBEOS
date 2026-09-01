@@ -16,6 +16,7 @@ import { addDays, format, isBefore, startOfDay, parse, addMinutes } from "date-f
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { appointmentService } from "@/services/appointment.service";
+import { availabilityService } from "@/services/availability.service";
 import { z } from "zod";
 
 const searchSchema = z.object({
