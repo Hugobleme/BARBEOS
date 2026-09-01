@@ -11,7 +11,7 @@ export function useBookingQueries(shopSlug: string | undefined, date: Date | und
     queryKey: ["book-shop", shopSlug],
     enabled: !!shopSlug,
     queryFn: async () => {
-      const { data, error } = await supabase.from("barbershops").select("id, name, slug, logo_url, is_sponsored").eq("slug", shopSlug!).eq("active", true).maybeSingle();
+      const data = await barbershopService.getPublicBarbershopBySlug(shopSlug!);
       if (error) throw error;
       return data;
     },

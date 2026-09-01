@@ -77,7 +77,7 @@ function BookingPage() {
     queryKey: ["book-shop", shopSlug],
     enabled: !!shopSlug,
     queryFn: async () => {
-      const { data, error } = await supabase.from("barbershops").select("id, name, slug, logo_url, is_sponsored").eq("slug", shopSlug!).eq("active", true).maybeSingle();
+      const data = await barbershopService.getPublicBarbershopBySlug(shopSlug!);
       if (error) {
         if (import.meta.env.DEV) console.error("Booking page load failed: barbershop", error);
         throw error;
@@ -489,20 +489,7 @@ function BookingPage() {
     );
   }
 
-  if (shop && !shop.is_sponsored) {
-    return (
-      <PublicLayout>
-        <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-          <AlertCircle className="h-16 w-16 text-amber-500/50 mb-4" />
-          <h1 className="text-2xl font-bold font-serif mb-2">Agendamento indisponível</h1>
-          <p className="text-muted-foreground mb-8">Esta barbearia não aceita agendamentos online pelo aplicativo no momento.</p>
-          <Button asChild className="h-12 px-8 bg-accent text-accent-foreground font-bold">
-            <Link to="/barbearias">Ver barbearias parceiras</Link>
-          </Button>
-        </div>
-      </PublicLayout>
-    );
-  }
+  
 
   return (
     <PublicLayout>

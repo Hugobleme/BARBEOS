@@ -15,7 +15,7 @@ import { format, isFuture, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { barbershopService } from "@/services/barbershop.service";
-import { phoneMask } from "@/lib/utils";
+import { phoneMask } from "@/lib/format";
 
 export const Route = createFileRoute("/minha-conta")({
   component: MinhaContaPage,

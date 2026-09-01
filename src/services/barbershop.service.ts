@@ -242,6 +242,21 @@ export const barbershopService = {
   /**
    * Obtém os detalhes completos de uma barbearia pelo slug para a página pública
    */
+  
+  async getPublicBarbershopBySlug(slug: string) {
+    const normalizedSlug = (slug ?? "").trim().toLowerCase();
+    if (!normalizedSlug) return null;
+    const { data, error } = await supabase
+      .from("barbershops")
+      .select("id, name, slug, logo_url")
+      .eq("slug", normalizedSlug)
+      .eq("active", true)
+      .maybeSingle();
+      
+    if (error) throw error;
+    return data;
+  },
+
   async getBarbershopBySlug(slug: string) {
     const { data: shop, error: sErr } = await supabase
       .from("barbershops")

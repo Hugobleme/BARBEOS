@@ -201,8 +201,7 @@ function ServicesDirectoryPage() {
                           <span className="font-serif text-xl font-bold text-accent">
                             {brl(Number(s.price))}
                           </span>
-                          {shop.is_sponsored ? (
-                            <Button
+                          <Button
                               asChild
                               size="sm"
                               className="rounded-none bg-amber-500 text-[10px] font-bold uppercase tracking-wider text-amber-950 hover:bg-amber-600"
@@ -211,15 +210,6 @@ function ServicesDirectoryPage() {
                                 Agendar <ArrowRight className="ml-1 h-3 w-3" />
                               </Link>
                             </Button>
-                          ) : (
-                            <Button
-                              disabled
-                              size="sm"
-                              className="rounded-none bg-muted text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                            >
-                              Indisponível
-                            </Button>
-                          )}
                         </div>
                       </article>
                     ))}
