@@ -14,12 +14,14 @@ import { Calendar, Clock, LogOut, MapPin, Scissors, Star, User, Settings, ArrowR
 import { format, isFuture, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { barbershopService } from "@/services/barbershop.service";
+import { phoneMask } from "@/lib/utils";
 
 export const Route = createFileRoute("/minha-conta")({
   component: MinhaContaPage,
 });
 
-type Tab = "proximos" | "historico" | "perfil";
+type Tab = "proximos" | "historico" | "perfil" | "negocio";
 
 function MinhaContaPage() {
   const { user, loading } = useAuth();
@@ -31,6 +33,32 @@ function MinhaContaPage() {
   const [editName, setEditName] = useState(user?.user_metadata?.full_name || "");
   const [editPhone, setEditPhone] = useState(user?.user_metadata?.phone || "");
   const [savingProfile, setSavingProfile] = useState(false);
+
+  const [bsName, setBsName] = useState("");
+  const [bsPhone, setBsPhone] = useState("");
+  const [creatingBs, setCreatingBs] = useState(false);
+
+  async function handleCreateBarbershop(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bsName.trim()) return toast.error("O nome é obrigatório");
+    setCreatingBs(true);
+    try {
+      await barbershopService.createBarbershop({
+        name: bsName.trim(),
+        ownerId: user!.id,
+        phone: bsPhone.trim() || undefined,
+        address: { street: null, number: null, neighborhood: null, city: null, state: null, zip_code: null },
+        theme: { primaryColor: "#d4af37", secondaryColor: "#1a1a1a", logoUrl: null, bannerUrl: null },
+        links: { instagram: null, facebook: null, website: null, google_maps: null },
+      });
+      toast.success("Barbearia criada com sucesso!");
+      window.location.href = "/admin"; // hard redirect to reload permissions
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao criar barbearia");
+      setCreatingBs(false);
+    }
+  }
+
 
   // Queries
   const { data: customerIds = [], isLoading: idsLoading } = useQuery({
