@@ -122,10 +122,10 @@ function Dashboard() {
       // b. Estoque baixo
       const { count: lowStockCount } = await supabase
         .from("products")
-        .select("*", { count: "exact", head: true })
-        .eq("barbershop_id", shopId!)
+        .select("id", { count: "exact", head: true })
+        .eq("barbershop_id", shopId)
         .eq("active", true)
-        .lte("stock_quantity", 5); // Fallback to 5 if min_stock logic is complex
+        .lte("stock_qty", 5); // Fallback to 5 if min_stock logic is complex
 
       // c. Comissões pendentes
       const { count: pendingCommCount } = await supabase
