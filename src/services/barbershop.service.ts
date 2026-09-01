@@ -145,6 +145,7 @@ export const barbershopService = {
 
     if (owner) {
       await this.addMember(shop.id, owner, "owner");
+      await supabase.from("profiles").update({ default_barbershop_id: shop.id }).eq("id", owner);
     }
 
     return shop;

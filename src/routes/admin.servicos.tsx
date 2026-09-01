@@ -58,11 +58,17 @@ function ServicesPage() {
     }
   });
 
-  const { data: services, isLoading, isError, refetch } = useQuery({
+  const { data: services, isLoading, isError, error: fetchError, refetch } = useQuery({
     queryKey: ["admin-services", shopId],
     enabled: !!shopId,
     queryFn: () => barbershopService.getServices(shopId!),
   });
+
+  useEffect(() => {
+    if (isError && fetchError && import.meta.env.DEV) {
+      console.error("Services fetch error:", fetchError);
+    }
+  }, [isError, fetchError]);
 
   const toggleStatusMut = useMutation({
     mutationFn: async ({ id, active }: { id: string, active: boolean }) => {
