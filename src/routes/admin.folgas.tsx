@@ -57,7 +57,17 @@ function FolgasPage() {
 
   const filtered = timeoffs.filter(t => filterPro === "all" || t.professional_id === filterPro);
 
-  if (!shopId) return null;
+    if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
+          Não encontramos uma barbearia vinculada à sua conta.
+        </h2>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">

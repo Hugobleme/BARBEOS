@@ -20,17 +20,17 @@ const WEEKDAYS = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Q
 type Interval = { opens_at: string; closes_at: string; id?: string };
 
 function AdminHorariosPage() {
-  const { shop } = useCurrentShop();
+  const { shop, shopId } = useCurrentShop();
   const queryClient = useQueryClient();
 
   const { data: hours, isLoading } = useQuery({
-    queryKey: ["shop-hours", shop?.id],
-    enabled: !!shop?.id,
+    queryKey: ["shop-hours", shopId],
+    enabled: !!shopId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("barbershop_business_hours")
         .select("*")
-        .eq("barbershop_id", shop!.id)
+        .eq("barbershop_id", shopId)
         .order("weekday");
       if (error) throw error;
       return data;
@@ -56,7 +56,7 @@ function AdminHorariosPage() {
   const saveMut = useMutation({
     mutationFn: async (payload: Record<number, Interval[]>) => {
       // Clear old hours
-      const { error: delErr } = await supabase.from("barbershop_business_hours").delete().eq("barbershop_id", shop!.id);
+      const { error: delErr } = await supabase.from("barbershop_business_hours").delete().eq("barbershop_id", shopId);
       if (delErr) throw delErr;
 
       // Insert new hours
@@ -64,7 +64,7 @@ function AdminHorariosPage() {
       for (const [day, intervals] of Object.entries(payload)) {
          for (const inv of intervals) {
              if (inv.opens_at && inv.closes_at) {
-                 toInsert.push({ barbershop_id: shop!.id, weekday: parseInt(day), opens_at: inv.opens_at, closes_at: inv.closes_at });
+                 toInsert.push({ barbershop_id: shopId, weekday: parseInt(day), opens_at: inv.opens_at, closes_at: inv.closes_at });
              }
          }
       }
@@ -113,6 +113,17 @@ function AdminHorariosPage() {
   };
 
   if (!shop) return <div className="h-[calc(100vh-4rem)] flex flex-col bg-background/50"><div>Carregando...</div></div>;
+
+  if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
+          Não encontramos uma barbearia vinculada à sua conta.
+        </h2>
+      </div>
+    );
+  }
+
 
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col bg-background/50">

@@ -72,6 +72,17 @@ function CarteiraPage() {
   const balance = walletSummary?.balance ?? 0;
   const pendingReceivables = walletSummary?.pendingReceivables ?? 0;
 
+  if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
+          Não encontramos uma barbearia vinculada à sua conta.
+        </h2>
+      </div>
+    );
+  }
+
+
   return (
     <div className="space-y-8">
       {/* Topo / Cabeçalho */}

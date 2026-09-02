@@ -77,7 +77,17 @@ function AvaliacoesPage() {
     return { total, avg: total > 0 ? sum / total : 0, dist };
   }, [surveys]);
 
-  if (!shopId) return null;
+    if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
+          Não encontramos uma barbearia vinculada à sua conta.
+        </h2>
+      </div>
+    );
+  }
+
+
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
@@ -190,7 +200,7 @@ function AvaliacoesPage() {
                         
                         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">
                           <span className="flex items-center gap-1 font-semibold text-foreground"><User className="h-3 w-3 text-muted-foreground" /> {custName}</span>
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {(isNaN(new Date(s.answered_at).getTime()) ? 'Inv�lido' : format(new Date(s.answered_at), "dd/MM/yy"))}</span>
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {(isNaN(new Date(s.answered_at).getTime()) ? 'Inv�lido' : format(new Date(s.answered_at), "dd/MM/yy"))}</span>
                           {s.professional && (
                             <span className="flex items-center gap-1 bg-muted/50 px-2 py-0.5 rounded-md">Atendido por: {s.professional.display_name}</span>
                           )}
