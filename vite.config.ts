@@ -2,10 +2,16 @@
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  server: {
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8'
+    }
+  },
   nitro: {
     preset: "vercel",
   },
   build: {
+    charset: 'utf-8',
     target: 'esnext',
     minify: 'esbuild',
     rollupOptions: {

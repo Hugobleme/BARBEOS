@@ -119,7 +119,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
+      { charSet: "UTF-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "BarberOS — Gestão e agendamento para barbearias" },
       { name: "description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro." },
@@ -161,7 +161,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <meta charSet="utf-8" />
+        <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
           <HeadContent />
       </head>
