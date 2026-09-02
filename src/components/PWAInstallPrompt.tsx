@@ -69,6 +69,29 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
     setIsVisible(false);
   }
 
+  if (updateAvailable) {
+    return (
+      <div
+        className={cn(
+          "fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl md:left-auto md:right-4",
+          className
+        )}
+      >
+        <div className="flex flex-col gap-1">
+          <h4 className="font-serif font-bold text-sm text-foreground">Uma nova versão está disponível.</h4>
+          <p className="text-xs text-muted-foreground">Recarregue a página para continuar.</p>
+        </div>
+        <Button
+          size="sm"
+          onClick={() => window.location.reload()}
+          className="rounded-none bg-accent text-accent-foreground text-xs font-bold uppercase tracking-wider hover:bg-foreground hover:text-background shrink-0"
+        >
+          Recarregar agora
+        </Button>
+      </div>
+    );
+  }
+
   if (!isVisible || !deferredPrompt) return null;
 
   return (
