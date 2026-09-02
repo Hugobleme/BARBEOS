@@ -22,18 +22,24 @@ export function ShopProvider({
   children: ReactNode;
 }) {
   const [shopId, setShopIdState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem(STORAGE_KEY);
+    return shops.length > 0 ? shops[0].id : null;
   });
 
+  const [isHydrated, setIsHydrated] = useState(false);
+
   useEffect(() => {
-    if (!shops.length) return;
-    if (!shopId || !shops.find((s) => s.id === shopId)) {
-      const next = shops[0].id;
-      setShopIdState(next);
-      localStorage.setItem(STORAGE_KEY, next);
+    setIsHydrated(true);
+    const stored = localStorage.getItem(STORAGE_KEY);
+
+    if (stored && shops.some((s) => s.id === stored)) {
+      if (stored !== shopId) {
+        setShopIdState(stored);
+      }
+    } else if (shops.length > 0 && shopId !== shops[0].id) {
+      setShopIdState(shops[0].id);
+      localStorage.setItem(STORAGE_KEY, shops[0].id);
     }
-  }, [shops, shopId]);
+  }, [shops]);
 
   const setShopId = (id: string) => {
     setShopIdState(id);

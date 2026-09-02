@@ -116,8 +116,6 @@ function AdminLayout() {
     return null; // Will redirect via useEffect
   }
 
-  
-
   return (
     <ShopProvider shops={memberships} refresh={() => {}}>
       <AdminShell />
@@ -139,7 +137,6 @@ function AdminShell() {
       </div>
     );
   }
-
 
   const { theme, toggle } = useTheme();
   const [openSidebar, setOpenSidebar] = useState(false);
