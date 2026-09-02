@@ -82,7 +82,7 @@ function Dashboard() {
   });
 
   // 2. Próximos Agendamentos (com serviços incluídos via query customizada)
-  const { data: nextAppts, isLoading: loadingNext, isError: isErrNext, refetch: refetchNext } = useQuery({
+  const { data: nextAppts = [], isLoading: loadingNext, isError: isErrNext, refetch: refetchNext } = useQuery({
     queryKey: ["admin-next-appts", shopId],
     enabled: Boolean(shopId),
     queryFn: async () => {

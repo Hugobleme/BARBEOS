@@ -58,7 +58,7 @@ function CarteiraPage() {
   });
 
   // Consulta 2: Últimas 10 Transações
-  const { data: recentTransactions, isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
+  const { data: recentTransactions = [], isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
     queryKey: ["admin-wallet-recent-txs", shopId],
     enabled: !!shopId,
     queryFn: async () => {

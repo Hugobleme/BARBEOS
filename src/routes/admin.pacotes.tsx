@@ -102,8 +102,8 @@ function AdminPackagesPage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/40 rounded-xl bg-muted/10 mt-8">
               <PackageOpen className="h-10 w-10 text-muted-foreground/40 mb-3" />
-              <h3 className="font-bold">Nenhum pacote configurado</h3>
-              <p className="text-sm text-muted-foreground max-w-md mt-1">Crie pacotes de serviços para fidelizar clientes (ex: Pacote de 4 Cortes).</p>
+              <h3 className="font-bold">Você ainda não cadastrou pacotes.</h3>
+              <p className="text-sm text-muted-foreground max-w-md mt-1">Comece adicionando o primeiro pacote.</p>
               {canManage && (
                 <Button onClick={openNew} variant="outline" className="mt-6 text-accent border-accent/30 hover:bg-accent/10">
                   Criar Primeiro Pacote

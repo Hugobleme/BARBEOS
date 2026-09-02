@@ -59,7 +59,7 @@ function ServicesPage() {
     }
   });
 
-  const { data: services, isLoading, isError, error: fetchError, refetch } = useQuery({
+  const { data: services = [], isLoading, isError, error: fetchError, refetch } = useQuery({
     queryKey: ["admin-services", shopId],
     enabled: !!shopId,
     queryFn: () => barbershopService.getServices(shopId!),

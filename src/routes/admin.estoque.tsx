@@ -130,7 +130,7 @@ function EstoquePage() {
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/20 py-20 text-center">
               <Package className="h-12 w-12 text-muted-foreground/30 mb-4" />
               <h3 className="font-serif text-lg font-bold text-foreground">
-                {search || filterStatus !== "all" ? "Nenhum produto encontrado pros filtros atuais." : "Nenhum produto cadastrado."}
+                {search || filterStatus !== "all" ? "Nenhum produto encontrado pros filtros atuais." : "Você ainda não cadastrou produtos."}
               </h3>
             </div>
           ) : (

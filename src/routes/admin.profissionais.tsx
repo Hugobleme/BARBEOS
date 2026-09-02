@@ -55,7 +55,7 @@ function ProfessionalsPage() {
     }
   });
 
-  const { data: professionals, isLoading, isError, refetch } = useQuery({
+  const { data: professionals = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-pros", shopId],
     enabled: !!shopId,
     queryFn: async () => {

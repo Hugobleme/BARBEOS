@@ -44,13 +44,13 @@ function EquipePage() {
   const isAdmin = shop?.role === "admin";
   const canManage = isOwner || isAdmin;
 
-  const { data: members, isLoading, isError, refetch } = useQuery({
+  const { data: members = [], isLoading, isError, refetch } = useQuery({
     queryKey: ["admin-team", shopId],
     enabled: !!shopId,
     queryFn: () => barbershopService.getMembers(shopId!),
   });
 
-  const { data: invitations } = useQuery({
+  const { data: invitations = [] } = useQuery({
     queryKey: ["admin-invitations", shopId],
     enabled: !!shopId && canManage,
     queryFn: async () => {
@@ -148,7 +148,8 @@ function EquipePage() {
             ) : !Array.isArray(members) || members.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/20 py-16 text-center">
                 <ShieldAlert className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                <h3 className="font-serif text-lg font-bold text-foreground">Nenhum membro ativo encontrado.</h3>
+                <h3 className="font-serif text-lg font-bold text-foreground">Você ainda não cadastrou membros.</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Comece adicionando o primeiro membro.</p>
               </div>
             ) : (
               <div className="space-y-3">

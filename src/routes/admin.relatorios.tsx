@@ -50,13 +50,13 @@ function RelatoriosPage() {
     queryFn: () => reportService.getAppointmentsReport(shopId!, dateRange.s, dateRange.e)
   });
 
-  const { data: topCust, isLoading: loadCust } = useQuery({
+  const { data: topCust = [], isLoading: loadCust } = useQuery({
     queryKey: ["report-cust", shopId, dateRange.s.toISOString(), dateRange.e.toISOString()],
     enabled: !!shopId,
     queryFn: () => reportService.getTopCustomers(shopId!, 5)
   });
 
-  const { data: topSvc, isLoading: loadSvc } = useQuery({
+  const { data: topSvc = [], isLoading: loadSvc } = useQuery({
     queryKey: ["report-svc", shopId, dateRange.s.toISOString(), dateRange.e.toISOString()],
     enabled: !!shopId,
     queryFn: () => reportService.getTopServices(shopId!, 5)

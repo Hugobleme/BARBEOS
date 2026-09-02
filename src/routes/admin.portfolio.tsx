@@ -97,7 +97,7 @@ function PortfolioPage() {
             <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed border-border/40 rounded-xl bg-muted/10 mt-8">
               <ImageIcon className="h-10 w-10 text-muted-foreground/40 mb-3" />
               <h3 className="font-bold text-foreground">Seu portfólio ainda está vazio.</h3>
-              <p className="text-sm text-muted-foreground max-w-md mt-1">Adicione fotos dos seus melhores trabalhos.</p>
+              <p className="text-sm text-muted-foreground max-w-md mt-1">Comece adicionando o primeiro trabalho.</p>
               <Button onClick={() => setFormOpen(true)} variant="outline" className="mt-6 border-accent/30 text-accent hover:bg-accent/10">Adicionar Primeira Foto</Button>
             </div>
           ) : (

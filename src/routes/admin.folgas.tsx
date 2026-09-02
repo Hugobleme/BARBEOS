@@ -107,7 +107,7 @@ function FolgasPage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border/50 bg-card/20 py-20 text-center">
               <CalendarOff className="h-12 w-12 text-muted-foreground/30 mb-4" />
-              <h3 className="font-serif text-lg font-bold text-foreground">Nenhuma folga registrada.</h3>
+              <h3 className="font-serif text-lg font-bold text-foreground">Você ainda não cadastrou folgas.</h3>
               <p className="text-sm text-muted-foreground mt-1">Os profissionais estão com as agendas totalmente livres.</p>
             </div>
           ) : (
@@ -125,7 +125,7 @@ function FolgasPage() {
                         <span className="font-bold text-sm text-foreground truncate">{t.professional?.display_name || "Desconhecido"}</span>
                       </div>
                       <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1"><CalIcon className="h-3 w-3" /> {(isNaN(start.getTime()) ? 'Inv�lido' : format(start, "dd/MM/yy HH:mm"))} até {(isNaN(end.getTime()) ? 'Inv�lido' : format(end, "dd/MM/yy HH:mm"))}</span>
+                        <span className="flex items-center gap-1"><CalIcon className="h-3 w-3" /> {(isNaN(start.getTime()) ? 'Inv�lido' : format(start, "dd/MM/yy HH:mm"))} até {(isNaN(end.getTime()) ? 'Inv�lido' : format(end, "dd/MM/yy HH:mm"))}</span>
                       </div>
                       {t.reason && (
                         <span className="text-xs text-muted-foreground italic truncate mt-1 bg-muted/30 px-2 py-0.5 rounded-md inline-block w-fit max-w-full">

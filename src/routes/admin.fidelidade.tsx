@@ -128,7 +128,8 @@ function AdminLoyaltyPage() {
               </div>
             ) : rewards.length === 0 ? (
               <div className="p-6 sm:p-8 text-center border border-dashed border-border/40 rounded-xl bg-muted/10">
-                <p className="text-muted-foreground text-sm">Nenhuma recompensa configurada.</p>
+                <h3 className="font-bold">Você ainda não cadastrou recompensas.</h3>
+                  <p className="text-muted-foreground text-sm mt-1">Comece adicionando a primeira recompensa.</p>
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2">
