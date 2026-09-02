@@ -17,14 +17,17 @@ import { AnimatedOutlet } from "@/components/ui/animated-outlet";
 
 function NotFoundComponent() {
   const loc = useRouterState({ select: (s) => s.location });
-  
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-full max-w-[390px] w-full text-center sm:max-w-md">
         <h1 className="text-4xl md:text-6xl font-serif font-bold text-accent sm:text-7xl">404</h1>
-        <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">Página não encontrada</h2>
+        <h2 className="mt-4 font-serif text-xl font-semibold text-foreground sm:text-2xl">
+          Página não encontrada
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          O caminho que você buscou não existe ou foi movido. Vamos te ajudar a encontrar o que procura.
+          O caminho que você buscou não existe ou foi movido. Vamos te ajudar a encontrar o que
+          procura.
         </p>
         {import.meta.env.DEV && loc?.pathname && (
           <p className="mt-2 font-mono text-[10px] text-muted-foreground/50 truncate">
@@ -57,7 +60,8 @@ function getReadableError(error: unknown): string {
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error("Unhandled application error", error);
-  
+  const router = useRouter();
+
   if (
     error.message?.includes("Failed to fetch dynamically imported module") ||
     error.message?.includes("Importing a module script failed") ||
@@ -69,13 +73,10 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     }
   }
 
-  const router = useRouter();
   const isDevelopment = import.meta.env.DEV;
 
   const safeErrorMessage =
-    error instanceof Error && error.message
-      ? error.message.slice(0, 180)
-      : "Erro inesperado.";
+    error instanceof Error && error.message ? error.message.slice(0, 180) : "Erro inesperado.";
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -86,13 +87,13 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
         <p className="mt-2 text-xs text-muted-foreground">
           Tivemos uma instabilidade temporária. Tente recarregar a página para continuar.
         </p>
-        
+
         {isDevelopment ? (
           <p className="mt-4 break-words text-xs text-muted-foreground text-left bg-muted/30 p-2 rounded">
             Diagnóstico técnico: {safeErrorMessage}
           </p>
         ) : null}
-        
+
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
             onClick={() => {
@@ -122,10 +123,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "UTF-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "BarberOS — Gestão e agendamento para barbearias" },
-      { name: "description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro." },
+      {
+        name: "description",
+        content:
+          "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro.",
+      },
       { name: "author", content: "BarberOS" },
       { property: "og:title", content: "BarberOS — Gestão e agendamento para barbearias" },
-      { property: "og:description", content: "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro." },
+      {
+        property: "og:description",
+        content:
+          "Sistema completo para barbearias modernas: agenda online 24/7, gestão de clientes, equipe e financeiro.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@BarberOS" },
@@ -138,8 +147,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "preload", as: "style", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap" },
+      {
+        rel: "preload",
+        as: "style",
+        href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap",
+      },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,500&family=Inter:wght@300;400;500;600;700&display=swap",
+      },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
@@ -155,15 +171,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
-
-
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
-          <HeadContent />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+        />
+        <HeadContent />
       </head>
       <body className="overflow-x-hidden antialiased bg-background text-foreground">
         {children}
@@ -182,7 +199,10 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         {isLoading && (
           <div className="fixed inset-x-0 top-0 z-[100] h-1 origin-left animate-in fade-in fill-mode-both">
-            <div className="h-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] transition-all duration-500" style={{ width: "100%", animation: "progress 2s ease-in-out infinite" }} />
+            <div
+              className="h-full bg-accent shadow-[0_0_8px_hsl(var(--accent))] transition-all duration-500"
+              style={{ width: "100%", animation: "progress 2s ease-in-out infinite" }}
+            />
             <style>{`
               @keyframes progress {
                 0% { transform: scaleX(0); transform-origin: left; }
@@ -199,6 +219,3 @@ function RootComponent() {
     </ThemeProvider>
   );
 }
-
-
-

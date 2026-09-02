@@ -1,4 +1,5 @@
-﻿# ðŸ’ˆ BarberOS â€” Sistema de GestÃ£o & Agendamento para Barbearias Modernas
+﻿[![CI](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml)
+# ðŸ’ˆ BarberOS â€” Sistema de GestÃ£o & Agendamento para Barbearias Modernas
 
 O **BarberOS** Ã© uma plataforma completa e moderna para barbearias, desenvolvida com **React 19**, **TypeScript**, **Vite**, **TanStack Router**, **TanStack Start (SSR)**, **Tailwind CSS v4** e **Supabase** como backend seguro e em tempo real.
 
@@ -135,3 +136,4 @@ npx eslint src/routes/admin.servicos.tsx
 ```
 
 This check runs automatically in CI during the build/test verification workflow.
+
