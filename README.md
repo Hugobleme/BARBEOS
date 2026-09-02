@@ -116,3 +116,22 @@ Propriedade de BarberOS. Todos os direitos reservados.
 ## Mapas
 A home page do cliente utiliza a biblioteca leve **Leaflet** (eact-leaflet) para exibir o mapa dinâmico de barbearias, consumindo os tiles gratuitos do OpenStreetMap/CartoDB.
 Para utilizar Google Maps ou Mapbox no futuro, basta alterar a variável VITE_MAP_PROVIDER para google ou mapbox (requer extensão do MapProvider.tsx com o respectivo SDK da provedora).
+
+## 🧹 Code Quality & Linting
+
+### Missing Lucide Icon Imports Check
+To prevent runtime crashes caused by using `<IconName />` components without importing them from `lucide-react`, we have a custom ESLint plugin (`eslint-plugin-barbeos`).
+
+**How to run locally:**
+```bash
+npm run lint
+# or specifically check a file:
+npx eslint src/routes/admin.servicos.tsx
+```
+
+**Example Error Output:**
+```text
+126:14  error  Icon 'Info' is used but not imported from 'lucide-react'  barbeos/lucide-imports
+```
+
+This check runs automatically in CI during the build/test verification workflow.

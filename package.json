@@ -9,6 +9,7 @@
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "lint:icons": "eslint -c eslint.lucide.config.js .",
     "format": "prettier --write .",
     "test": "vitest run && playwright test",
     "test:e2e": "playwright test",
