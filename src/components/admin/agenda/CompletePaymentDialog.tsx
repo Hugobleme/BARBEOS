@@ -1,16 +1,33 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { appointmentService } from "@/services/appointment.service";
 import { cashService } from "@/services/cash.service";
 import { PaymentMethod } from "@/services/cash.service";
 
 const METHOD_LABEL: Record<PaymentMethod, string> = {
-  cash: "Dinheiro", debit: "Débito", credit: "Crédito", pix: "Pix", transfer: "Transferência", other: "Outro"
+  cash: "Dinheiro",
+  debit: "Débito",
+  credit: "Crédito",
+  pix: "Pix",
+  transfer: "Transferência",
+  other: "Outro",
 };
 
 interface CompletePaymentDialogProps {
@@ -20,7 +37,12 @@ interface CompletePaymentDialogProps {
   onDone: () => void;
 }
 
-export function CompletePaymentDialog({ appt, onClose, userId, onDone }: CompletePaymentDialogProps) {
+export function CompletePaymentDialog({
+  appt,
+  onClose,
+  userId,
+  onDone,
+}: CompletePaymentDialogProps) {
   const [method, setMethod] = useState<PaymentMethod>("cash");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
@@ -34,7 +56,7 @@ export function CompletePaymentDialog({ appt, onClose, userId, onDone }: Complet
       // 1. Get or open session
       const openSession = await cashService.getOpenSession(appt.barbershop_id);
       let sessionId = openSession?.id;
-      
+
       if (!sessionId) {
         const created = await cashService.openSession(appt.barbershop_id, userId, 0);
         sessionId = created.id;
@@ -81,15 +103,21 @@ export function CompletePaymentDialog({ appt, onClose, userId, onDone }: Complet
               </SelectTrigger>
               <SelectContent>
                 {(Object.keys(METHOD_LABEL) as PaymentMethod[]).map((m) => (
-                  <SelectItem key={m} value={m}>{METHOD_LABEL[m]}</SelectItem>
+                  <SelectItem key={m} value={m}>
+                    {METHOD_LABEL[m]}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={submit} disabled={loading}>{loading ? "Processando..." : "Confirmar e Receber"}</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={submit} disabled={loading}>
+            {loading ? "Processando..." : "Confirmar e Receber"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

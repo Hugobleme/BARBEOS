@@ -6,7 +6,29 @@ import { ShopProvider, useCurrentShop } from "@/hooks/use-current-shop";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { BarChart3, Boxes, Building2, Calendar, CalendarOff, Coins, DollarSign, Gift, Image as ImageIcon, LayoutDashboard, MessageSquare, MoreHorizontal, Package, Scissors, Settings, ShoppingCart, TicketPercent, Users, UserCog, UsersRound, Wallet } from "lucide-react";
+import {
+  BarChart3,
+  Boxes,
+  Building2,
+  Calendar,
+  CalendarOff,
+  Coins,
+  DollarSign,
+  Gift,
+  Image as ImageIcon,
+  LayoutDashboard,
+  MessageSquare,
+  MoreHorizontal,
+  Package,
+  Scissors,
+  Settings,
+  ShoppingCart,
+  TicketPercent,
+  Users,
+  UserCog,
+  UsersRound,
+  Wallet,
+} from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useTheme } from "@/hooks/use-theme";
@@ -18,10 +40,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
-    meta: [
-      { title: "Admin — BarberOS" },
-      { name: "robots", content: "noindex,nofollow" },
-    ],
+    meta: [{ title: "Admin — BarberOS" }, { name: "robots", content: "noindex,nofollow" }],
   }),
   loader: async ({ context: { queryClient } }) => {
     // Prefetching memberships is useful as they are needed immediately
@@ -30,8 +49,8 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-import { useOnboardingStatus } from '@/hooks/use-onboarding';
-import { CheckCircle2 as CheckCircle2Icon } from 'lucide-react';
+import { useOnboardingStatus } from "@/hooks/use-onboarding";
+import { CheckCircle2 as CheckCircle2Icon } from "lucide-react";
 
 const NAV = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -85,7 +104,9 @@ function AdminLayout() {
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="h-12 w-12 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-          <p className="animate-pulse text-sm font-medium text-muted-foreground">Carregando painel...</p>
+          <p className="animate-pulse text-sm font-medium text-muted-foreground">
+            Carregando painel...
+          </p>
         </div>
       </div>
     );
@@ -93,6 +114,16 @@ function AdminLayout() {
 
   if (!user || !memberships || memberships.length === 0) {
     return null; // Will redirect via useEffect
+  }
+
+  if (!shopId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
+        <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
+          Não encontramos uma barbearia vinculada à sua conta.
+        </h2>
+      </div>
+    );
   }
 
   return (
@@ -106,10 +137,10 @@ function AdminShell() {
   const loc = useLocation();
   const { user } = useAuth();
   const { shopId, shops, setShopId, refresh } = useCurrentShop();
-  
+
   const { theme, toggle } = useTheme();
   const [openSidebar, setOpenSidebar] = useState(false);
-  
+
   const { data: onboarding } = useOnboardingStatus(shopId);
   const [bannerDismissed, setBannerDismissed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -123,65 +154,84 @@ function AdminShell() {
     sessionStorage.setItem("onboarding_banner_dismissed", "true");
   };
 
-
   return (
     <div className="relative min-h-screen bg-background selection:bg-accent/30 selection:text-accent-foreground">
       {/* Dynamic background accents */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden opacity-[0.4] dark:opacity-60">
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.1, 1],
             x: [0, 20, 0],
-            y: [0, -20, 0]
+            y: [0, -20, 0],
           }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -left-32 top-0 h-[600px] w-full max-w-[600px] rounded-full bg-accent/10 blur-[120px]" 
+          className="absolute -left-32 top-0 h-[600px] w-full max-w-[600px] rounded-full bg-accent/10 blur-[120px]"
         />
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.2, 1],
             x: [0, -30, 0],
-            y: [0, 30, 0]
+            y: [0, 30, 0],
           }}
           transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -right-32 bottom-0 h-[500px] w-full max-w-[500px] rounded-full bg-accent/5 blur-[140px]" 
+          className="absolute -right-32 bottom-0 h-[500px] w-full max-w-[500px] rounded-full bg-accent/5 blur-[140px]"
         />
       </div>
 
       <AdminSidebar navItems={NAV} open={openSidebar} setOpen={setOpenSidebar} />
 
-      
       <div className="relative z-10 flex flex-col md:pl-64">
         {onboarding && !onboarding.isFullyComplete && !bannerDismissed && (
           <div className="bg-accent text-accent-foreground px-4 py-3 flex items-center justify-between shadow-md">
             <div className="flex items-center gap-2">
               <CheckCircle2Icon className="h-5 w-5" />
-              <p className="text-sm font-semibold">Complete a configuração da sua barbearia para começar a atender online.</p>
+              <p className="text-sm font-semibold">
+                Complete a configuração da sua barbearia para começar a atender online.
+              </p>
             </div>
             <div className="flex items-center gap-3">
-              <Link to="/admin/onboarding" className="text-xs font-bold uppercase tracking-wider bg-background/20 hover:bg-background/30 px-3 py-1.5 rounded-lg transition-colors">
+              <Link
+                to="/admin/onboarding"
+                className="text-xs font-bold uppercase tracking-wider bg-background/20 hover:bg-background/30 px-3 py-1.5 rounded-lg transition-colors"
+              >
                 Continuar configuração
               </Link>
-              <button onClick={dismissBanner} className="p-1 hover:bg-background/20 rounded-full transition-colors">
+              <button
+                onClick={dismissBanner}
+                className="p-1 hover:bg-background/20 rounded-full transition-colors"
+              >
                 <span className="sr-only">Fechar</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-x h-4 w-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-x h-4 w-4"
+                >
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
               </button>
             </div>
           </div>
         )}
-        <AdminHeader 
- 
-          shopId={shopId} 
-          shops={shops} 
-          setShopId={setShopId} 
-          refresh={refresh} 
-          setOpenSidebar={setOpenSidebar} 
-          theme={theme} 
-          toggleTheme={toggle} 
-          userEmail={user?.email} 
+        <AdminHeader
+          shopId={shopId}
+          shops={shops}
+          setShopId={setShopId}
+          refresh={refresh}
+          setOpenSidebar={setOpenSidebar}
+          theme={theme}
+          toggleTheme={toggle}
+          userEmail={user?.email}
           navItems={NAV}
         />
-        
+
         <main className="flex-1 p-3 pb-28 md:p-8 md:pb-8 w-full min-w-0 overflow-x-hidden">
           <motion.div
             key={loc.pathname}
@@ -199,42 +249,56 @@ function AdminShell() {
           {NAV.slice(0, 4).map((n) => {
             const active = n.exact ? loc.pathname === n.to : loc.pathname.startsWith(n.to);
             return (
-              <Link 
-                key={n.to} 
-                to={n.to} 
+              <Link
+                key={n.to}
+                to={n.to}
                 className={`group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2 transition-all active:scale-90 ${active ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {active && (
-                  <motion.div 
+                  <motion.div
                     layoutId="mobile-nav-pill"
                     className="absolute inset-x-1 inset-y-1 z-[-1] rounded-xl bg-accent/10"
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                   />
                 )}
-                <n.icon className={`h-5 w-5 transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`} />
+                <n.icon
+                  className={`h-5 w-5 transition-transform ${active ? "scale-110" : "group-hover:scale-110"}`}
+                />
                 <span className="text-[10px] font-bold tracking-tight">{n.label}</span>
               </Link>
             );
           })}
           <Sheet>
             <SheetTrigger asChild>
-              <button className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-muted-foreground transition-all active:scale-90 ${NAV.slice(4).some(n => loc.pathname.startsWith(n.to)) ? "text-accent" : ""}`}>
+              <button
+                className={`flex flex-1 flex-col items-center justify-center gap-1 py-2 text-muted-foreground transition-all active:scale-90 ${NAV.slice(4).some((n) => loc.pathname.startsWith(n.to)) ? "text-accent" : ""}`}
+              >
                 <MoreHorizontal className="h-5 w-5" />
                 <span className="text-[10px] font-bold tracking-tight">Mais</span>
               </button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-[32px] border-border/40 bg-background/95 pb-12 backdrop-blur-xl max-h-[85vh] overflow-y-auto">
+            <SheetContent
+              side="bottom"
+              className="rounded-t-[32px] border-border/40 bg-background/95 pb-12 backdrop-blur-xl max-h-[85vh] overflow-y-auto"
+            >
               <SheetHeader className="mb-6 border-b border-border/40 pb-4 text-left">
-                <SheetTitle className="font-display text-2xl font-bold tracking-tight">Todas as Opções</SheetTitle>
+                <SheetTitle className="font-display text-2xl font-bold tracking-tight">
+                  Todas as Opções
+                </SheetTitle>
               </SheetHeader>
               <div className="grid grid-cols-3 gap-3">
                 {NAV.slice(4).map((n) => {
                   const active = loc.pathname.startsWith(n.to);
                   return (
-                    <Link key={n.to} to={n.to}
-                      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 transition-all active:scale-95 ${active ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-muted/20 text-foreground hover:bg-muted/40"}`}>
+                    <Link
+                      key={n.to}
+                      to={n.to}
+                      className={`flex flex-col items-center justify-center gap-2 rounded-2xl border p-4 transition-all active:scale-95 ${active ? "border-accent bg-accent/10 text-accent shadow-sm" : "border-border/40 bg-muted/20 text-foreground hover:bg-muted/40"}`}
+                    >
                       <n.icon className="h-6 w-6" />
-                      <span className="text-[10px] font-bold tracking-tight text-center uppercase">{n.label}</span>
+                      <span className="text-[10px] font-bold tracking-tight text-center uppercase">
+                        {n.label}
+                      </span>
                     </Link>
                   );
                 })}
@@ -246,4 +310,3 @@ function AdminShell() {
     </div>
   );
 }
-

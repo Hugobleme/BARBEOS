@@ -18,7 +18,8 @@ export const auroraTools = [
   },
   {
     name: "buscar_horarios_disponiveis",
-    description: "Retorna horários livres num intervalo de datas para um serviço, opcionalmente filtrando por profissional.",
+    description:
+      "Retorna horários livres num intervalo de datas para um serviço, opcionalmente filtrando por profissional.",
     parameters: {
       type: "object",
       properties: {
@@ -41,7 +42,8 @@ export const auroraTools = [
   },
   {
     name: "criar_agendamento",
-    description: "Cria o agendamento. Se o cliente não existir, cria pelo nome+telefone. Só chame após confirmação clara.",
+    description:
+      "Cria o agendamento. Se o cliente não existir, cria pelo nome+telefone. Só chame após confirmação clara.",
     parameters: {
       type: "object",
       properties: {
@@ -51,7 +53,13 @@ export const auroraTools = [
         customer_name: { type: "string" },
         customer_phone: { type: "string" },
       },
-      required: ["service_id", "professional_id", "scheduled_start", "customer_name", "customer_phone"],
+      required: [
+        "service_id",
+        "professional_id",
+        "scheduled_start",
+        "customer_name",
+        "customer_phone",
+      ],
     },
   },
   {
@@ -74,7 +82,11 @@ function normalizePhone(p: string): string {
   return p.replace(/\D+/g, "");
 }
 
-export async function runTool(name: string, args: Record<string, unknown>, barbershopId: string): Promise<unknown> {
+export async function runTool(
+  name: string,
+  args: Record<string, unknown>,
+  barbershopId: string,
+): Promise<unknown> {
   const db = supabaseAdmin;
 
   switch (name) {
@@ -94,12 +106,27 @@ export async function runTool(name: string, args: Record<string, unknown>, barbe
       if (serviceId) {
         const { data, error } = await db
           .from("service_professionals")
-          .select("professional:professionals(id,display_name,bio,specialties,active,barbershop_id)")
+          .select(
+            "professional:professionals(id,display_name,bio,specialties,active,barbershop_id)",
+          )
           .eq("service_id", serviceId);
         if (error) throw error;
         const pros = (data ?? [])
-          .map((r: { professional: { id: string; display_name: string; bio: string | null; specialties: string[] | null; active: boolean; barbershop_id: string } | null }) => r.professional)
-          .filter((p): p is NonNullable<typeof p> => !!p && p.active && p.barbershop_id === barbershopId);
+          .map(
+            (r: {
+              professional: {
+                id: string;
+                display_name: string;
+                bio: string | null;
+                specialties: string[] | null;
+                active: boolean;
+                barbershop_id: string;
+              } | null;
+            }) => r.professional,
+          )
+          .filter(
+            (p): p is NonNullable<typeof p> => !!p && p.active && p.barbershop_id === barbershopId,
+          );
         return { professionals: pros };
       }
       const { data, error } = await db
@@ -160,23 +187,41 @@ export async function runTool(name: string, args: Record<string, unknown>, barbe
         const weekday = d.getDay();
         const dateStr = d.toISOString().slice(0, 10);
         for (const proId of proIds) {
-          const hours = (wh ?? []).filter((h: { professional_id: string; weekday: number }) => h.professional_id === proId && h.weekday === weekday);
-          for (const h of hours as Array<{ professional_id: string; start_time: string; end_time: string; break_start: string | null; break_end: string | null }>) {
+          const hours = (wh ?? []).filter(
+            (h: { professional_id: string; weekday: number }) =>
+              h.professional_id === proId && h.weekday === weekday,
+          );
+          for (const h of hours as Array<{
+            professional_id: string;
+            start_time: string;
+            end_time: string;
+            break_start: string | null;
+            break_end: string | null;
+          }>) {
             const dayStart = new Date(`${dateStr}T${h.start_time}-03:00`);
             const dayEnd = new Date(`${dateStr}T${h.end_time}-03:00`);
             const breakStart = h.break_start ? new Date(`${dateStr}T${h.break_start}-03:00`) : null;
             const breakEnd = h.break_end ? new Date(`${dateStr}T${h.break_end}-03:00`) : null;
-            for (let t = new Date(dayStart); t.getTime() + durMin * 60000 <= dayEnd.getTime(); t = new Date(t.getTime() + 30 * 60000)) {
+            for (
+              let t = new Date(dayStart);
+              t.getTime() + durMin * 60000 <= dayEnd.getTime();
+              t = new Date(t.getTime() + 30 * 60000)
+            ) {
               const slotEnd = new Date(t.getTime() + durMin * 60000);
               if (t < new Date()) continue;
               if (breakStart && breakEnd && t < breakEnd && slotEnd > breakStart) continue;
-              const conflict = (appts ?? []).some((a: { professional_id: string; scheduled_start: string; scheduled_end: string }) =>
-                a.professional_id === proId &&
-                new Date(a.scheduled_start) < slotEnd &&
-                new Date(a.scheduled_end) > t
+              const conflict = (appts ?? []).some(
+                (a: { professional_id: string; scheduled_start: string; scheduled_end: string }) =>
+                  a.professional_id === proId &&
+                  new Date(a.scheduled_start) < slotEnd &&
+                  new Date(a.scheduled_end) > t,
               );
               if (conflict) continue;
-              slots.push({ professional_id: proId, start: t.toISOString(), end: slotEnd.toISOString() });
+              slots.push({
+                professional_id: proId,
+                start: t.toISOString(),
+                end: slotEnd.toISOString(),
+              });
               if (slots.length >= 30) break;
             }
             if (slots.length >= 30) break;
@@ -271,13 +316,22 @@ export async function runTool(name: string, args: Record<string, unknown>, barbe
         duration_snapshot: svc.duration_min,
       });
 
-      return { appointment_id: appt.id, scheduled_start: start.toISOString(), scheduled_end: end.toISOString() };
+      return {
+        appointment_id: appt.id,
+        scheduled_start: start.toISOString(),
+        scheduled_end: end.toISOString(),
+      };
     }
 
     case "cancelar_agendamento": {
       const id = args.appointment_id as string;
-      const { data: appt } = await db.from("appointments").select("barbershop_id").eq("id", id).single();
-      if (!appt || appt.barbershop_id !== barbershopId) return { error: "Agendamento não encontrado." };
+      const { data: appt } = await db
+        .from("appointments")
+        .select("barbershop_id")
+        .eq("id", id)
+        .single();
+      if (!appt || appt.barbershop_id !== barbershopId)
+        return { error: "Agendamento não encontrado." };
       const { error } = await db.from("appointments").update({ status: "cancelled" }).eq("id", id);
       if (error) throw error;
       return { ok: true };

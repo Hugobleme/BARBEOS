@@ -15,17 +15,24 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ ERRO: SUPABASE_URL e SUPABASE_SERVICE_KEY devem ser configurados no arquivo .env");
+  console.error(
+    "❌ ERRO: SUPABASE_URL e SUPABASE_SERVICE_KEY devem ser configurados no arquivo .env",
+  );
 }
 
-const supabase = createClient(supabaseUrl || "https://placeholder.supabase.co", supabaseKey || "placeholder");
+const supabase = createClient(
+  supabaseUrl || "https://placeholder.supabase.co",
+  supabaseKey || "placeholder",
+);
 
 // 2. Estado de conversação em memória para cada número
 const userSessions = new Map();
 
 // Helper para formatar moeda
 function formatBRL(amount) {
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(amount) || 0);
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
+    Number(amount) || 0,
+  );
 }
 
 // Helper para formatar telefone para o WhatsApp JID
@@ -135,7 +142,14 @@ async function handleIncomingMessage(sock, from, text, msg) {
     }
   }
 
-  if (normalized === "menu" || normalized === "/menu" || normalized === "inicio" || normalized === "oi" || normalized === "olá" || normalized === "ola") {
+  if (
+    normalized === "menu" ||
+    normalized === "/menu" ||
+    normalized === "inicio" ||
+    normalized === "oi" ||
+    normalized === "olá" ||
+    normalized === "ola"
+  ) {
     userSessions.delete(from);
     return sendMainMenu(sock, from);
   }
@@ -248,7 +262,8 @@ async function handleIncomingMessage(sock, from, text, msg) {
       minute: "2-digit",
     });
 
-    const summaryMsg = `📋 *CONFIRMAÇÃO DO AGENDAMENTO*\n\n` +
+    const summaryMsg =
+      `📋 *CONFIRMAÇÃO DO AGENDAMENTO*\n\n` +
       `👤 *Cliente:* ${session.customerName}\n` +
       `✂️ *Serviço:* ${session.selectedService.name}\n` +
       `💰 *Valor:* ${formatBRL(session.selectedService.price)}\n` +
@@ -295,7 +310,8 @@ async function handleIncomingMessage(sock, from, text, msg) {
 
   if (normalized === "5" || normalized === "/ajuda") {
     return sock.sendMessage(from, {
-      text: `💈 *BarberOS — Informações & Atendimento*\n\n` +
+      text:
+        `💈 *BarberOS — Informações & Atendimento*\n\n` +
         `📍 *Endereço:* Unidades credenciadas no Brasil\n` +
         `⏰ *Funcionamento:* Seg a Sáb das 09h às 20h\n` +
         `🌐 *Agende Online:* https://barberos.vercel.app\n\n` +
@@ -391,7 +407,8 @@ async function executeBookingCreation(sock, from, session) {
     });
 
     await sock.sendMessage(from, {
-      text: `🎉 *Agendamento Confirmado com Sucesso!*\n\n` +
+      text:
+        `🎉 *Agendamento Confirmado com Sucesso!*\n\n` +
         `✂️ *Serviço:* ${session.selectedService.name}\n` +
         `🗓️ *Data:* ${dataFormatada}\n` +
         `💈 *Profissional:* ${session.selectedPro?.display_name || "A definir"}\n` +
@@ -570,7 +587,9 @@ function parseUserDate(input) {
   }
 
   // Caso: "25/08 16:00" ou "25/08/2026 16:00"
-  const dateMatch = text.match(/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+(?:às\s+)?(\d{1,2})[:h](\d{2})?/);
+  const dateMatch = text.match(
+    /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\s+(?:às\s+)?(\d{1,2})[:h](\d{2})?/,
+  );
   if (dateMatch) {
     const day = parseInt(dateMatch[1], 10);
     const month = parseInt(dateMatch[2], 10) - 1;
@@ -616,7 +635,8 @@ function setupRealtimeAndCron(sock) {
             minute: "2-digit",
           });
 
-          const msg = `💈 *Agendamento Confirmado no BarberOS!*\n\n` +
+          const msg =
+            `💈 *Agendamento Confirmado no BarberOS!*\n\n` +
             `Olá, *${customer.full_name.split(" ")[0]}*! Seu agendamento para *${dataStr}* foi confirmado no sistema.\n\n` +
             `Qualquer dúvida ou alteração, responda esta mensagem!`;
 
@@ -625,7 +645,7 @@ function setupRealtimeAndCron(sock) {
         } catch (err) {
           console.error("Erro ao enviar confirmação Realtime:", err);
         }
-      }
+      },
     )
     .subscribe();
 
@@ -638,7 +658,9 @@ function setupRealtimeAndCron(sock) {
 
     const { data: appointments } = await supabase
       .from("appointments")
-      .select("id, scheduled_start, customers(full_name, phone), professional:professionals(display_name)")
+      .select(
+        "id, scheduled_start, customers(full_name, phone), professional:professionals(display_name)",
+      )
       .eq("status", "scheduled")
       .gte("scheduled_start", in24hStart.toISOString())
       .lte("scheduled_start", in24hEnd.toISOString());
@@ -654,7 +676,8 @@ function setupRealtimeAndCron(sock) {
         minute: "2-digit",
       });
 
-      const lembreteMsg = `💈 *Lembrete BarberOS*\n\n` +
+      const lembreteMsg =
+        `💈 *Lembrete BarberOS*\n\n` +
         `Olá, *${a.customers.full_name.split(" ")[0]}*!\n` +
         `Lembramos que seu horário é *amanhã às ${dataStr}* com *${a.professional?.display_name || "seu barbeiro"}*.\n\n` +
         `Te esperamos lá! Para cancelar ou remarcar, responda *menu*.`;

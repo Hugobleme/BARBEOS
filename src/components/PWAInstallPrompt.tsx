@@ -74,11 +74,13 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
       <div
         className={cn(
           "fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl md:left-auto md:right-4",
-          className
+          className,
         )}
       >
         <div className="flex flex-col gap-1">
-          <h4 className="font-serif font-bold text-sm text-foreground">Uma nova versão está disponível.</h4>
+          <h4 className="font-serif font-bold text-sm text-foreground">
+            Uma nova versão está disponível.
+          </h4>
           <p className="text-xs text-muted-foreground">Recarregue a página para continuar.</p>
         </div>
         <Button
@@ -98,7 +100,7 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
     <div
       className={cn(
         "fixed bottom-4 left-4 right-4 z-50 mx-auto flex max-w-md items-center justify-between gap-4 border border-border bg-card/95 p-4 shadow-2xl backdrop-blur-xl md:left-auto md:right-4",
-        className
+        className,
       )}
       role="banner"
       aria-label="Instalação do Aplicativo BarberOS"
@@ -109,7 +111,9 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
         </div>
         <div>
           <h4 className="font-serif font-bold text-sm text-foreground">Instalar o BarberOS</h4>
-          <p className="text-xs text-muted-foreground">Acesse sua barbearia direto da tela inicial</p>
+          <p className="text-xs text-muted-foreground">
+            Acesse sua barbearia direto da tela inicial
+          </p>
         </div>
       </div>
 

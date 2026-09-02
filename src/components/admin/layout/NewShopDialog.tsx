@@ -2,13 +2,26 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { barbershopService } from "@/services/barbershop.service";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { slugify } from "@/lib/utils";
 
-export function NewShopDialog({ onCreated, trigger }: { onCreated: () => void; trigger: React.ReactNode }) {
+export function NewShopDialog({
+  onCreated,
+  trigger,
+}: {
+  onCreated: () => void;
+  trigger: React.ReactNode;
+}) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -17,7 +30,7 @@ export function NewShopDialog({ onCreated, trigger }: { onCreated: () => void; t
   async function create() {
     if (!name.trim()) return toast.error("Informe o nome da barbearia");
     if (!user) return;
-    
+
     setBusy(true);
     try {
       const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -42,7 +55,11 @@ export function NewShopDialog({ onCreated, trigger }: { onCreated: () => void; t
         </DialogHeader>
         <div className="grid gap-2">
           <Label>Nome</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: BarberOS Centro" />
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: BarberOS Centro"
+          />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>

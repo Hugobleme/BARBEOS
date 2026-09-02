@@ -12,7 +12,15 @@ type Ctx = {
 const ShopCtx = createContext<Ctx | null>(null);
 const STORAGE_KEY = "barberos.currentShopId";
 
-export function ShopProvider({ shops, refresh, children }: { shops: Shop[]; refresh: () => void; children: ReactNode }) {
+export function ShopProvider({
+  shops,
+  refresh,
+  children,
+}: {
+  shops: Shop[];
+  refresh: () => void;
+  children: ReactNode;
+}) {
   const [shopId, setShopIdState] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem(STORAGE_KEY);
@@ -34,7 +42,11 @@ export function ShopProvider({ shops, refresh, children }: { shops: Shop[]; refr
 
   const shop = shops.find((s) => s.id === shopId) ?? null;
 
-  return <ShopCtx.Provider value={{ shopId, shop, shops, setShopId, refresh }}>{children}</ShopCtx.Provider>;
+  return (
+    <ShopCtx.Provider value={{ shopId, shop, shops, setShopId, refresh }}>
+      {children}
+    </ShopCtx.Provider>
+  );
 }
 
 export function useCurrentShop() {

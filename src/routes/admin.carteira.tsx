@@ -9,8 +9,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { TableSkeleton, EmptyState } from "@/components/site/LoadingState";
 import { brl } from "@/lib/format";
 import { format, subDays } from "date-fns";
@@ -51,14 +64,22 @@ function CarteiraPage() {
   const canWithdraw = isOwner;
 
   // Consulta 1: Resumo da Carteira
-  const { data: walletSummary, isLoading: loadingSummary, refetch: refetchSummary } = useQuery({
+  const {
+    data: walletSummary,
+    isLoading: loadingSummary,
+    refetch: refetchSummary,
+  } = useQuery({
     queryKey: ["admin-wallet-summary", shopId],
     enabled: !!shopId,
     queryFn: () => cashService.getWalletSummary(shopId!),
   });
 
   // Consulta 2: Últimas 10 Transações
-  const { data: recentTransactions = [], isLoading: loadingTransactions, refetch: refetchTransactions } = useQuery({
+  const {
+    data: recentTransactions = [],
+    isLoading: loadingTransactions,
+    refetch: refetchTransactions,
+  } = useQuery({
     queryKey: ["admin-wallet-recent-txs", shopId],
     enabled: !!shopId,
     queryFn: async () => {
@@ -81,7 +102,6 @@ function CarteiraPage() {
       </div>
     );
   }
-
 
   return (
     <div className="space-y-8">
@@ -122,10 +142,14 @@ function CarteiraPage() {
               <Wallet className="h-4 w-4" />
             </div>
           </div>
-          <div className={`mt-3 font-serif text-4xl font-bold ${balance >= 0 ? "text-accent" : "text-destructive"}`}>
+          <div
+            className={`mt-3 font-serif text-4xl font-bold ${balance >= 0 ? "text-accent" : "text-destructive"}`}
+          >
             {brl(balance)}
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Líquido acumulado de vendas e despesas</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Líquido acumulado de vendas e despesas
+          </p>
         </Card>
 
         {/* Recebíveis Futuros */}
@@ -141,7 +165,9 @@ function CarteiraPage() {
           <div className="mt-3 font-serif text-4xl font-bold text-foreground">
             {brl(pendingReceivables)}
           </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">Agendamentos marcados pendentes de atendimento</p>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Agendamentos marcados pendentes de atendimento
+          </p>
         </Card>
 
         {/* Total Movimentações */}
@@ -201,20 +227,30 @@ function CarteiraPage() {
                       </td>
                       <td className="py-3">
                         {isEntry ? (
-                          <Badge variant="outline" className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase">
+                          <Badge
+                            variant="outline"
+                            className="rounded-none border-emerald-500/30 bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase"
+                          >
                             Entrada
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase">
+                          <Badge
+                            variant="outline"
+                            className="rounded-none border-destructive/30 bg-destructive/10 text-destructive text-[10px] font-bold uppercase"
+                          >
                             Retirada / Saída
                           </Badge>
                         )}
                       </td>
-                      <td className="py-3 font-medium text-foreground">{tx.description || "Transação"}</td>
+                      <td className="py-3 font-medium text-foreground">
+                        {tx.description || "Transação"}
+                      </td>
                       <td className="py-3 text-xs text-muted-foreground">
                         {METHOD_LABELS[tx.method] || tx.method}
                       </td>
-                      <td className={`py-3 text-right font-mono font-bold ${isEntry ? "text-emerald-500" : "text-destructive"}`}>
+                      <td
+                        className={`py-3 text-right font-mono font-bold ${isEntry ? "text-emerald-500" : "text-destructive"}`}
+                      >
                         {isEntry ? `+ ${brl(Number(tx.amount))}` : `- ${brl(Number(tx.amount))}`}
                       </td>
                     </tr>
@@ -268,7 +304,8 @@ function WithdrawModal({
     const amountNum = Number(amountStr.replace(",", "."));
 
     if (!amountNum || amountNum <= 0) return toast.error("Informe um valor de retirada válido.");
-    if (amountNum > currentBalance) return toast.error("O valor de retirada excede o saldo disponível na carteira.");
+    if (amountNum > currentBalance)
+      return toast.error("O valor de retirada excede o saldo disponível na carteira.");
 
     setBusy(true);
     try {
@@ -302,7 +339,9 @@ function WithdrawModal({
 
           <div className="space-y-4 py-4 text-xs">
             <div className="border border-border bg-card/60 p-3">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground">Saldo Disponível:</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                Saldo Disponível:
+              </span>
               <div className="font-serif text-xl font-bold text-accent">{brl(currentBalance)}</div>
             </div>
 
@@ -349,10 +388,19 @@ function WithdrawModal({
           </div>
 
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-none">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="rounded-none"
+            >
               Cancelar
             </Button>
-            <Button type="submit" disabled={busy} className="rounded-none bg-accent text-accent-foreground">
+            <Button
+              type="submit"
+              disabled={busy}
+              className="rounded-none bg-accent text-accent-foreground"
+            >
               {busy ? "Processando..." : "Confirmar Retirada"}
             </Button>
           </DialogFooter>

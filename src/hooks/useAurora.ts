@@ -25,7 +25,9 @@ async function playPcmBase64(base64: string, mime: string): Promise<void> {
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
   const pcm = new Int16Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 2));
   const rate = parseRate(mime);
-  const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const AC =
+    window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
   const ctx = new AC({ sampleRate: rate });
   const buf = ctx.createBuffer(1, pcm.length, rate);
   const ch = buf.getChannelData(0);
@@ -34,7 +36,10 @@ async function playPcmBase64(base64: string, mime: string): Promise<void> {
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.connect(ctx.destination);
-    src.onended = () => { ctx.close().catch(() => undefined); resolve(); };
+    src.onended = () => {
+      ctx.close().catch(() => undefined);
+      resolve();
+    };
     src.start();
   });
 }
@@ -46,14 +51,24 @@ function fallbackSpeak(text: string): Promise<void> {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "pt-BR";
-      const v = window.speechSynthesis.getVoices().find((x) => x.lang?.toLowerCase().startsWith("pt"));
+      const v = window.speechSynthesis
+        .getVoices()
+        .find((x) => x.lang?.toLowerCase().startsWith("pt"));
       if (v) u.voice = v;
       let done = false;
-      const finish = () => { if (!done) { done = true; resolve(); } };
-      u.onend = finish; u.onerror = finish;
+      const finish = () => {
+        if (!done) {
+          done = true;
+          resolve();
+        }
+      };
+      u.onend = finish;
+      u.onerror = finish;
       window.speechSynthesis.speak(u);
       setTimeout(finish, Math.min(15000, Math.max(2500, text.length * 90)));
-    } catch { resolve(); }
+    } catch {
+      resolve();
+    }
   });
 }
 
@@ -103,7 +118,8 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
 
         const userText = (payload.user_text ?? data.user_text ?? "").trim();
         const newMessages: AuroraMessage[] = [];
-        if (userText) newMessages.push({ id: crypto.randomUUID(), role: "user", content: userText });
+        if (userText)
+          newMessages.push({ id: crypto.randomUUID(), role: "user", content: userText });
         newMessages.push({ id: crypto.randomUUID(), role: "assistant", content: data.text });
         setMessages((m) => [...m, ...newMessages]);
 
@@ -131,8 +147,13 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
   );
 
   const recorder = useVoiceRecorder({
-    onRecorded: (b64, mime) => { void sendTurn({ audio_base64: b64, audio_mime: mime }); },
-    onError: (msg) => { setError(msg); setStatus("idle"); },
+    onRecorded: (b64, mime) => {
+      void sendTurn({ audio_base64: b64, audio_mime: mime });
+    },
+    onError: (msg) => {
+      setError(msg);
+      setStatus("idle");
+    },
   });
 
   useEffect(() => {
@@ -140,25 +161,38 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
     else setStatus((cur) => (cur === "listening" ? "idle" : cur));
   }, [recorder.isRecording]);
 
-  const sendText = useCallback((text: string) => {
-    if (!text.trim()) return;
-    void sendTurn({ user_text: text.trim() });
-  }, [sendTurn]);
+  const sendText = useCallback(
+    (text: string) => {
+      if (!text.trim()) return;
+      void sendTurn({ user_text: text.trim() });
+    },
+    [sendTurn],
+  );
 
   const startListening = useCallback(() => {
     setError(null);
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        /* noop */
+      }
     }
     void recorder.start();
   }, [recorder]);
 
-  const stopListening = useCallback(() => { recorder.stop(); }, [recorder]);
+  const stopListening = useCallback(() => {
+    recorder.stop();
+  }, [recorder]);
 
   const endSession = useCallback(async () => {
     recorder.cancel();
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        /* noop */
+      }
     }
     if (sessionId) {
       await fetch("/api/voice/end-session", {
@@ -175,7 +209,11 @@ export function useAurora({ barbershopId, enabled, muted = false }: UseAuroraOpt
 
   useEffect(() => {
     if (!enabled && typeof window !== "undefined" && "speechSynthesis" in window) {
-      try { window.speechSynthesis.cancel(); } catch { /* noop */ }
+      try {
+        window.speechSynthesis.cancel();
+      } catch {
+        /* noop */
+      }
     }
   }, [enabled]);
 

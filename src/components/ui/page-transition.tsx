@@ -1,7 +1,14 @@
 ﻿import { HTMLMotionProps, motion, useReducedMotion } from "framer-motion";
 import { ReactNode } from "react";
 
-export type PageTransitionVariant = "fade" | "slide-up" | "slide-right" | "slide-left" | "zoom" | "parallax" | "flip";
+export type PageTransitionVariant =
+  | "fade"
+  | "slide-up"
+  | "slide-right"
+  | "slide-left"
+  | "zoom"
+  | "parallax"
+  | "flip";
 
 interface PageTransitionProps extends HTMLMotionProps<"div"> {
   children: ReactNode;
@@ -44,7 +51,7 @@ const variants = {
     initial: { opacity: 0, rotateX: 90 },
     animate: { opacity: 1, rotateX: 0 },
     exit: { opacity: 0, rotateX: -90 },
-  }
+  },
 };
 
 export function PageTransition({

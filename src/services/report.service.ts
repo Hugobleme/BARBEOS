@@ -31,7 +31,10 @@ export const reportService = {
     if (apptErr) throw apptErr;
 
     const totalCashRevenue = (cashSales ?? []).reduce((acc, t) => acc + Number(t.amount || 0), 0);
-    const totalApptRevenue = (completedAppts ?? []).reduce((acc, a) => acc + Number(a.total_amount || 0), 0);
+    const totalApptRevenue = (completedAppts ?? []).reduce(
+      (acc, a) => acc + Number(a.total_amount || 0),
+      0,
+    );
 
     const byPaymentMethod: Record<string, number> = {};
     (cashSales ?? []).forEach((t) => {
@@ -98,7 +101,10 @@ export const reportService = {
 
     if (error) throw error;
 
-    const customerMap: Record<string, { customer: any; totalSpent: number; appointmentsCount: number }> = {};
+    const customerMap: Record<
+      string,
+      { customer: any; totalSpent: number; appointmentsCount: number }
+    > = {};
 
     (appts ?? []).forEach((a: any) => {
       const cid = a.customer_id;
@@ -126,18 +132,23 @@ export const reportService = {
   async getTopServices(barbershopId: string, limit: number = 10) {
     const { data: items, error } = await supabase
       .from("appointment_services")
-      .select(`
+      .select(
+        `
         service_id,
         price_snapshot,
         service:services(id, name),
         appointment:appointments!inner(barbershop_id, status)
-      `)
+      `,
+      )
       .eq("appointment.barbershop_id", barbershopId)
       .eq("appointment.status", "completed");
 
     if (error) throw error;
 
-    const serviceMap: Record<string, { id: string; name: string; bookingsCount: number; totalRevenue: number }> = {};
+    const serviceMap: Record<
+      string,
+      { id: string; name: string; bookingsCount: number; totalRevenue: number }
+    > = {};
 
     (items ?? []).forEach((item: any) => {
       const sid = item.service_id;

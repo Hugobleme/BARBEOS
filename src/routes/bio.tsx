@@ -23,7 +23,7 @@ function BioPage() {
     },
   });
 
-  const phone = ((shop?.contacts as any)?.phone as string | undefined)?.replace(/\D/g, '') || "";
+  const phone = ((shop?.contacts as any)?.phone as string | undefined)?.replace(/\D/g, "") || "";
   const waLink = phone ? `https://wa.me/55${phone}` : "#";
 
   return (
@@ -40,35 +40,56 @@ function BioPage() {
           <Scissors className="h-10 w-10 text-accent" />
         </div>
         <div>
-          <h1 className="font-serif text-2xl font-bold tracking-tight">{shop?.name || "BarberOS"}</h1>
+          <h1 className="font-serif text-2xl font-bold tracking-tight">
+            {shop?.name || "BarberOS"}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">A melhor experiência em barbearia</p>
         </div>
       </div>
 
       {/* Links Area */}
       <div className="w-full max-w-sm flex flex-col gap-4">
-        <Button asChild size="lg" className="h-14 w-full rounded-none bg-accent text-accent-foreground hover:bg-accent/90 justify-start px-6 transition-transform hover:scale-[1.02]">
+        <Button
+          asChild
+          size="lg"
+          className="h-14 w-full rounded-none bg-accent text-accent-foreground hover:bg-accent/90 justify-start px-6 transition-transform hover:scale-[1.02]"
+        >
           <Link to="/barbearias">
             <CalendarCheck className="mr-4 h-5 w-5" />
             Agendar Horário
           </Link>
         </Button>
 
-        <Button asChild size="lg" variant="outline" className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-accent hover:text-accent hover:bg-accent/10 justify-start px-6 transition-transform hover:scale-[1.02]">
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-accent hover:text-accent hover:bg-accent/10 justify-start px-6 transition-transform hover:scale-[1.02]"
+        >
           <Link to="/clube">
             <Crown className="mr-4 h-5 w-5" />
             Clube VIP (Assinaturas)
           </Link>
         </Button>
 
-        <Button asChild size="lg" variant="outline" className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-accent hover:text-accent hover:bg-accent/10 justify-start px-6 transition-transform hover:scale-[1.02]">
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-accent hover:text-accent hover:bg-accent/10 justify-start px-6 transition-transform hover:scale-[1.02]"
+        >
           <Link to="/servicos">
             <Scissors className="mr-4 h-5 w-5" />
             Tabela de Preços
           </Link>
         </Button>
 
-        <Button asChild size="lg" variant="outline" className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-[#25D366] hover:text-[#25D366] hover:bg-[#25D366]/10 justify-start px-6 transition-transform hover:scale-[1.02]">
+        <Button
+          asChild
+          size="lg"
+          variant="outline"
+          className="h-14 w-full rounded-none border-border/60 bg-card/50 backdrop-blur-sm hover:border-[#25D366] hover:text-[#25D366] hover:bg-[#25D366]/10 justify-start px-6 transition-transform hover:scale-[1.02]"
+        >
           <a href={waLink} target="_blank" rel="noopener noreferrer">
             <MessageCircle className="mr-4 h-5 w-5" />
             Falar no WhatsApp

@@ -37,7 +37,8 @@ export const couponService = {
   async createCoupon(data: CreateCouponInput): Promise<Coupon> {
     const isPercent = data.discount_percent !== undefined;
     const kind = data.kind || (isPercent ? "percent" : "fixed");
-    const value = data.value ?? (data.discount_percent ?? (data.discount_cents ? data.discount_cents / 100 : 0));
+    const value =
+      data.value ?? data.discount_percent ?? (data.discount_cents ? data.discount_cents / 100 : 0);
 
     const { data: coupon, error } = await supabase
       .from("coupons")
@@ -128,10 +129,7 @@ export const couponService = {
     if (error || !coupon) return;
 
     const nextCount = (coupon.used_count || 0) + 1;
-    await supabase
-      .from("coupons")
-      .update({ used_count: nextCount })
-      .eq("id", coupon.id);
+    await supabase.from("coupons").update({ used_count: nextCount }).eq("id", coupon.id);
   },
 
   /**
@@ -153,10 +151,7 @@ export const couponService = {
    * Exclui ou desativa um cupom
    */
   async deleteCoupon(id: string) {
-    const { error } = await supabase
-      .from("coupons")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("coupons").delete().eq("id", id);
 
     if (error) throw error;
   },

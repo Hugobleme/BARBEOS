@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mic, MicOff, Send, Volume2, VolumeX, X, Loader2 } from "lucide-react";
@@ -55,7 +61,10 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="h-[90vh] flex flex-col gap-0 p-0 bg-gradient-to-b from-background to-background/95">
+      <SheetContent
+        side="bottom"
+        className="h-[90vh] flex flex-col gap-0 p-0 bg-gradient-to-b from-background to-background/95"
+      >
         <SheetHeader className="px-5 py-4 border-b border-border/40 flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 flex items-center justify-center text-background font-bold">
@@ -72,10 +81,20 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
             </div>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setMuted((m) => !m)} aria-label={muted ? "Ativar voz" : "Silenciar"}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setMuted((m) => !m)}
+              aria-label={muted ? "Ativar voz" : "Silenciar"}
+            >
               {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Fechar">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              aria-label="Fechar"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -89,7 +108,10 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
             </div>
           )}
           {aurora.messages.map((m) => (
-            <div key={m.id} className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}>
+            <div
+              key={m.id}
+              className={cn("flex", m.role === "user" ? "justify-end" : "justify-start")}
+            >
               <div
                 className={cn(
                   "max-w-[80%] rounded-2xl px-4 py-2 text-sm whitespace-pre-wrap",
@@ -109,11 +131,11 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
               </div>
             </div>
           )}
-          {aurora.error && (
-            <p className="text-xs text-destructive text-center">{aurora.error}</p>
-          )}
+          {aurora.error && <p className="text-xs text-destructive text-center">{aurora.error}</p>}
           {!aurora.isSupported && (
-            <p className="text-xs text-destructive text-center">Seu navegador não suporta gravação de áudio.</p>
+            <p className="text-xs text-destructive text-center">
+              Seu navegador não suporta gravação de áudio.
+            </p>
           )}
         </div>
 
@@ -129,7 +151,9 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
                 "disabled:opacity-40 disabled:cursor-not-allowed",
                 aurora.status === "listening" && "ring-4 ring-amber-400/60",
               )}
-              style={aurora.status === "listening" ? { transform: `scale(${pulseScale})` } : undefined}
+              style={
+                aurora.status === "listening" ? { transform: `scale(${pulseScale})` } : undefined
+              }
               aria-label={aurora.status === "listening" ? "Parar gravação" : "Falar com a Aurora"}
             >
               {aurora.status === "thinking" || aurora.status === "speaking" ? (
@@ -157,7 +181,8 @@ export function AuroraDrawer({ open, onOpenChange, barbershopId, barbershopName 
           </form>
 
           <p className="text-[10px] text-center text-muted-foreground/70">
-            Sua conversa pode ser registrada para melhorar o atendimento. Não compartilhe dados sensíveis.
+            Sua conversa pode ser registrada para melhorar o atendimento. Não compartilhe dados
+            sensíveis.
           </p>
         </div>
       </SheetContent>

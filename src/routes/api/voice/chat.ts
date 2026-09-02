@@ -3,12 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { auroraTools, runTool } from "@/lib/voice/tools.server";
 import { buildSystemPrompt } from "@/lib/voice/system-prompt";
-import {
-  geminiGenerate,
-  geminiTts,
-  maskPII,
-  type GeminiContent,
-} from "@/lib/voice/gemini.server";
+import { geminiGenerate, geminiTts, maskPII, type GeminiContent } from "@/lib/voice/gemini.server";
 
 const MAX_TOOL_HOPS = 6;
 
@@ -36,7 +31,8 @@ export const Route = createFileRoute("/api/voice/chat")({
             .select("id,barbershop_id,status,total_turns")
             .eq("id", body.session_id)
             .single();
-          if (sErr || !session) return Response.json({ error: "session not found" }, { status: 404 });
+          if (sErr || !session)
+            return Response.json({ error: "session not found" }, { status: 404 });
           if (session.status !== "active") {
             return Response.json({ error: "session ended" }, { status: 410 });
           }
@@ -47,13 +43,16 @@ export const Route = createFileRoute("/api/voice/chat")({
             .eq("id", session.barbershop_id)
             .single();
           const settings = (shop?.settings as Record<string, unknown> | null) ?? {};
-          const aurora = (settings.aurora as {
-            welcome?: string;
-            persona?: string;
-            max_turns?: number;
-            voice?: string;
-            enabled?: boolean;
-          } | undefined) ?? {};
+          const aurora =
+            (settings.aurora as
+              | {
+                  welcome?: string;
+                  persona?: string;
+                  max_turns?: number;
+                  voice?: string;
+                  enabled?: boolean;
+                }
+              | undefined) ?? {};
           const maxTurns = aurora.max_turns ?? 15;
           if (session.total_turns >= maxTurns) {
             return Response.json({ error: "max turns reached" }, { status: 429 });
@@ -92,21 +91,25 @@ export const Route = createFileRoute("/api/voice/chat")({
             } else if (row.role === "tool" && row.tool_name) {
               contents.push({
                 role: "model",
-                parts: [{
-                  functionCall: {
-                    name: row.tool_name,
-                    args: (row.tool_payload as Record<string, unknown>) ?? {},
+                parts: [
+                  {
+                    functionCall: {
+                      name: row.tool_name,
+                      args: (row.tool_payload as Record<string, unknown>) ?? {},
+                    },
                   },
-                }],
+                ],
               });
               contents.push({
                 role: "function",
-                parts: [{
-                  functionResponse: {
-                    name: row.tool_name,
-                    response: (row.tool_result as Record<string, unknown>) ?? {},
+                parts: [
+                  {
+                    functionResponse: {
+                      name: row.tool_name,
+                      response: (row.tool_result as Record<string, unknown>) ?? {},
+                    },
                   },
-                }],
+                ],
               });
             }
           }
@@ -129,17 +132,19 @@ export const Route = createFileRoute("/api/voice/chat")({
               const stt = await geminiGenerate({
                 systemInstruction:
                   "Você é um transcritor especializado em áudios de barbearia. Transcreva fielmente o áudio em português do Brasil. Ignore ruídos de fundo (secadores, tesouras). Se o áudio estiver vazio ou incompreensível, responda APENAS com [incompreensível]. Responda APENAS com a transcrição literal, sem comentários, sem aspas, sem prefixos.",
-                contents: [{
-                  role: "user",
-                  parts: [
-                    { text: "Transcreva o áudio a seguir:" },
-                    { inlineData: { mimeType: sttMime, data: body.audio_base64 } },
-                  ],
-                }],
+                contents: [
+                  {
+                    role: "user",
+                    parts: [
+                      { text: "Transcreva o áudio a seguir:" },
+                      { inlineData: { mimeType: sttMime, data: body.audio_base64 } },
+                    ],
+                  },
+                ],
               });
-              const t = stt.candidates?.[0]?.content?.parts?.find(
-                (p): p is { text: string } => "text" in p && typeof p.text === "string",
-              )?.text?.trim();
+              const t = stt.candidates?.[0]?.content?.parts
+                ?.find((p): p is { text: string } => "text" in p && typeof p.text === "string")
+                ?.text?.trim();
               userTranscript = t || "";
               if (userTranscript.includes("[incompreensível]")) userTranscript = "";
             } catch (err) {
@@ -159,7 +164,6 @@ export const Route = createFileRoute("/api/voice/chat")({
             contents.push({ role: "user", parts: [{ text: body.user_text! }] });
           }
 
-
           for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
             const resp = await geminiGenerate({
               systemInstruction: systemPrompt,
@@ -178,12 +182,21 @@ export const Route = createFileRoute("/api/voice/chat")({
             if (fnCalls.length > 0) {
               toolUsed = true;
               // Push model's tool-call turn
-              contents.push({ role: "model", parts: fnCalls.map((p) => ({ functionCall: p.functionCall })) });
-              const responseParts: Array<{ functionResponse: { name: string; response: Record<string, unknown> } }> = [];
+              contents.push({
+                role: "model",
+                parts: fnCalls.map((p) => ({ functionCall: p.functionCall })),
+              });
+              const responseParts: Array<{
+                functionResponse: { name: string; response: Record<string, unknown> };
+              }> = [];
               for (const call of fnCalls) {
                 let result: unknown;
                 try {
-                  result = await runTool(call.functionCall.name, call.functionCall.args, session.barbershop_id);
+                  result = await runTool(
+                    call.functionCall.name,
+                    call.functionCall.args,
+                    session.barbershop_id,
+                  );
                 } catch (err) {
                   result = { error: err instanceof Error ? err.message : "tool failed" };
                 }
@@ -222,7 +235,9 @@ export const Route = createFileRoute("/api/voice/chat")({
             }
 
             // Final text
-            const textPart = parts.find((p): p is { text: string } => "text" in p && typeof p.text === "string");
+            const textPart = parts.find(
+              (p): p is { text: string } => "text" in p && typeof p.text === "string",
+            );
             assistantText = textPart?.text?.trim() ?? "";
             break;
           }
@@ -230,7 +245,6 @@ export const Route = createFileRoute("/api/voice/chat")({
           if (!assistantText) {
             assistantText = "Desculpa, não entendi. Pode repetir?";
           }
-
 
           // Persist user turn
           await supabaseAdmin.from("voice_messages").insert({

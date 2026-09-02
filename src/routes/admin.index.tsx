@@ -36,10 +36,22 @@ export const Route = createFileRoute("/admin/")({
 
 const STATUS_LABELS: Record<string, { label: string; className: string }> = {
   scheduled: { label: "Agendado", className: "border-blue-500/30 bg-blue-500/10 text-blue-400" },
-  in_progress: { label: "Em atendimento", className: "border-amber-500/30 bg-amber-500/10 text-amber-400 animate-pulse" },
-  completed: { label: "Concluído", className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400" },
-  cancelled: { label: "Cancelado", className: "border-border bg-muted/40 text-muted-foreground line-through" },
-  no_show: { label: "Falta", className: "border-destructive/30 bg-destructive/10 text-destructive" },
+  in_progress: {
+    label: "Em atendimento",
+    className: "border-amber-500/30 bg-amber-500/10 text-amber-400 animate-pulse",
+  },
+  completed: {
+    label: "Concluído",
+    className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-400",
+  },
+  cancelled: {
+    label: "Cancelado",
+    className: "border-border bg-muted/40 text-muted-foreground line-through",
+  },
+  no_show: {
+    label: "Falta",
+    className: "border-destructive/30 bg-destructive/10 text-destructive",
+  },
 };
 
 function formatCurrency(value: number | string | undefined | null): string {
@@ -57,43 +69,67 @@ function Dashboard() {
   const startWeek = subDays(now, 7);
 
   // 1. KPIs de Hoje
-  const { data: todayRevenue, isLoading: loadingRev, isError: isErrRev, refetch: refetchRev } = useQuery({
+  const {
+    data: todayRevenue,
+    isLoading: loadingRev,
+    isError: isErrRev,
+    refetch: refetchRev,
+  } = useQuery({
     queryKey: ["admin-today-revenue", shopId],
     enabled: Boolean(shopId),
     queryFn: () => reportService.getRevenueReport(shopId!, startToday, endToday),
   });
 
-  const { data: todayAppts, isLoading: loadingAppts, isError: isErrAppts, refetch: refetchAppts } = useQuery({
+  const {
+    data: todayAppts,
+    isLoading: loadingAppts,
+    isError: isErrAppts,
+    refetch: refetchAppts,
+  } = useQuery({
     queryKey: ["admin-today-appts", shopId],
     enabled: Boolean(shopId),
     queryFn: () => reportService.getAppointmentsReport(shopId!, startToday, endToday),
   });
 
-  const { data: todayCustomers, isLoading: loadingCustomers, isError: isErrCust, refetch: refetchCust } = useQuery({
+  const {
+    data: todayCustomers,
+    isLoading: loadingCustomers,
+    isError: isErrCust,
+    refetch: refetchCust,
+  } = useQuery({
     queryKey: ["admin-today-customers", shopId],
     enabled: Boolean(shopId),
     queryFn: async () => {
       const appts = await appointmentService.getByDate(shopId!, now);
       // count unique customers in completed/in_progress appts
-      const activeAppts = appts.filter(a => a.status === "completed" || a.status === "in_progress");
-      const uniqueIds = new Set(activeAppts.map(a => a.customer_id).filter(Boolean));
+      const activeAppts = appts.filter(
+        (a) => a.status === "completed" || a.status === "in_progress",
+      );
+      const uniqueIds = new Set(activeAppts.map((a) => a.customer_id).filter(Boolean));
       return uniqueIds.size;
     },
   });
 
   // 2. Próximos Agendamentos (com serviços incluídos via query customizada)
-  const { data: nextAppts = [], isLoading: loadingNext, isError: isErrNext, refetch: refetchNext } = useQuery({
+  const {
+    data: nextAppts = [],
+    isLoading: loadingNext,
+    isError: isErrNext,
+    refetch: refetchNext,
+  } = useQuery({
     queryKey: ["admin-next-appts", shopId],
     enabled: Boolean(shopId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("appointments")
-        .select(`
+        .select(
+          `
           id, scheduled_start, status, total_amount,
           professional:professionals(display_name),
           customer:customers(full_name),
           services:appointment_services(service:services(name))
-        `)
+        `,
+        )
         .eq("barbershop_id", shopId!)
         .gte("scheduled_start", now.toISOString())
         .in("status", ["scheduled", "in_progress"])
@@ -102,7 +138,7 @@ function Dashboard() {
 
       if (error) throw error;
       return data || [];
-    }
+    },
   });
 
   // 3. Alertas Operacionais
@@ -139,7 +175,7 @@ function Dashboard() {
         lowStock: lowStockCount || 0,
         pendingCommissions: pendingCommCount || 0,
       };
-    }
+    },
   });
 
   // 4. Performance Semanal
@@ -149,7 +185,7 @@ function Dashboard() {
     queryFn: async () => {
       const rev = await reportService.getRevenueReport(shopId!, startWeek, endToday);
       const appts = await reportService.getAppointmentsReport(shopId!, startWeek, endToday);
-      
+
       const { count } = await supabase
         .from("customers")
         .select("*", { count: "exact", head: true })
@@ -161,7 +197,7 @@ function Dashboard() {
         completed: appts.byStatus.completed || 0,
         newCustomers: count || 0,
       };
-    }
+    },
   });
 
   const retryAll = () => {
@@ -171,7 +207,7 @@ function Dashboard() {
     refetchNext();
   };
 
-    if (!shopId) {
+  if (!shopId) {
     return (
       <div className="flex flex-col items-center justify-center py-20 px-4 text-center h-[60vh]">
         <h2 className="text-xl font-bold font-serif mb-2 text-foreground">
@@ -180,8 +216,6 @@ function Dashboard() {
       </div>
     );
   }
-
-
 
   const hasError = isErrRev || isErrAppts || isErrCust || isErrNext;
 
@@ -209,13 +243,12 @@ function Dashboard() {
 
   const firstName = user?.email ? user.email.split("@")[0] : "Usuário";
   const formattedDate = format(now, "EEEE, d 'de' MMMM", { locale: ptBR });
-  
+
   const pendingCountTotal = todayAppts?.byStatus?.scheduled || 0;
   const completedCountToday = todayAppts?.byStatus?.completed || 0;
 
   return (
     <div className="space-y-6 md:space-y-8 pb-10 max-w-7xl mx-auto">
-      
       {/* 1. HEADER */}
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-2xl md:text-3xl font-bold tracking-tight text-foreground capitalize">
@@ -239,7 +272,9 @@ function Dashboard() {
             <span className="text-sm font-semibold uppercase tracking-wider">Agendamentos</span>
           </div>
           <div className="mt-4">
-            {loadingAppts ? <Skeleton className="h-8 w-16" /> : (
+            {loadingAppts ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
               <span className="text-3xl font-bold font-serif text-foreground">
                 {todayAppts?.totalAppointments || 0}
               </span>
@@ -257,7 +292,9 @@ function Dashboard() {
             <span className="text-sm font-semibold uppercase tracking-wider">Faturamento</span>
           </div>
           <div className="mt-4">
-            {loadingRev ? <Skeleton className="h-8 w-24" /> : (
+            {loadingRev ? (
+              <Skeleton className="h-8 w-24" />
+            ) : (
               <span className="text-3xl font-bold font-serif text-foreground">
                 {formatCurrency(todayRevenue?.totalRevenue)}
               </span>
@@ -272,10 +309,14 @@ function Dashboard() {
             <div className="rounded-lg bg-blue-500/10 p-2 text-blue-500">
               <Users className="h-5 w-5" />
             </div>
-            <span className="text-sm font-semibold uppercase tracking-wider">Clientes Atendidos</span>
+            <span className="text-sm font-semibold uppercase tracking-wider">
+              Clientes Atendidos
+            </span>
           </div>
           <div className="mt-4">
-            {loadingCustomers ? <Skeleton className="h-8 w-16" /> : (
+            {loadingCustomers ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
               <span className="text-3xl font-bold font-serif text-foreground">
                 {todayCustomers || 0}
               </span>
@@ -293,7 +334,9 @@ function Dashboard() {
             <span className="text-sm font-semibold uppercase tracking-wider">Pendentes</span>
           </div>
           <div className="mt-4">
-            {loadingAppts ? <Skeleton className="h-8 w-16" /> : (
+            {loadingAppts ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
               <span className="text-3xl font-bold font-serif text-foreground">
                 {pendingCountTotal}
               </span>
@@ -305,9 +348,15 @@ function Dashboard() {
 
       {/* 3. QUICK ACTIONS */}
       <div>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">Ações Rápidas</h2>
+        <h2 className="mb-3 text-sm font-bold uppercase tracking-widest text-muted-foreground">
+          Ações Rápidas
+        </h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Button asChild variant="outline" className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+          <Button
+            asChild
+            variant="outline"
+            className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all"
+          >
             <Link to="/admin/agenda">
               <Plus className="h-5 w-5 text-accent" />
               <div className="flex flex-col items-start text-left">
@@ -317,7 +366,11 @@ function Dashboard() {
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+          <Button
+            asChild
+            variant="outline"
+            className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all"
+          >
             <Link to="/admin/pdv">
               <ShoppingBag className="h-5 w-5 text-accent" />
               <div className="flex flex-col items-start text-left">
@@ -327,7 +380,11 @@ function Dashboard() {
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+          <Button
+            asChild
+            variant="outline"
+            className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all"
+          >
             <Link to="/admin/clientes">
               <UserPlus className="h-5 w-5 text-accent" />
               <div className="flex flex-col items-start text-left">
@@ -337,7 +394,11 @@ function Dashboard() {
             </Link>
           </Button>
 
-          <Button asChild variant="outline" className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all">
+          <Button
+            asChild
+            variant="outline"
+            className="h-14 justify-start gap-3 border-border/40 bg-card/40 backdrop-blur-md hover:bg-accent/10 hover:text-accent hover:border-accent/30 transition-all"
+          >
             <Link to="/admin/servicos">
               <Scissors className="h-5 w-5 text-accent" />
               <div className="flex flex-col items-start text-left">
@@ -350,13 +411,21 @@ function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         {/* 4. TODAY'S SCHEDULE */}
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Agenda de Hoje (Próximos)</h2>
-            <Button asChild variant="link" size="sm" className="text-xs text-accent hover:text-accent/80 p-0 h-auto">
-              <Link to="/admin/agenda">Ver agenda completa <ArrowRight className="ml-1 h-3 w-3" /></Link>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              Agenda de Hoje (Próximos)
+            </h2>
+            <Button
+              asChild
+              variant="link"
+              size="sm"
+              className="text-xs text-accent hover:text-accent/80 p-0 h-auto"
+            >
+              <Link to="/admin/agenda">
+                Ver agenda completa <ArrowRight className="ml-1 h-3 w-3" />
+              </Link>
             </Button>
           </div>
           <Card className="overflow-hidden border-border/40 bg-card/40 backdrop-blur-md">
@@ -369,13 +438,23 @@ function Dashboard() {
             ) : Array.isArray(nextAppts) && nextAppts.length > 0 ? (
               <div className="divide-y divide-border/20">
                 {nextAppts.map((appt: any) => {
-                  const statusInfo = STATUS_LABELS[appt.status] || { label: appt.status, className: "bg-muted text-muted-foreground" };
-                  const serviceNames = Array.isArray(appt.services) && appt.services.length > 0 
-                    ? appt.services.map((s: any) => s.service?.name).filter(Boolean).join(", ")
-                    : "Serviço";
-                  
+                  const statusInfo = STATUS_LABELS[appt.status] || {
+                    label: appt.status,
+                    className: "bg-muted text-muted-foreground",
+                  };
+                  const serviceNames =
+                    Array.isArray(appt.services) && appt.services.length > 0
+                      ? appt.services
+                          .map((s: any) => s.service?.name)
+                          .filter(Boolean)
+                          .join(", ")
+                      : "Serviço";
+
                   return (
-                    <div key={appt.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-accent/5 transition-colors gap-3">
+                    <div
+                      key={appt.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 hover:bg-accent/5 transition-colors gap-3"
+                    >
                       <div className="flex items-start sm:items-center gap-4">
                         <div className="flex flex-col items-center justify-center rounded-xl bg-muted/40 p-2 min-w-[70px]">
                           <span className="text-sm font-bold text-foreground">
@@ -392,7 +471,10 @@ function Dashboard() {
                         </div>
                       </div>
                       <div className="flex items-center self-start sm:self-auto shrink-0">
-                        <Badge variant="outline" className={`font-semibold ${statusInfo.className}`}>
+                        <Badge
+                          variant="outline"
+                          className={`font-semibold ${statusInfo.className}`}
+                        >
                           {statusInfo.label}
                         </Badge>
                       </div>
@@ -403,8 +485,13 @@ function Dashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center p-10 text-center">
                 <CheckCircle2 className="h-10 w-10 text-emerald-500/50 mb-3" />
-                <p className="text-sm font-medium text-foreground">Sua agenda está livre por enquanto.</p>
-                <p className="text-xs text-muted-foreground mt-1 mb-4">Que tal compartilhar seu link de agendamento nas redes sociais para atrair mais clientes hoje?</p>
+                <p className="text-sm font-medium text-foreground">
+                  Sua agenda está livre por enquanto.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1 mb-4">
+                  Que tal compartilhar seu link de agendamento nas redes sociais para atrair mais
+                  clientes hoje?
+                </p>
                 <Button asChild variant="outline" size="sm" className="rounded-xl">
                   <Link to="/admin/agenda">Ver agenda</Link>
                 </Button>
@@ -415,44 +502,62 @@ function Dashboard() {
 
         {/* 5. OPERATIONAL ALERTS & 6. WEEKLY SUMMARY */}
         <div className="space-y-6">
-          
           {/* Configuração */}
           <SetupStatusCard shopId={shopId} />
 
           {/* Alertas */}
           <div className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Alertas Operacionais</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              Alertas Operacionais
+            </h2>
             <Card className="p-4 border-border/40 bg-card/40 backdrop-blur-md">
               {loadingAlerts ? (
                 <div className="space-y-3">
                   <Skeleton className="h-10 w-full rounded-xl" />
                   <Skeleton className="h-10 w-full rounded-xl" />
                 </div>
-              ) : (alertsData?.pendingAppts || alertsData?.lowStock || alertsData?.pendingCommissions) ? (
+              ) : alertsData?.pendingAppts ||
+                alertsData?.lowStock ||
+                alertsData?.pendingCommissions ? (
                 <div className="flex flex-col gap-3">
                   {alertsData.pendingAppts > 0 && (
-                    <Link to="/admin/agenda" className="flex items-center justify-between rounded-xl bg-blue-500/10 p-3 border border-blue-500/20 hover:bg-blue-500/20 transition-colors group">
+                    <Link
+                      to="/admin/agenda"
+                      className="flex items-center justify-between rounded-xl bg-blue-500/10 p-3 border border-blue-500/20 hover:bg-blue-500/20 transition-colors group"
+                    >
                       <div className="flex items-center gap-3">
                         <Calendar className="h-4 w-4 text-blue-500" />
-                        <span className="text-sm font-medium text-blue-100">{alertsData.pendingAppts} agendamentos pendentes</span>
+                        <span className="text-sm font-medium text-blue-100">
+                          {alertsData.pendingAppts} agendamentos pendentes
+                        </span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-blue-500 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </Link>
                   )}
                   {alertsData.lowStock > 0 && (
-                    <Link to="/admin/estoque" className="flex items-center justify-between rounded-xl bg-amber-500/10 p-3 border border-amber-500/20 hover:bg-amber-500/20 transition-colors group">
+                    <Link
+                      to="/admin/estoque"
+                      className="flex items-center justify-between rounded-xl bg-amber-500/10 p-3 border border-amber-500/20 hover:bg-amber-500/20 transition-colors group"
+                    >
                       <div className="flex items-center gap-3">
                         <ShoppingBag className="h-4 w-4 text-amber-500" />
-                        <span className="text-sm font-medium text-amber-100">{alertsData.lowStock} produtos no nível crítico de estoque</span>
+                        <span className="text-sm font-medium text-amber-100">
+                          {alertsData.lowStock} produtos no nível crítico de estoque
+                        </span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-amber-500 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </Link>
                   )}
                   {alertsData.pendingCommissions > 0 && (
-                    <Link to="/admin/comissoes" className="flex items-center justify-between rounded-xl bg-rose-500/10 p-3 border border-rose-500/20 hover:bg-rose-500/20 transition-colors group">
+                    <Link
+                      to="/admin/comissoes"
+                      className="flex items-center justify-between rounded-xl bg-rose-500/10 p-3 border border-rose-500/20 hover:bg-rose-500/20 transition-colors group"
+                    >
                       <div className="flex items-center gap-3">
                         <DollarSign className="h-4 w-4 text-rose-500" />
-                        <span className="text-sm font-medium text-rose-100">{alertsData.pendingCommissions} comissões pendentes</span>
+                        <span className="text-sm font-medium text-rose-100">
+                          {alertsData.pendingCommissions} comissões pendentes
+                        </span>
                       </div>
                       <ArrowRight className="h-4 w-4 text-rose-500 opacity-50 group-hover:opacity-100 transition-opacity" />
                     </Link>
@@ -461,7 +566,9 @@ function Dashboard() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500/50 mb-2" />
-                  <p className="text-sm font-medium text-muted-foreground">Operação 100% sob controle. Excelente trabalho hoje!</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Operação 100% sob controle. Excelente trabalho hoje!
+                  </p>
                 </div>
               )}
             </Card>
@@ -469,7 +576,9 @@ function Dashboard() {
 
           {/* Resumo da Semana */}
           <div className="space-y-3">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Resumo da Semana</h2>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              Resumo da Semana
+            </h2>
             <Card className="p-5 border-border/40 bg-card/40 backdrop-blur-md">
               {loadingWeek ? (
                 <div className="space-y-4">
@@ -481,27 +590,31 @@ function Dashboard() {
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
                     <span className="text-sm text-muted-foreground">Atendimentos</span>
-                    <span className="font-serif font-bold text-foreground">{weekSummary?.completed || 0} atendimentos realizados</span>
+                    <span className="font-serif font-bold text-foreground">
+                      {weekSummary?.completed || 0} atendimentos realizados
+                    </span>
                   </div>
                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
                     <span className="text-sm text-muted-foreground">Faturamento</span>
-                    <span className="font-serif font-bold text-emerald-400">{formatCurrency(weekSummary?.revenue)}</span>
+                    <span className="font-serif font-bold text-emerald-400">
+                      {formatCurrency(weekSummary?.revenue)}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Novos clientes</span>
-                    <span className="font-serif font-bold text-blue-400">+{weekSummary?.newCustomers || 0} clientes conquistados</span>
+                    <span className="font-serif font-bold text-blue-400">
+                      +{weekSummary?.newCustomers || 0} clientes conquistados
+                    </span>
                   </div>
                 </div>
               )}
             </Card>
           </div>
-
         </div>
       </div>
     </div>
   );
 }
-
 
 function SetupStatusCard({ shopId }: { shopId: string }) {
   const { data: status, isLoading } = useOnboardingStatus(shopId);
@@ -515,15 +628,21 @@ function SetupStatusCard({ shopId }: { shopId: string }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Configuração</h2>
+      <h2 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+        Configuração
+      </h2>
       <Card className="p-4 border-border/40 bg-card/40 backdrop-blur-md flex flex-col gap-3">
         <div className="flex items-center justify-between text-sm font-bold">
-          <span className="text-muted-foreground">{completedCount} de {totalSteps} etapas</span>
+          <span className="text-muted-foreground">
+            {completedCount} de {totalSteps} etapas
+          </span>
           <span className="text-accent">{progressPercent}%</span>
         </div>
         <Progress value={progressPercent} className="h-2" />
         <p className="text-xs text-muted-foreground">
-          Faltam apenas {totalSteps - completedCount} etapa{totalSteps - completedCount > 1 ? 's' : ''} para liberar 100% do poder da sua página de agendamento.
+          Faltam apenas {totalSteps - completedCount} etapa
+          {totalSteps - completedCount > 1 ? "s" : ""} para liberar 100% do poder da sua página de
+          agendamento.
         </p>
         <Button asChild className="w-full text-xs font-bold uppercase tracking-wider mt-2">
           <Link to="/admin/onboarding">Finalizar configurações agora</Link>

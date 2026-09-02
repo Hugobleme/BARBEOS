@@ -15,7 +15,9 @@ export type AvailabilityParams = {
 };
 
 export class AvailabilityService {
-  async getAvailableSlots(params: AvailabilityParams): Promise<{ times: string[], timeToPros: Record<string, string[]> }> {
+  async getAvailableSlots(
+    params: AvailabilityParams,
+  ): Promise<{ times: string[]; timeToPros: Record<string, string[]> }> {
     const { barbershopId, professionalId, date, durationMinutes, intervalMinutes = 30 } = params;
 
     const now = new Date();
@@ -24,7 +26,7 @@ export class AvailabilityService {
       return { times: [], timeToPros: {} };
     }
 
-    const weekday = date.getDay(); 
+    const weekday = date.getDay();
     const dateStr = format(date, "yyyy-MM-dd");
 
     // 2. Load barbershop operating intervals
@@ -52,7 +54,7 @@ export class AvailabilityService {
         .eq("active", true);
       if (prosErr) throw new Error("Query failure: " + prosErr.message);
       if (!pros || pros.length === 0) return { times: [], timeToPros: {} };
-      proIdsToFetch = pros.map(p => p.id);
+      proIdsToFetch = pros.map((p) => p.id);
     }
 
     const { data: proHours, error: proHoursErr } = await supabase
@@ -68,27 +70,26 @@ export class AvailabilityService {
       .in("professional_id", proIdsToFetch);
     if (timeOffsErr) throw new Error("Query failure: " + timeOffsErr.message);
 
-    const { data: conflicts, error: conflictsErr } = await supabase
-      .rpc("get_public_appointments", {
-        p_barbershop_id: barbershopId,
-        p_date: dateStr
-      });
+    const { data: conflicts, error: conflictsErr } = await supabase.rpc("get_public_appointments", {
+      p_barbershop_id: barbershopId,
+      p_date: dateStr,
+    });
     if (conflictsErr) throw new Error("Query failure: " + conflictsErr.message);
 
-    let allSlots: AvailableSlot[] = [];
+    const allSlots: AvailableSlot[] = [];
 
     for (const pId of proIdsToFetch) {
-      let intervals = [];
+      const intervals = [];
 
-      const specificProHours = (proHours || []).filter(ph => ph.professional_id === pId);
+      const specificProHours = (proHours || []).filter((ph) => ph.professional_id === pId);
       if (specificProHours.length > 0) {
         for (const ph of specificProHours) {
-           if (ph.break_start && ph.break_end) {
-             intervals.push({ start: ph.start_time, end: ph.break_start });
-             intervals.push({ start: ph.break_end, end: ph.end_time });
-           } else {
-             intervals.push({ start: ph.start_time, end: ph.end_time });
-           }
+          if (ph.break_start && ph.break_end) {
+            intervals.push({ start: ph.start_time, end: ph.break_start });
+            intervals.push({ start: ph.break_end, end: ph.end_time });
+          } else {
+            intervals.push({ start: ph.start_time, end: ph.end_time });
+          }
         }
       } else {
         for (const sh of shopHours) {
@@ -96,9 +97,8 @@ export class AvailabilityService {
         }
       }
 
-      const proTimeOffs = (timeOffs || []).filter(to => to.professional_id === pId);
+      const proTimeOffs = (timeOffs || []).filter((to) => to.professional_id === pId);
       const proConflicts = (conflicts || []).filter((c: any) => c.professional_id === pId);
-
 
       const toMinutes = (timeStr: string) => {
         const [h, m] = timeStr.split(":");
@@ -110,12 +110,16 @@ export class AvailabilityService {
         const endMins = toMinutes(inv.end);
 
         while (currentMins + durationMinutes <= endMins) {
-          const slotStart = new Date(`${dateStr}T${Math.floor(currentMins / 60).toString().padStart(2, '0')}:${(currentMins % 60).toString().padStart(2, '0')}:00`);
+          const slotStart = new Date(
+            `${dateStr}T${Math.floor(currentMins / 60)
+              .toString()
+              .padStart(2, "0")}:${(currentMins % 60).toString().padStart(2, "0")}:00`,
+          );
           const slotEnd = addMinutes(slotStart, durationMinutes);
 
           if (isBefore(slotStart, now)) {
-             currentMins += intervalMinutes;
-             continue;
+            currentMins += intervalMinutes;
+            continue;
           }
 
           let hasTimeOff = false;
@@ -146,7 +150,7 @@ export class AvailabilityService {
           if (!hasConflict) {
             allSlots.push({
               time: format(slotStart, "HH:mm"),
-              professionalId: pId
+              professionalId: pId,
             });
           }
           currentMins += intervalMinutes;
@@ -158,16 +162,16 @@ export class AvailabilityService {
     const timeToPros: Record<string, string[]> = {};
 
     for (const s of allSlots) {
-       times.add(s.time);
-       if (!timeToPros[s.time]) timeToPros[s.time] = [];
-       if (s.professionalId) {
-           timeToPros[s.time].push(s.professionalId);
-       }
+      times.add(s.time);
+      if (!timeToPros[s.time]) timeToPros[s.time] = [];
+      if (s.professionalId) {
+        timeToPros[s.time].push(s.professionalId);
+      }
     }
 
     return {
-       times: Array.from(times).sort(),
-       timeToPros
+      times: Array.from(times).sort(),
+      timeToPros,
     };
   }
 }

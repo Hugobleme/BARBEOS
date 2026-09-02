@@ -1,16 +1,35 @@
 import * as React from "react";
 import { Building2, Menu, Moon, Plus, Sun, User, LogOut, Settings, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { NewShopDialog } from "./NewShopDialog";
 import { motion } from "framer-motion";
 import { CommandMenu } from "./CommandMenu";
 import { NotificationCenter } from "./NotificationCenter";
 import { useLocation, Link, useNavigate } from "@tanstack/react-router";
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { supabase } from "@/integrations/supabase/client";
-
 
 interface HeaderProps {
   shopId: string | null;
@@ -49,9 +68,8 @@ export function AdminHeader({
   return (
     <header className="sticky top-0 z-30 flex h-20 md:h-16 flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-4 border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:px-8 py-2 md:py-0">
       <div className="flex items-center justify-between md:justify-start gap-4">
-
-        <button 
-          className="rounded-lg p-2 transition-colors hover:bg-accent/10 active:scale-90 md:hidden" 
+        <button
+          className="rounded-lg p-2 transition-colors hover:bg-accent/10 active:scale-90 md:hidden"
           onClick={() => setOpenSidebar(true)}
         >
           <Menu className="h-5 w-5" />
@@ -60,7 +78,9 @@ export function AdminHeader({
         {/* Current page title for mobile & desktop */}
         <div className="flex-1 md:hidden text-center truncate pr-8">
           <span className="font-serif font-bold text-lg text-foreground capitalize">
-            {pathSegments.length > 1 ? pathSegments[pathSegments.length - 1].replace(/-/g, " ") : "Dashboard"}
+            {pathSegments.length > 1
+              ? pathSegments[pathSegments.length - 1].replace(/-/g, " ")
+              : "Dashboard"}
           </span>
         </div>
 
@@ -77,29 +97,38 @@ export function AdminHeader({
                   <SelectItem key={s.id} value={s.id} className="rounded-lg">
                     <div className="flex items-center justify-between gap-2">
                       <span className="truncate max-w-[120px]">{s.name}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shrink-0">{s.role}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 shrink-0">
+                        {s.role}
+                      </span>
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <div className="h-4 w-[1px] bg-border/60 mx-1 shrink-0" />
-            <NewShopDialog onCreated={refresh} trigger={
-              <Button size="icon" variant="ghost" className="h-7 w-7 rounded-lg hover:bg-accent/20 hover:text-accent shrink-0">
-                <Plus className="h-4 w-4"/>
-              </Button>
-            } />
+            <NewShopDialog
+              onCreated={refresh}
+              trigger={
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 rounded-lg hover:bg-accent/20 hover:text-accent shrink-0"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              }
+            />
           </div>
         )}
 
         <div className="hidden lg:block">
           <Breadcrumb>
             <BreadcrumbList>
-                <BreadcrumbItem>
-                  <BreadcrumbLink asChild>
-                    <Link to="/admin">Admin</Link>
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
+              <BreadcrumbItem>
+                <BreadcrumbLink asChild>
+                  <Link to="/admin">Admin</Link>
+                </BreadcrumbLink>
+              </BreadcrumbItem>
               {pathSegments.slice(1).map((seg, i) => (
                 <React.Fragment key={seg}>
                   <BreadcrumbSeparator />
@@ -117,17 +146,14 @@ export function AdminHeader({
 
       <div className="hidden md:flex items-center justify-between md:justify-end gap-2 md:gap-3">
         <CommandMenu navItems={navItems} />
-        
+
         <div className="flex items-center gap-1 md:gap-2">
           {/* Notification Button with Badge */}
           <div className="relative">
             <NotificationCenter />
           </div>
 
-          <motion.div 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
               size="icon"
               variant="ghost"
@@ -135,7 +161,11 @@ export function AdminHeader({
               aria-label="Alternar tema"
               className="rounded-xl text-muted-foreground hover:bg-accent/10 hover:text-accent"
             >
-              {theme === "dark" ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
+              {theme === "dark" ? (
+                <Sun className="h-[18px] w-[18px]" />
+              ) : (
+                <Moon className="h-[18px] w-[18px]" />
+              )}
             </Button>
           </motion.div>
         </div>
@@ -156,7 +186,9 @@ export function AdminHeader({
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none capitalize">{displayName}</p>
-                <p className="text-xs leading-none text-muted-foreground">{userEmail || "email@desconhecido.com"}</p>
+                <p className="text-xs leading-none text-muted-foreground">
+                  {userEmail || "email@desconhecido.com"}
+                </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -173,7 +205,10 @@ export function AdminHeader({
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive" onClick={handleSignOut}>
+            <DropdownMenuItem
+              className="cursor-pointer gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+              onClick={handleSignOut}
+            >
               <LogOut className="h-4 w-4" />
               <span>Sair</span>
             </DropdownMenuItem>

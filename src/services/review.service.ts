@@ -45,7 +45,8 @@ export const reviewService = {
   async getReviews(barbershopId: string) {
     const { data, error } = await supabase
       .from("satisfaction_surveys")
-      .select(`
+      .select(
+        `
         *,
         professional:professionals(id, display_name),
         appointment:appointments(
@@ -53,7 +54,8 @@ export const reviewService = {
           scheduled_start,
           customer:customers(id, full_name)
         )
-      `)
+      `,
+      )
       .eq("barbershop_id", barbershopId)
       .order("answered_at", { ascending: false });
 
@@ -80,10 +82,7 @@ export const reviewService = {
    * Exclui uma avaliação
    */
   async deleteReview(id: string) {
-    const { error } = await supabase
-      .from("satisfaction_surveys")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("satisfaction_surveys").delete().eq("id", id);
 
     if (error) throw error;
   },

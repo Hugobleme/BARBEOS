@@ -35,7 +35,8 @@ function ServicesDirectoryPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("services")
-        .select(`
+        .select(
+          `
           id,
           name,
           description,
@@ -48,7 +49,8 @@ function ServicesDirectoryPage() {
             address,
             active
           )
-        `)
+        `,
+        )
         .eq("active", true)
         .eq("barbershops.active", true)
         .order("name");
@@ -74,7 +76,9 @@ function ServicesDirectoryPage() {
       const matchShop =
         !query ||
         item.barbershop?.name.toLowerCase().includes(query) ||
-        JSON.stringify(item.barbershop?.address ?? {}).toLowerCase().includes(query);
+        JSON.stringify(item.barbershop?.address ?? {})
+          .toLowerCase()
+          .includes(query);
 
       if (matchService || matchShop) {
         const shopId = item.barbershop.id;
@@ -152,7 +156,10 @@ function ServicesDirectoryPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className="font-serif text-3xl font-bold">{shop.name}</h2>
-                        <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent text-[10px]">
+                        <Badge
+                          variant="outline"
+                          className="rounded-none border-accent/40 bg-accent/5 text-accent text-[10px]"
+                        >
                           Unidade Parceira
                         </Badge>
                       </div>
@@ -202,14 +209,14 @@ function ServicesDirectoryPage() {
                             {brl(Number(s.price))}
                           </span>
                           <Button
-                              asChild
-                              size="sm"
-                              className="rounded-none bg-amber-500 text-[10px] font-bold uppercase tracking-wider text-amber-950 hover:bg-amber-600"
-                            >
-                              <Link to="/agendar" search={{ barbershop: shop.slug }}>
-                                Agendar <ArrowRight className="ml-1 h-3 w-3" />
-                              </Link>
-                            </Button>
+                            asChild
+                            size="sm"
+                            className="rounded-none bg-amber-500 text-[10px] font-bold uppercase tracking-wider text-amber-950 hover:bg-amber-600"
+                          >
+                            <Link to="/agendar" search={{ barbershop: shop.slug }}>
+                              Agendar <ArrowRight className="ml-1 h-3 w-3" />
+                            </Link>
+                          </Button>
                         </div>
                       </article>
                     ))}

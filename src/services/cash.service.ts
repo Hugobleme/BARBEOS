@@ -23,7 +23,9 @@ export const cashService = {
       .maybeSingle();
 
     if (error || !data) {
-      throw new Error("Acesso negado: você não possui permissão para movimentar o caixa desta barbearia.");
+      throw new Error(
+        "Acesso negado: você não possui permissão para movimentar o caixa desta barbearia.",
+      );
     }
 
     return true;
@@ -91,7 +93,11 @@ export const cashService = {
   /**
    * Busca lançamentos do caixa em um intervalo de datas
    */
-  async getCashEntries(barbershopId: string, startDate: Date, endDate: Date): Promise<CashTransaction[]> {
+  async getCashEntries(
+    barbershopId: string,
+    startDate: Date,
+    endDate: Date,
+  ): Promise<CashTransaction[]> {
     const { data, error } = await supabase
       .from("cash_transactions")
       .select("*, professional:professionals(display_name), customer:customers(full_name)")
@@ -148,17 +154,19 @@ export const cashService = {
     const finalAmount = params.amount ?? (params.amount_cents ? params.amount_cents / 100 : 0);
     const kind =
       params.kind ??
-      (params.type === "saída" || params.type === "out" || params.type === "withdraw" ? "withdraw" : "in");
+      (params.type === "saída" || params.type === "out" || params.type === "withdraw"
+        ? "withdraw"
+        : "in");
 
     const method: PaymentMethod =
       params.method ??
       (params.payment_method === "PIX"
         ? "pix"
         : params.payment_method === "Cartão"
-        ? "credit"
-        : params.payment_method === "Dinheiro"
-        ? "cash"
-        : (params.payment_method as PaymentMethod) || "cash");
+          ? "credit"
+          : params.payment_method === "Dinheiro"
+            ? "cash"
+            : (params.payment_method as PaymentMethod) || "cash");
 
     let sessionId = params.session_id;
     if (!sessionId) {
@@ -215,7 +223,7 @@ export const cashService = {
 
     const pendingReceivables = (pendingAppts ?? []).reduce(
       (sum, a) => sum + Number(a.total_amount || 0),
-      0
+      0,
     );
 
     return {
@@ -228,7 +236,10 @@ export const cashService = {
   /**
    * Atualiza um lançamento do caixa
    */
-  async updateCashEntry(id: string, data: Database["public"]["Tables"]["cash_transactions"]["Update"]) {
+  async updateCashEntry(
+    id: string,
+    data: Database["public"]["Tables"]["cash_transactions"]["Update"],
+  ) {
     const { data: updated, error } = await supabase
       .from("cash_transactions")
       .update(data)
@@ -244,10 +255,7 @@ export const cashService = {
    * Exclui um lançamento do caixa
    */
   async deleteCashEntry(id: string) {
-    const { error } = await supabase
-      .from("cash_transactions")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("cash_transactions").delete().eq("id", id);
 
     if (error) throw error;
   },

@@ -122,7 +122,8 @@ export const barbershopService = {
         "-" +
         Math.floor(Math.random() * 1000);
 
-    const contacts = data.contacts || (data.phone ? { phone: data.phone, whatsapp: data.phone } : null);
+    const contacts =
+      data.contacts || (data.phone ? { phone: data.phone, whatsapp: data.phone } : null);
 
     const { data: shop, error } = await supabase
       .from("barbershops")
@@ -166,15 +167,14 @@ export const barbershopService = {
   /**
    * Lista barbearias com filtros de busca, localização, avaliação e paginação
    */
-  async getBarbershops(filters?: BarbershopFilters): Promise<{ data: BarbershopWithStats[]; count: number }> {
+  async getBarbershops(
+    filters?: BarbershopFilters,
+  ): Promise<{ data: BarbershopWithStats[]; count: number }> {
     const page = filters?.page || 1;
     const limit = filters?.limit || 20;
     const offset = (page - 1) * limit;
 
-    let query = supabase
-      .from("barbershops")
-      .select("*", { count: "exact" })
-      .eq("active", true);
+    let query = supabase.from("barbershops").select("*", { count: "exact" }).eq("active", true);
 
     if (filters?.q) {
       const term = `%${filters.q.trim()}%`;
@@ -191,9 +191,12 @@ export const barbershopService = {
         .filter((r: number) => !isNaN(r) && r > 0);
 
       const review_count = validRatings.length;
-      const rating = review_count > 0
-        ? Number((validRatings.reduce((a: number, b: number) => a + b, 0) / review_count).toFixed(1))
-        : 5.0;
+      const rating =
+        review_count > 0
+          ? Number(
+              (validRatings.reduce((a: number, b: number) => a + b, 0) / review_count).toFixed(1),
+            )
+          : 5.0;
 
       const address = (shop.address ?? {}) as any;
       const city = address?.city ?? "";
@@ -211,12 +214,24 @@ export const barbershopService = {
 
     if (filters?.city) {
       const c = filters.city.trim().toLowerCase();
-      shops = shops.filter((s: any) => s._city.includes(c) || JSON.stringify(s.address ?? {}).toLowerCase().includes(c));
+      shops = shops.filter(
+        (s: any) =>
+          s._city.includes(c) ||
+          JSON.stringify(s.address ?? {})
+            .toLowerCase()
+            .includes(c),
+      );
     }
 
     if (filters?.neighborhood) {
       const n = filters.neighborhood.trim().toLowerCase();
-      shops = shops.filter((s: any) => s._neighborhood.includes(n) || JSON.stringify(s.address ?? {}).toLowerCase().includes(n));
+      shops = shops.filter(
+        (s: any) =>
+          s._neighborhood.includes(n) ||
+          JSON.stringify(s.address ?? {})
+            .toLowerCase()
+            .includes(n),
+      );
     }
 
     if (filters?.minRating) {
@@ -243,7 +258,7 @@ export const barbershopService = {
   /**
    * Obtém os detalhes completos de uma barbearia pelo slug para a página pública
    */
-  
+
   async getPublicBarbershopBySlug(slug: string) {
     const normalizedSlug = (slug ?? "").trim().toLowerCase();
     if (!normalizedSlug) return null;
@@ -253,7 +268,7 @@ export const barbershopService = {
       .eq("slug", normalizedSlug)
       .eq("active", true)
       .maybeSingle();
-      
+
     if (error) throw error;
     return data;
   },
@@ -275,19 +290,12 @@ export const barbershopService = {
         .eq("barbershop_id", shop.id)
         .eq("active", true)
         .order("sort"),
-      supabase
-        .from("professionals")
-        .select("*")
-        .eq("barbershop_id", shop.id)
-        .eq("active", true),
-      supabase
-        .from("portfolio_items")
-        .select("*")
-        .eq("barbershop_id", shop.id)
-        .order("sort"),
+      supabase.from("professionals").select("*").eq("barbershop_id", shop.id).eq("active", true),
+      supabase.from("portfolio_items").select("*").eq("barbershop_id", shop.id).order("sort"),
       supabase
         .from("satisfaction_surveys")
-        .select(`
+        .select(
+          `
           id,
           shop_rating,
           comment,
@@ -295,7 +303,8 @@ export const barbershopService = {
           appointment:appointments(
             customer:customers(full_name)
           )
-        `)
+        `,
+        )
         .eq("barbershop_id", shop.id)
         .eq("is_public", true)
         .order("answered_at", { ascending: false })
@@ -310,10 +319,17 @@ export const barbershopService = {
       customer_name: r.appointment?.customer?.full_name ?? "Cliente BarberOS",
     }));
 
-    const validRatings = reviews.map((r: any) => Number(r.rating)).filter((n: number) => !isNaN(n) && n > 0);
-    const avgRating = validRatings.length > 0
-      ? Number((validRatings.reduce((a: number, b: number) => a + b, 0) / validRatings.length).toFixed(1))
-      : 5.0;
+    const validRatings = reviews
+      .map((r: any) => Number(r.rating))
+      .filter((n: number) => !isNaN(n) && n > 0);
+    const avgRating =
+      validRatings.length > 0
+        ? Number(
+            (validRatings.reduce((a: number, b: number) => a + b, 0) / validRatings.length).toFixed(
+              1,
+            ),
+          )
+        : 5.0;
 
     return {
       shop: {
@@ -385,7 +401,7 @@ export const barbershopService = {
 
   async updateService(id: string, data: Partial<Service>): Promise<Service> {
     const updatePayload: any = { ...data };
-    
+
     const { data: updated, error } = await supabase
       .from("services")
       .update(updatePayload)
@@ -407,10 +423,7 @@ export const barbershopService = {
   },
 
   async deleteService(id: string) {
-    const { error } = await supabase
-      .from("services")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("services").delete().eq("id", id);
 
     if (error) throw error;
   },
@@ -439,12 +452,13 @@ export const barbershopService = {
     email?: string | null;
     active?: boolean;
   }): Promise<Professional> {
-    const slug = data.display_name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || crypto.randomUUID().slice(0, 8);
+    const slug =
+      data.display_name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") || crypto.randomUUID().slice(0, 8);
 
     const commission_rule = {
       percentage: data.commission_percent ?? 40,
@@ -468,7 +482,10 @@ export const barbershopService = {
     return pro;
   },
 
-  async updateBarber(id: string, data: Partial<Professional> & { commission_percent?: number }): Promise<Professional> {
+  async updateBarber(
+    id: string,
+    data: Partial<Professional> & { commission_percent?: number },
+  ): Promise<Professional> {
     const updatePayload: any = { ...data };
     if (data.commission_percent !== undefined) {
       updatePayload.commission_rule = {
@@ -490,10 +507,7 @@ export const barbershopService = {
   },
 
   async deleteBarber(id: string) {
-    const { error } = await supabase
-      .from("professionals")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("professionals").delete().eq("id", id);
 
     if (error) throw error;
   },
@@ -517,10 +531,7 @@ export const barbershopService = {
    * Exclusão ou desativação suave (soft delete) da barbearia
    */
   async deleteBarbershop(id: string) {
-    const { error } = await supabase
-      .from("barbershops")
-      .update({ active: false })
-      .eq("id", id);
+    const { error } = await supabase.from("barbershops").update({ active: false }).eq("id", id);
 
     if (error) throw error;
   },
@@ -542,7 +553,11 @@ export const barbershopService = {
   /**
    * Adiciona um novo membro à equipe da barbearia
    */
-  async addMember(barbershopId: string, userId: string, role: Database["public"]["Enums"]["app_role"] = "professional") {
+  async addMember(
+    barbershopId: string,
+    userId: string,
+    role: Database["public"]["Enums"]["app_role"] = "professional",
+  ) {
     const { data, error } = await supabase
       .from("barbershop_members")
       .insert({

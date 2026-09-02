@@ -17,7 +17,8 @@ export const commissionService = {
   async getCommissions(barbershopId: string, month?: number, year?: number): Promise<Commission[]> {
     let query = supabase
       .from("commissions")
-      .select(`
+      .select(
+        `
         *,
         professional:professionals(display_name),
         appointment:appointments(
@@ -25,7 +26,8 @@ export const commissionService = {
           total_amount,
           customer:customers(full_name)
         )
-      `)
+      `,
+      )
       .eq("barbershop_id", barbershopId)
       .order("created_at", { ascending: false });
 
@@ -46,7 +48,8 @@ export const commissionService = {
   async calculateCommission(appointmentId: string) {
     const { data: appt, error } = await supabase
       .from("appointments")
-      .select(`
+      .select(
+        `
         id,
         barbershop_id,
         total_amount,
@@ -56,7 +59,8 @@ export const commissionService = {
           display_name,
           commission_rule
         )
-      `)
+      `,
+      )
       .eq("id", appointmentId)
       .single();
 

@@ -13,7 +13,10 @@ export const Route = createFileRoute("/cadastro")({
   head: () => ({
     meta: [
       { title: "Criar minha conta — BarberOS" },
-      { name: "description", content: "Crie sua conta BarberOS e agende em segundos, com histórico e lembretes." },
+      {
+        name: "description",
+        content: "Crie sua conta BarberOS e agende em segundos, com histórico e lembretes.",
+      },
       { property: "og:title", content: "Criar conta — BarberOS" },
       { property: "og:description", content: "Cadastro gratuito para agendar online 24/7." },
       { property: "og:url", content: "/cadastro" },
@@ -43,7 +46,10 @@ function SignupPage() {
         .limit(1)
         .maybeSingle();
 
-      if (membership && ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)) {
+      if (
+        membership &&
+        ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)
+      ) {
         nav({ to: "/admin" });
       } else {
         nav({ to: "/minha-conta" });
@@ -62,7 +68,9 @@ function SignupPage() {
 
   // 2. Auth State Listener para login em tempo real ou OAuth
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         redirectBasedOnMembership(session.user.id);
       }
@@ -107,7 +115,10 @@ function SignupPage() {
     setLoading(false);
 
     if (error) {
-      if (error.message.includes("User already registered") || error.message.includes("already exists")) {
+      if (
+        error.message.includes("User already registered") ||
+        error.message.includes("already exists")
+      ) {
         return toast.error("Este e-mail já está cadastrado. Tente entrar.");
       }
       if (error.message.includes("Password should be at least")) {
@@ -136,15 +147,23 @@ function SignupPage() {
         />
         <div className="mx-auto max-w-md px-6 py-20 md:py-28">
           <div className="text-center">
-            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Cadastro</p>
-            <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Criar conta</h1>
-            <p className="mt-3 text-sm text-muted-foreground">Crie sua conta em 30 segundos para agendar horários ou gerenciar seu negócio.</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">
+              Cadastro
+            </p>
+            <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">
+              Criar conta
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Crie sua conta em 30 segundos para agendar horários ou gerenciar seu negócio.
+            </p>
           </div>
 
           <div className="mt-10 border border-border/60 bg-card/40 p-8 backdrop-blur-sm">
             <form onSubmit={submit} className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Nome completo</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  Nome completo
+                </Label>
                 <Input
                   required
                   type="text"
@@ -157,7 +176,9 @@ function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">E-mail</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  E-mail
+                </Label>
                 <Input
                   required
                   type="email"
@@ -170,7 +191,9 @@ function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Telefone celular</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  Telefone celular
+                </Label>
                 <Input
                   required
                   type="tel"
@@ -183,7 +206,9 @@ function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Senha (mínimo 6 dígitos)</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  Senha (mínimo 6 dígitos)
+                </Label>
                 <Input
                   required
                   type="password"
@@ -196,7 +221,10 @@ function SignupPage() {
                 />
               </div>
 
-              <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]" disabled={loading}>
+              <Button
+                className="mt-2 w-full rounded-none uppercase tracking-[0.2em]"
+                disabled={loading}
+              >
                 {loading ? "Criando conta..." : "Criar conta"}
               </Button>
             </form>

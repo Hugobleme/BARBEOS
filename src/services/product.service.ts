@@ -63,7 +63,10 @@ export const productService = {
   /**
    * Atualiza dados de um produto existente
    */
-  async updateProduct(id: string, data: Database["public"]["Tables"]["products"]["Update"] & { price_cents?: number }): Promise<Product> {
+  async updateProduct(
+    id: string,
+    data: Database["public"]["Tables"]["products"]["Update"] & { price_cents?: number },
+  ): Promise<Product> {
     const updatePayload: any = { ...data };
     if (data.price_cents !== undefined) {
       updatePayload.price = data.price_cents / 100;
@@ -85,10 +88,7 @@ export const productService = {
    * Exclusão suave (desativação) de produto
    */
   async deleteProduct(id: string) {
-    const { error } = await supabase
-      .from("products")
-      .update({ active: false })
-      .eq("id", id);
+    const { error } = await supabase.from("products").update({ active: false }).eq("id", id);
 
     if (error) throw error;
   },
@@ -96,7 +96,12 @@ export const productService = {
   /**
    * Movimenta o estoque de um produto e registra em stock_movements
    */
-  async updateStock(productId: string, quantityDelta: number, reason: string = "Ajuste manual", userId?: string) {
+  async updateStock(
+    productId: string,
+    quantityDelta: number,
+    reason: string = "Ajuste manual",
+    userId?: string,
+  ) {
     // 1. Obter estoque atual
     const { data: prod, error: pErr } = await supabase
       .from("products")

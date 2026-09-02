@@ -1,6 +1,15 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { LogOut, Scissors, X, Search, ChevronRight, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import {
+  LogOut,
+  Scissors,
+  X,
+  Search,
+  ChevronRight,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -29,18 +38,18 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const { shop } = useCurrentShop();
-  
+
   const [collapsed, setCollapsed] = useState(false);
-  
+
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    "OPERAÇão": true,
-    "GESTão": true,
-    "CRESCIMENTO": true,
-    "CONFIGURAÇÕES": true,
+    OPERAÇão: true,
+    GESTão: true,
+    CRESCIMENTO: true,
+    CONFIGURAÇÕES: true,
   });
 
   const toggleSection = (title: string) => {
-    setOpenSections(prev => ({ ...prev, [title]: !prev[title] }));
+    setOpenSections((prev) => ({ ...prev, [title]: !prev[title] }));
   };
 
   const handleSignOut = async () => {
@@ -50,13 +59,8 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
 
   const navGroups: NavGroup[] = useMemo(() => {
     const map: Record<string, string[]> = {
-      "OPERAÇão": [
-        "/admin",
-        "/admin/agenda",
-        "/admin/pdv",
-        "/admin/caixa",
-      ],
-      "GESTão": [
+      OPERAÇão: ["/admin", "/admin/agenda", "/admin/pdv", "/admin/caixa"],
+      GESTão: [
         "/admin/clientes",
         "/admin/servicos",
         "/admin/profissionais",
@@ -64,7 +68,7 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
         "/admin/estoque",
         "/admin/comissoes",
       ],
-      "CRESCIMENTO": [
+      CRESCIMENTO: [
         "/admin/avaliacoes",
         "/admin/cupons",
         "/admin/fidelidade",
@@ -72,7 +76,7 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
         "/admin/portfolio",
         "/admin/relatorios",
       ],
-      "CONFIGURAÇÕES": [
+      CONFIGURAÇÕES: [
         "/admin/franquia",
         "/admin/folgas",
         "/admin/carteira",
@@ -121,7 +125,9 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
         } ${collapsed ? "md:w-20" : "md:w-64"}`}
         aria-label="Navegação Administrativa"
       >
-        <div className={`flex h-16 shrink-0 items-center border-b border-sidebar-border/40 px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
+        <div
+          className={`flex h-16 shrink-0 items-center border-b border-sidebar-border/40 px-4 ${collapsed ? "justify-center" : "justify-between"}`}
+        >
           <Link
             to="/admin"
             className={`flex items-center gap-3 font-serif text-xl tracking-tight transition-transform active:scale-95 ${collapsed ? "justify-center" : ""}`}
@@ -172,7 +178,9 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
               </div>
               <div className="flex flex-col min-w-0">
                 <span className="truncate text-sm font-bold text-foreground">{shop.name}</span>
-                <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{shop.role}</span>
+                <span className="truncate text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  {shop.role}
+                </span>
               </div>
             </div>
           </div>
@@ -205,12 +213,14 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
                 return (
                   <div key={group.title} className="space-y-1">
                     {!collapsed ? (
-                      <button 
+                      <button
                         onClick={() => toggleSection(group.title)}
                         className="flex w-full items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
                       >
                         {group.title}
-                        <ChevronDown className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        <ChevronDown
+                          className={`h-3 w-3 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                        />
                       </button>
                     ) : (
                       <div className="h-px w-full bg-sidebar-border/40 my-2" />

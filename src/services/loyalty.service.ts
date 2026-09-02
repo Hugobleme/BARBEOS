@@ -76,14 +76,12 @@ export const loyaltyService = {
         })
         .eq("id", balance.id);
     } else {
-      await supabase
-        .from("loyalty_balances")
-        .insert({
-          customer_id: customerId,
-          barbershop_id: barbershopId,
-          points: nextPoints,
-          lifetime_points: nextLifetime,
-        });
+      await supabase.from("loyalty_balances").insert({
+        customer_id: customerId,
+        barbershop_id: barbershopId,
+        points: nextPoints,
+        lifetime_points: nextLifetime,
+      });
     }
 
     const { data: tx, error: txErr } = await supabase
@@ -218,10 +216,7 @@ export const loyaltyService = {
    * Exclui uma recompensa
    */
   async deleteReward(id: string) {
-    const { error } = await supabase
-      .from("packages")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("packages").delete().eq("id", id);
 
     if (error) throw error;
   },

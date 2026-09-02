@@ -37,19 +37,23 @@ export function useOnboardingStatus(shopId: string | null) {
 
       if (proErr) throw proErr;
 
-      const hasProfile = !!shop && !!shop.name && !!shop.slug && (!!shop.address || !!shop.contacts || !!shop.logo_url);
+      const hasProfile =
+        !!shop &&
+        !!shop.name &&
+        !!shop.slug &&
+        (!!shop.address || !!shop.contacts || !!shop.logo_url);
       const hasServices = !!services && services.length > 0;
       const hasProfessionals = !!professionals && professionals.length > 0;
 
-      // denominator is 4 total (Profile, Services, Professionals, Review). 
+      // denominator is 4 total (Profile, Services, Professionals, Review).
       // Hours is "Em breve" and excluded from denominator.
       // Review is considered complete if the first 3 are complete.
       const hasReview = hasProfile && hasServices && hasProfessionals;
 
-      const completedCount = 
-        (hasProfile ? 1 : 0) + 
-        (hasServices ? 1 : 0) + 
-        (hasProfessionals ? 1 : 0) + 
+      const completedCount =
+        (hasProfile ? 1 : 0) +
+        (hasServices ? 1 : 0) +
+        (hasProfessionals ? 1 : 0) +
         (hasReview ? 1 : 0);
 
       const isFullyComplete = completedCount === 4;
@@ -62,8 +66,8 @@ export function useOnboardingStatus(shopId: string | null) {
         hasReview,
         completedCount,
         totalSteps: 4,
-        isFullyComplete
+        isFullyComplete,
       };
-    }
+    },
   });
 }

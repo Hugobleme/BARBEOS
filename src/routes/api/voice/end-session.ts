@@ -7,7 +7,8 @@ export const Route = createFileRoute("/api/voice/end-session")({
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         const body = (await request.json()) as { session_id?: string; outcome?: string };
-        if (!body.session_id) return Response.json({ error: "session_id required" }, { status: 400 });
+        if (!body.session_id)
+          return Response.json({ error: "session_id required" }, { status: 400 });
         await supabaseAdmin
           .from("voice_sessions")
           .update({

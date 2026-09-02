@@ -24,7 +24,9 @@ function Page() {
   const [sent, setSent] = useState(false);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` });
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
     if (error) return toast.error(error.message);
     setSent(true);
   }
@@ -37,9 +39,15 @@ function Page() {
         />
         <div className="mx-auto max-w-md px-6 py-20 md:py-28">
           <div className="text-center">
-            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Acesso</p>
-            <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">Recuperar senha</h1>
-            <p className="mt-3 text-sm text-muted-foreground">Informe seu e-mail e enviaremos um link.</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">
+              Acesso
+            </p>
+            <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">
+              Recuperar senha
+            </h1>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Informe seu e-mail e enviaremos um link.
+            </p>
           </div>
 
           <div className="mt-10 border border-border/60 bg-card/40 p-8 backdrop-blur-sm">
@@ -50,7 +58,9 @@ function Page() {
             ) : (
               <form onSubmit={submit} className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">E-mail</Label>
+                  <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                    E-mail
+                  </Label>
                   <Input
                     type="email"
                     required
@@ -59,7 +69,9 @@ function Page() {
                     className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                   />
                 </div>
-                <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]">Enviar link</Button>
+                <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]">
+                  Enviar link
+                </Button>
               </form>
             )}
             <p className="mt-6 text-center text-xs">

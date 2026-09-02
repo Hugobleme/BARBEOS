@@ -41,7 +41,9 @@ export function OptimizedImage({
   const imageSrc = error && fallback ? fallback : src || fallback;
 
   return (
-    <div className={cn("relative overflow-hidden bg-card/40", aspectClasses[aspectRatio], className)}>
+    <div
+      className={cn("relative overflow-hidden bg-card/40", aspectClasses[aspectRatio], className)}
+    >
       {!loaded && !error && (
         <Skeleton className="absolute inset-0 z-10 h-full w-full animate-pulse bg-muted/40" />
       )}
@@ -53,7 +55,7 @@ export function OptimizedImage({
         className={cn(
           "h-full w-full object-cover max-w-full transition-all duration-700",
           loaded ? "opacity-100 scale-100" : "opacity-0 scale-95",
-          imageClassName
+          imageClassName,
         )}
         onLoad={() => setLoaded(true)}
         onError={() => {

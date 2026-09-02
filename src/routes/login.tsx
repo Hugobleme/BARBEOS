@@ -12,7 +12,10 @@ export const Route = createFileRoute("/login")({
   head: () => ({
     meta: [
       { title: "Fazer login — BarberOS" },
-      { name: "description", content: "Acesse sua conta BarberOS para gerenciar agendamentos e preferências." },
+      {
+        name: "description",
+        content: "Acesse sua conta BarberOS para gerenciar agendamentos e preferências.",
+      },
       { property: "og:title", content: "Entrar — BarberOS" },
       { property: "og:description", content: "Acesso seguro à sua conta BarberOS." },
       { property: "og:url", content: "/login" },
@@ -43,7 +46,10 @@ function LoginPage() {
         .limit(1)
         .maybeSingle();
 
-      if (membership && ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)) {
+      if (
+        membership &&
+        ["owner", "admin", "barber", "manager", "receptionist"].includes(membership.role)
+      ) {
         nav({ to: "/admin" });
       } else {
         nav({ to: "/minha-conta" });
@@ -55,7 +61,9 @@ function LoginPage() {
 
   useEffect(() => {
     // Apenas um listener global para capturar o login
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       // Evita redirecionar se estivermos no meio da requisição de login (loading = true)
       if (session?.user && !loading && !redirectingRef.current) {
         redirectBasedOnMembership(session.user.id);
@@ -94,7 +102,10 @@ function LoginPage() {
     setLoading(false);
 
     if (error) {
-      if (error.message.includes("Invalid login credentials") || error.message.includes("invalid_grant")) {
+      if (
+        error.message.includes("Invalid login credentials") ||
+        error.message.includes("invalid_grant")
+      ) {
         return toast.error("E-mail ou senha incorretos.");
       }
       if (error.message.includes("Email not confirmed")) {
@@ -118,7 +129,9 @@ function LoginPage() {
         />
         <div className="mx-auto max-w-md px-6 py-20 md:py-28">
           <div className="text-center">
-            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">Acesso</p>
+            <p className="text-[10px] font-medium uppercase tracking-[0.35em] text-accent">
+              Acesso
+            </p>
             <h1 className="mt-3 font-serif text-4xl font-bold tracking-tight md:text-5xl">
               Entrar
             </h1>
@@ -130,7 +143,9 @@ function LoginPage() {
           <div className="mt-10 border border-border/60 bg-card/40 p-8 backdrop-blur-sm">
             <form onSubmit={submit} className="space-y-5">
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">E-mail</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  E-mail
+                </Label>
                 <Input
                   type="email"
                   required
@@ -142,7 +157,9 @@ function LoginPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Senha</Label>
+                <Label className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  Senha
+                </Label>
                 <Input
                   type="password"
                   required
@@ -154,7 +171,10 @@ function LoginPage() {
                   className="rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 focus-visible:ring-0"
                 />
               </div>
-              <Button className="mt-2 w-full rounded-none uppercase tracking-[0.2em]" disabled={loading}>
+              <Button
+                className="mt-2 w-full rounded-none uppercase tracking-[0.2em]"
+                disabled={loading}
+              >
                 {loading ? "Entrando..." : "Entrar"}
               </Button>
             </form>
@@ -181,7 +201,10 @@ function LoginPage() {
             </Button>
 
             <div className="mt-6 flex items-center justify-between text-xs">
-              <Link to="/recuperar-senha" className="text-muted-foreground transition hover:text-accent">
+              <Link
+                to="/recuperar-senha"
+                className="text-muted-foreground transition hover:text-accent"
+              >
                 Esqueci minha senha
               </Link>
               <Link to="/cadastro" className="font-medium text-accent hover:underline">

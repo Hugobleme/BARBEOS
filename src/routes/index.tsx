@@ -8,8 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowRight, Calendar, Clock, MapPin, Phone, Scissors, Search, Sparkles, Star } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowRight,
+  Calendar,
+  Clock,
+  MapPin,
+  Phone,
+  Scissors,
+  Search,
+  Sparkles,
+  Star,
+} from "lucide-react";
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
 import { AuroraFab } from "@/components/aurora/AuroraFab";
 import { OptimizedImage } from "@/components/OptimizedImage";
@@ -26,7 +42,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "BarberOS — Encontre e Agende nas MelhoreSábarbearias" },
-      { name: "description", content: "Atendimento exclusivo nas melhores barbearias do Brasil. Agende online em 30 segundos, disponível 24/7." },
+      {
+        name: "description",
+        content:
+          "Atendimento exclusivo nas melhores barbearias do Brasil. Agende online em 30 segundos, disponível 24/7.",
+      },
       { property: "og:title", content: "BarberOS — Barbearias Premium" },
       { property: "og:description", content: "Reserve sua experiência em 30 segundos, 24/7." },
       { property: "og:url", content: "/" },
@@ -128,11 +148,15 @@ function Landing() {
             </h1>
 
             <p className="max-w-md text-lg font-light leading-relaxed text-muted-foreground md:text-xl">
-              Encontre as melhores barbearias e reserve seu horário em 30 segundos. Sem ligações, sem espera — 24 horas por dia.
+              Encontre as melhores barbearias e reserve seu horário em 30 segundos. Sem ligações,
+              sem espera — 24 horas por dia.
             </p>
 
             {/* Caixa de Busca Rápida por Cidade/Bairro */}
-            <form onsubmit={handleSearchsubmit} className="flex flex-col gap-3 sm:flex-row max-w-lg w-full">
+            <form
+              onsubmit={handleSearchsubmit}
+              className="flex flex-col gap-3 sm:flex-row max-w-lg w-full"
+            >
               <div className="relative flex-1 w-full">
                 <MapPin className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-accent" />
                 <Input
@@ -153,7 +177,9 @@ function Landing() {
 
             {/* Chips de Cidades Populares */}
             <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-              <span className="text-[10px] uppercase font-bold text-muted-foreground">Populares:</span>
+              <span className="text-[10px] uppercase font-bold text-muted-foreground">
+                Populares:
+              </span>
               {["São Paulo", "Rio de Janeiro", "Curitiba", "Belo Horizonte"].map((c) => (
                 <Link
                   key={c}
@@ -211,12 +237,12 @@ function Landing() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-72 w-72 rounded-full bg-accent/20 blur-[120px]" />
             <div className="pointer-events-none absolute -left-10 -bottom-10 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
 
-            <div 
+            <div
               className="group relative min-h-[400px] sm:aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]"
               style={{
                 backgroundImage: "url('/hero-barbershop.jpg')",
                 backgroundSize: "cover",
-                backgroundPosition: "center"
+                backgroundPosition: "center",
               }}
             >
               {/* Gradient overlay sutil para manter a imagem brilhante e visível */}
@@ -275,7 +301,9 @@ function Landing() {
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs uppercase tracking-wider text-muted-foreground">Ordenar:</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">
+                Ordenar:
+              </span>
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[180px] rounded-none border-border bg-background/60 text-xs">
                   <SelectValue placeholder="Ordenar" />
@@ -303,7 +331,11 @@ function Landing() {
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {featuredShops.map((shop) => {
                 const addr = (shop.address ?? {}) as any;
-                const cityState = [addr.neighborhood || addr.district, addr.city || "São Paulo", addr.state || "SP"]
+                const cityState = [
+                  addr.neighborhood || addr.district,
+                  addr.city || "São Paulo",
+                  addr.state || "SP",
+                ]
                   .filter(Boolean)
                   .join(" · ");
 
@@ -334,13 +366,17 @@ function Landing() {
                             <span className="truncate">{cityState}</span>
                           </p>
                         </div>
-                        <Badge variant="outline" className="rounded-none border-accent/40 bg-accent/5 text-accent shrink-0">
+                        <Badge
+                          variant="outline"
+                          className="rounded-none border-accent/40 bg-accent/5 text-accent shrink-0"
+                        >
                           Destaque
                         </Badge>
                       </div>
 
                       <p className="mt-4 line-clamp-2 text-xs leading-relaxed text-muted-foreground">
-                        {shop.description || "Atendimento premium com os melhores profissionais da região."}
+                        {shop.description ||
+                          "Atendimento premium com os melhores profissionais da região."}
                       </p>
                     </div>
 
@@ -349,8 +385,12 @@ function Landing() {
                         <div className="flex text-accent">
                           <Star className="h-4 w-4 fill-current" />
                         </div>
-                        <span className="font-mono text-sm font-bold">{shop.rating?.toFixed(1) ?? "5.0"}</span>
-                        <span className="text-[10px] text-muted-foreground">({shop.review_count || 12} avaliações)</span>
+                        <span className="font-mono text-sm font-bold">
+                          {shop.rating?.toFixed(1) ?? "5.0"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          ({shop.review_count || 12} avaliações)
+                        </span>
                       </div>
 
                       <Button
@@ -370,7 +410,11 @@ function Landing() {
           )}
 
           <div className="mt-12 text-center">
-            <Button asChild variant="outline" className="rounded-none border-border px-8 text-xs uppercase tracking-[0.2em]">
+            <Button
+              asChild
+              variant="outline"
+              className="rounded-none border-border px-8 text-xs uppercase tracking-[0.2em]"
+            >
               <Link to="/barbearias">Ver todas as barbearias premium</Link>
             </Button>
           </div>
@@ -388,7 +432,8 @@ function Landing() {
               Serviços <span className="italic font-normal">selecionados</span>
             </h2>
             <p className="max-w-md text-muted-foreground">
-              Sua melhor versão exige os melhores profissionais. Encontre barbearias de alto padrão e reserve seu horário em 30 segundos.
+              Sua melhor versão exige os melhores profissionais. Encontre barbearias de alto padrão
+              e reserve seu horário em 30 segundos.
             </p>
           </div>
           <Link
@@ -524,9 +569,7 @@ function Landing() {
                     <Star key={i} className="h-4 w-4 fill-current" />
                   ))}
                 </div>
-                <p className="text-sm leading-relaxed text-foreground/90 italic">
-                  "{t.text}"
-                </p>
+                <p className="text-sm leading-relaxed text-foreground/90 italic">"{t.text}"</p>
               </div>
 
               <div className="mt-6 flex items-center gap-3 border-t border-border/40 pt-4">
@@ -538,7 +581,9 @@ function Landing() {
                 </div>
                 <div>
                   <div className="font-serif font-bold text-sm text-foreground">{t.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{t.city} · Cliente Verificado</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {t.city} · Cliente Verificado
+                  </div>
                 </div>
               </div>
             </div>
@@ -551,21 +596,21 @@ function Landing() {
         <div className="grid gap-12 md:grid-cols-2">
           <div className="space-y-6">
             <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
-            <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">— A casa</div>
+              <div className="text-[10px] font-bold uppercase tracking-[0.3em] text-accent">
+                — A casa
+              </div>
             </div>
             <h2 className="font-serif text-4xl font-bold md:text-5xl">
               Sobre a <span className="italic font-normal">BarberOS</span>
             </h2>
             <p className="max-w-md text-muted-foreground">
-              Mais que uma barbearia: uma experiência. Combinamos tradição e modernidade
-              num ambiente acolhedor para o homem que cuida da imagem.
+              Mais que uma barbearia: uma experiência. Combinamos tradição e modernidade num
+              ambiente acolhedor para o homem que cuida da imagem.
             </p>
             <div className="space-y-4 border-t border-border/60 pt-6 text-sm">
               <div className="flex items-center gap-4">
                 <MapPin className="h-4 w-4 shrink-0 text-accent" />
-                <span className="text-muted-foreground">
-                  Rua Augusta, 1500 — São Paulo / SP
-                </span>
+                <span className="text-muted-foreground">Rua Augusta, 1500 — São Paulo / SP</span>
               </div>
               <div className="flex items-center gap-4">
                 <Phone className="h-4 w-4 shrink-0 text-accent" />
@@ -606,10 +651,6 @@ function Landing() {
           </div>
         </div>
       </section>
-      
     </PublicLayout>
   );
 }
-
-
-

@@ -20,7 +20,9 @@ export function useTheme() {
 
   const setTheme = (t: Theme) => {
     setThemeState(t);
-    try { localStorage.setItem(KEY, t); } catch {}
+    try {
+      localStorage.setItem(KEY, t);
+    } catch {}
   };
 
   const toggle = () => setTheme(theme === "dark" ? "light" : "dark");

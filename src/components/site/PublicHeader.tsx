@@ -30,7 +30,10 @@ export function PublicHeader() {
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 border-r border-border/40 bg-background/95 backdrop-blur-xl">
+            <SheetContent
+              side="left"
+              className="w-[280px] p-0 border-r border-border/40 bg-background/95 backdrop-blur-xl"
+            >
               <SheetHeader className="p-6 border-b border-border/40">
                 <SheetTitle className="flex items-center gap-2.5 font-serif text-xl tracking-tight">
                   <span className="grid h-8 w-8 place-items-center border border-accent/40 bg-accent/10 text-accent">
@@ -72,19 +75,31 @@ export function PublicHeader() {
         </div>
 
         <nav className="hidden items-center gap-8 text-[11px] font-medium uppercase tracking-[0.25em] text-muted-foreground md:flex">
-          {NAV_LINKS.map(link => (
-            <Link key={link.to} to={link.to} className="transition-colors hover:text-accent">{link.label}</Link>
+          {NAV_LINKS.map((link) => (
+            <Link key={link.to} to={link.to} className="transition-colors hover:text-accent">
+              {link.label}
+            </Link>
           ))}
         </nav>
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
           {isAuthenticated ? (
-            <Button asChild variant="ghost" size="sm" className="hidden text-xs uppercase tracking-widest sm:flex">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden text-xs uppercase tracking-widest sm:flex"
+            >
               <Link to="/minha-conta">Minha conta</Link>
             </Button>
           ) : (
-            <Button asChild variant="ghost" size="sm" className="hidden text-xs uppercase tracking-widest sm:flex">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden text-xs uppercase tracking-widest sm:flex"
+            >
               <Link to="/login">Entrar</Link>
             </Button>
           )}
@@ -100,4 +115,3 @@ export function PublicHeader() {
     </header>
   );
 }
-

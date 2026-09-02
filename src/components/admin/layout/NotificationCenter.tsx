@@ -1,11 +1,7 @@
 import { useState } from "react";
 import { Bell, Check, Clock, Info, AlertTriangle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -51,9 +47,7 @@ export function NotificationCenter() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
 
   const markAllAsRead = () => {
@@ -66,10 +60,14 @@ export function NotificationCenter() {
 
   const getTypeIcon = (type: Notification["type"]) => {
     switch (type) {
-      case "success": return <Check className="h-4 w-4 text-green-500" />;
-      case "warning": return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case "error": return <X className="h-4 w-4 text-red-500" />;
-      default: return <Info className="h-4 w-4 text-blue-500" />;
+      case "success":
+        return <Check className="h-4 w-4 text-green-500" />;
+      case "warning":
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case "error":
+        return <X className="h-4 w-4 text-red-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
     }
   };
 
@@ -87,7 +85,10 @@ export function NotificationCenter() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 rounded-2xl border-border/40 bg-background/95 backdrop-blur-xl" align="end">
+      <PopoverContent
+        className="w-80 p-0 rounded-2xl border-border/40 bg-background/95 backdrop-blur-xl"
+        align="end"
+      >
         <div className="flex items-center justify-between border-b border-border/40 p-4">
           <h4 className="font-display font-bold tracking-tight">Notificações</h4>
           {unreadCount > 0 && (
@@ -111,7 +112,7 @@ export function NotificationCenter() {
                     exit={{ opacity: 0, x: 20 }}
                     className={cn(
                       "group relative flex gap-3 border-b border-border/20 p-4 transition-colors hover:bg-muted/30",
-                      !n.read && "bg-accent/5"
+                      !n.read && "bg-accent/5",
                     )}
                     onClick={() => markAsRead(n.id)}
                   >
@@ -120,8 +121,12 @@ export function NotificationCenter() {
                     </div>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-bold tracking-tight leading-none">{n.title}</span>
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">{n.time}</span>
+                        <span className="text-sm font-bold tracking-tight leading-none">
+                          {n.title}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                          {n.time}
+                        </span>
                       </div>
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         {n.description}
@@ -141,14 +146,19 @@ export function NotificationCenter() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Clock className="h-8 w-8 text-muted-foreground/30" />
-                  <p className="mt-2 text-sm text-muted-foreground">Nenhuma notificação por enquanto.</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Nenhuma notificação por enquanto.
+                  </p>
                 </div>
               )}
             </AnimatePresence>
           </div>
         </ScrollArea>
         <div className="border-t border-border/40 p-2">
-          <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
+          <Button
+            variant="ghost"
+            className="w-full text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+          >
             Ver todas as atividades
           </Button>
         </div>

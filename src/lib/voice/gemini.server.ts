@@ -63,14 +63,11 @@ export async function geminiGenerate(opts: GenerateOpts): Promise<GeminiResponse
     },
   };
 
-  const res = await fetch(
-    `${API_BASE}/models/${REASONING_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
+  const res = await fetch(`${API_BASE}/models/${REASONING_MODEL}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   const json = (await res.json()) as GeminiResponse;
   if (!res.ok || json.error) {
     throw new Error(json.error?.message ?? `Gemini ${res.status}`);
@@ -101,14 +98,11 @@ export async function geminiTts(
     },
   };
 
-  const res = await fetch(
-    `${API_BASE}/models/${TTS_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
+  const res = await fetch(`${API_BASE}/models/${TTS_MODEL}:generateContent?key=${apiKey}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   if (!res.ok) return null;
   const json = (await res.json()) as GeminiResponse;
   const part = json.candidates?.[0]?.content?.parts?.find(

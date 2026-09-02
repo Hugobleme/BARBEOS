@@ -2,7 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { appointmentService, AppointmentStatus } from "@/services/appointment.service";
 import { toast } from "sonner";
 
-export function useAppointments(shopId: string | null, date: Date, filters?: { status?: string; professionalId?: string; source?: string; q?: string }) {
+export function useAppointments(
+  shopId: string | null,
+  date: Date,
+  filters?: { status?: string; professionalId?: string; source?: string; q?: string },
+) {
   const queryClient = useQueryClient();
   const dateKey = date.toISOString().slice(0, 10);
 
@@ -13,19 +17,24 @@ export function useAppointments(shopId: string | null, date: Date, filters?: { s
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) => 
+    mutationFn: ({ id, status }: { id: string; status: AppointmentStatus }) =>
       appointmentService.updateStatus(id, status),
     onMutate: async ({ id, status }) => {
       // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
       await queryClient.cancelQueries({ queryKey: ["appointments", shopId, dateKey, filters] });
 
       // Snapshot the previous value
-      const previousAppointments = queryClient.getQueryData<any[]>(["appointments", shopId, dateKey, filters]);
+      const previousAppointments = queryClient.getQueryData<any[]>([
+        "appointments",
+        shopId,
+        dateKey,
+        filters,
+      ]);
 
       // Optimistically update to the new value
       if (previousAppointments) {
-        queryClient.setQueryData(["appointments", shopId, dateKey, filters], (old: any[]) => 
-          old.map(appt => appt.id === id ? { ...appt, status } : appt)
+        queryClient.setQueryData(["appointments", shopId, dateKey, filters], (old: any[]) =>
+          old.map((appt) => (appt.id === id ? { ...appt, status } : appt)),
         );
       }
 
@@ -34,7 +43,10 @@ export function useAppointments(shopId: string | null, date: Date, filters?: { s
     onError: (error: any, _variables, context) => {
       // Rollback to previous state if mutation fails
       if (context?.previousAppointments) {
-        queryClient.setQueryData(["appointments", shopId, dateKey, filters], context.previousAppointments);
+        queryClient.setQueryData(
+          ["appointments", shopId, dateKey, filters],
+          context.previousAppointments,
+        );
       }
       toast.error(error.message || "Erro ao atualizar status");
     },

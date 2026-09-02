@@ -61,7 +61,10 @@ export const packageService = {
   /**
    * Atualiza dados de um pacote
    */
-  async updatePackage(id: string, data: Partial<Package> & { price_cents?: number }): Promise<Package> {
+  async updatePackage(
+    id: string,
+    data: Partial<Package> & { price_cents?: number },
+  ): Promise<Package> {
     const updatePayload: any = { ...data };
     if (data.price_cents !== undefined) {
       updatePayload.price = data.price_cents / 100;
@@ -83,10 +86,7 @@ export const packageService = {
    * Exclusão suave (desativação) de um pacote
    */
   async deletePackage(id: string) {
-    const { error } = await supabase
-      .from("packages")
-      .update({ active: false })
-      .eq("id", id);
+    const { error } = await supabase.from("packages").update({ active: false }).eq("id", id);
 
     if (error) throw error;
   },

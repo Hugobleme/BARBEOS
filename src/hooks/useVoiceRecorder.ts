@@ -16,12 +16,7 @@ interface Opts {
 
 function pickMime(): string {
   if (typeof MediaRecorder === "undefined") return "";
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/mp4",
-    "audio/ogg;codecs=opus",
-  ];
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
   for (const m of candidates) {
     try {
       if (MediaRecorder.isTypeSupported(m)) return m;
@@ -74,8 +69,16 @@ export function useVoiceRecorder(opts: Opts) {
     if (maxTimerRef.current) clearTimeout(maxTimerRef.current);
     maxTimerRef.current = null;
     silenceStartRef.current = null;
-    try { analyserRef.current?.disconnect(); } catch { /* noop */ }
-    try { audioCtxRef.current?.close(); } catch { /* noop */ }
+    try {
+      analyserRef.current?.disconnect();
+    } catch {
+      /* noop */
+    }
+    try {
+      audioCtxRef.current?.close();
+    } catch {
+      /* noop */
+    }
     analyserRef.current = null;
     audioCtxRef.current = null;
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -86,7 +89,11 @@ export function useVoiceRecorder(opts: Opts) {
   const stop = useCallback(() => {
     const rec = recorderRef.current;
     if (rec && rec.state !== "inactive") {
-      try { rec.stop(); } catch { /* noop */ }
+      try {
+        rec.stop();
+      } catch {
+        /* noop */
+      }
     } else {
       cleanup();
       setRecording(false);
@@ -106,12 +113,16 @@ export function useVoiceRecorder(opts: Opts) {
     const maxMs = optsRef.current.maxMs ?? 30000;
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true },
+      });
       streamRef.current = stream;
       const mime = pickMime();
       const rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
       recorderRef.current = rec;
-      rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
       rec.onstop = async () => {
         const finalMime = rec.mimeType || mime || "audio/webm";
         const blob = new Blob(chunksRef.current, { type: finalMime });
@@ -131,7 +142,9 @@ export function useVoiceRecorder(opts: Opts) {
       };
 
       // VAD via amplitude
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AC =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       const ctx = new AC();
       audioCtxRef.current = ctx;
       const src = ctx.createMediaStreamSource(stream);
@@ -145,7 +158,10 @@ export function useVoiceRecorder(opts: Opts) {
         if (!analyserRef.current) return;
         analyserRef.current.getByteTimeDomainData(data);
         let sum = 0;
-        for (let i = 0; i < data.length; i++) { const v = (data[i] - 128) / 128; sum += v * v; }
+        for (let i = 0; i < data.length; i++) {
+          const v = (data[i] - 128) / 128;
+          sum += v * v;
+        }
         const rms = Math.sqrt(sum / data.length);
         setLevel(Math.min(1, rms * 4));
 
@@ -176,7 +192,13 @@ export function useVoiceRecorder(opts: Opts) {
     }
   }, [cleanup, stop]);
 
-  useEffect(() => () => { cancelledRef.current = true; stop(); }, [stop]);
+  useEffect(
+    () => () => {
+      cancelledRef.current = true;
+      stop();
+    },
+    [stop],
+  );
 
   return { isRecording, level, error, isSupported, start, stop, cancel };
 }

@@ -12,7 +12,11 @@ const DISMISS_KEY = "pwa-install-dismissed-at";
 const DISMISS_DAYS = 14;
 
 function isInIframe() {
-  try { return window.self !== window.top; } catch { return true; }
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
 }
 
 export function InstallAppButton({ className }: { className?: string }) {
@@ -33,7 +37,10 @@ export function InstallAppButton({ className }: { className?: string }) {
       setDeferred(e as BeforeInstallPromptEvent);
       setVisible(true);
     };
-    const onInstalled = () => { setVisible(false); setDeferred(null); };
+    const onInstalled = () => {
+      setVisible(false);
+      setDeferred(null);
+    };
 
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("appinstalled", onInstalled);
@@ -78,8 +85,14 @@ export function InstallAppButton({ className }: { className?: string }) {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={handleDismiss}>Agora não</Button>
-        <Button size="sm" onClick={handleInstall} className="bg-accent text-accent-foreground hover:bg-accent/90">
+        <Button variant="ghost" size="sm" onClick={handleDismiss}>
+          Agora não
+        </Button>
+        <Button
+          size="sm"
+          onClick={handleInstall}
+          className="bg-accent text-accent-foreground hover:bg-accent/90"
+        >
           Instalar
         </Button>
       </div>

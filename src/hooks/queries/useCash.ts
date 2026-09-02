@@ -11,14 +11,15 @@ export function useCash(shopId: string | null) {
     queryFn: () => cashService.getOpenSession(shopId!),
   });
 
-  const transactionsQuery = (date: Date) => useQuery({
-    queryKey: ["cash-transactions", shopId, date.toISOString().slice(0, 10)],
-    enabled: !!shopId,
-    queryFn: () => cashService.getTransactionsByDate(shopId!, date),
-  });
+  const transactionsQuery = (date: Date) =>
+    useQuery({
+      queryKey: ["cash-transactions", shopId, date.toISOString().slice(0, 10)],
+      enabled: !!shopId,
+      queryFn: () => cashService.getTransactionsByDate(shopId!, date),
+    });
 
   const openSessionMutation = useMutation({
-    mutationFn: ({ userId, amount }: { userId: string; amount: number }) => 
+    mutationFn: ({ userId, amount }: { userId: string; amount: number }) =>
       cashService.openSession(shopId!, userId, amount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-session"] });
@@ -27,8 +28,15 @@ export function useCash(shopId: string | null) {
   });
 
   const closeSessionMutation = useMutation({
-    mutationFn: ({ sessionId, userId, amount }: { sessionId: string; userId: string; amount: number }) => 
-      cashService.closeSession(sessionId, userId, amount),
+    mutationFn: ({
+      sessionId,
+      userId,
+      amount,
+    }: {
+      sessionId: string;
+      userId: string;
+      amount: number;
+    }) => cashService.closeSession(sessionId, userId, amount),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-session"] });
       toast.success("Caixa fechado com sucesso");
@@ -36,7 +44,7 @@ export function useCash(shopId: string | null) {
   });
 
   const createTransactionMutation = useMutation({
-    mutationFn: (params: Parameters<typeof cashService.createTransaction>[0]) => 
+    mutationFn: (params: Parameters<typeof cashService.createTransaction>[0]) =>
       cashService.createTransaction(params),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cash-transactions"] });

@@ -2,7 +2,9 @@ import { useState, lazy, Suspense } from "react";
 import { Mic } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const AuroraDrawer = lazy(() => import("./AuroraDrawer").then(m => ({ default: m.AuroraDrawer })));
+const AuroraDrawer = lazy(() =>
+  import("./AuroraDrawer").then((m) => ({ default: m.AuroraDrawer })),
+);
 
 interface Props {
   barbershopId: string;
@@ -34,7 +36,12 @@ export function AuroraFab({ barbershopId, barbershopName, className }: Props) {
       </button>
       {open && (
         <Suspense fallback={null}>
-          <AuroraDrawer open={open} onOpenChange={setOpen} barbershopId={barbershopId} barbershopName={barbershopName} />
+          <AuroraDrawer
+            open={open}
+            onOpenChange={setOpen}
+            barbershopId={barbershopId}
+            barbershopName={barbershopName}
+          />
         </Suspense>
       )}
     </>

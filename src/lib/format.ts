@@ -19,7 +19,10 @@ export const minutes = (n: number) => {
 
 export const phoneMask = (v: string) => {
   const d = (v ?? "").replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 10) return d.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (_,a,b,c)=>[a&&`(${a}`,a?.length===2?") ":"",b,c&&`-${c}`].filter(Boolean).join(""));
+  if (d.length <= 10)
+    return d.replace(/(\d{0,2})(\d{0,4})(\d{0,4}).*/, (_, a, b, c) =>
+      [a && `(${a}`, a?.length === 2 ? ") " : "", b, c && `-${c}`].filter(Boolean).join(""),
+    );
   return d.replace(/(\d{2})(\d{5})(\d{0,4}).*/, "($1) $2-$3");
 };
 

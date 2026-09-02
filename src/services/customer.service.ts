@@ -11,11 +11,7 @@ export interface CustomerStats {
 
 export const customerService = {
   async getById(id: string) {
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
+    const { data, error } = await supabase.from("customers").select("*").eq("id", id).maybeSingle();
 
     if (error) throw error;
     return data;
@@ -24,20 +20,14 @@ export const customerService = {
   async incrementNoShow(id: string) {
     const cur = await this.getById(id);
     const next = Number(cur?.no_show_count ?? 0) + 1;
-    const { error } = await supabase
-      .from("customers")
-      .update({ no_show_count: next })
-      .eq("id", id);
+    const { error } = await supabase.from("customers").update({ no_show_count: next }).eq("id", id);
 
     if (error) throw error;
     return next;
   },
 
   async blockCustomer(id: string) {
-    const { error } = await supabase
-      .from("customers")
-      .update({ blocked: true })
-      .eq("id", id);
+    const { error } = await supabase.from("customers").update({ blocked: true }).eq("id", id);
 
     if (error) throw error;
   },
@@ -54,7 +44,10 @@ export const customerService = {
   /**
    * Obtém lista de clientes de uma barbearia
    */
-  async getCustomers(barbershopId: string, params?: { q?: string; blocked?: boolean; page?: number; limit?: number }) {
+  async getCustomers(
+    barbershopId: string,
+    params?: { q?: string; blocked?: boolean; page?: number; limit?: number },
+  ) {
     const page = params?.page ?? 0;
     const limit = params?.limit ?? 20;
     const from = page * limit;
@@ -91,7 +84,8 @@ export const customerService = {
   async getCustomerHistory(customerId: string) {
     const { data, error } = await supabase
       .from("appointments")
-      .select(`
+      .select(
+        `
         id,
         scheduled_start,
         scheduled_end,
@@ -106,7 +100,8 @@ export const customerService = {
           duration_snapshot,
           service:services(id, name, description)
         )
-      `)
+      `,
+      )
       .eq("customer_id", customerId)
       .order("scheduled_start", { ascending: false });
 

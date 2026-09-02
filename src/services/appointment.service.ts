@@ -87,7 +87,7 @@ export const appointmentService = {
     if (professionalId) {
       timeOffQuery = timeOffQuery.eq("professional_id", professionalId);
     }
-    
+
     const { data: overlappingTimeOff } = await timeOffQuery;
 
     return overlapping.length === 0 && (overlappingTimeOff?.length || 0) === 0;
@@ -138,7 +138,9 @@ export const appointmentService = {
     });
 
     if (!isAvailable) {
-      throw new Error("O horário selecionado já está reservado ou o profissional está indisponível.");
+      throw new Error(
+        "O horário selecionado já está reservado ou o profissional está indisponível.",
+      );
     }
 
     // 4. Obter ou registrar o cliente
@@ -153,12 +155,14 @@ export const appointmentService = {
 
       if (existingCustomer) {
         if (existingCustomer.blocked) {
-          throw new Error("Seu cadastro está temporariamente bloqueado. Entre em contato com a barbearia.");
+          throw new Error(
+            "Seu cadastro está temporariamente bloqueado. Entre em contato com a barbearia.",
+          );
         }
         customerId = existingCustomer.id;
       }
     }
-    
+
     if (!customerId) {
       const { data: newCust, error: custErr } = await supabase
         .from("customers")
@@ -207,16 +211,18 @@ export const appointmentService = {
       duration_snapshot: s.duration_min ?? s.durationMinutes ?? 30,
     }));
 
-    const { error: servErr } = await supabase
-      .from("appointment_services")
-      .insert(apptServices);
+    const { error: servErr } = await supabase.from("appointment_services").insert(apptServices);
 
     if (servErr) throw servErr;
 
     return appt;
   },
 
-  async getByDate(shopId: string, date: Date, filters?: { status?: string; professionalId?: string; source?: string; q?: string }) {
+  async getByDate(
+    shopId: string,
+    date: Date,
+    filters?: { status?: string; professionalId?: string; source?: string; q?: string },
+  ) {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(date);
@@ -224,7 +230,9 @@ export const appointmentService = {
 
     let query = supabase
       .from("appointments")
-      .select("*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
+      .select(
+        "*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)",
+      )
       .eq("barbershop_id", shopId)
       .gte("scheduled_start", startOfDay.toISOString())
       .lte("scheduled_start", endOfDay.toISOString());
@@ -239,7 +247,9 @@ export const appointmentService = {
       query = query.eq("source", filters.source);
     }
     if (filters?.q) {
-      query = query.or(`customer.full_name.ilike.%${filters.q}%,customer.phone.ilike.%${filters.q}%`);
+      query = query.or(
+        `customer.full_name.ilike.%${filters.q}%,customer.phone.ilike.%${filters.q}%`,
+      );
     }
 
     const { data, error } = await query.order("scheduled_start", { ascending: true });
@@ -256,7 +266,9 @@ export const appointmentService = {
     const now = new Date();
     const { data, error } = await supabase
       .from("appointments")
-      .select("*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)")
+      .select(
+        "*, barbershop:barbershops(name), professional:professionals(id, display_name, commission_rule), customer:customers(full_name, phone)",
+      )
       .eq("barbershop_id", shopId)
       .gte("scheduled_start", now.toISOString())
       .in("status", ["scheduled", "in_progress"])
@@ -290,18 +302,22 @@ export const appointmentService = {
     if (apptErr) throw apptErr;
 
     // 2. Insert cash transaction
-    const { data: tx, error: txErr } = await supabase.from("cash_transactions").insert({
-      barbershop_id: params.barbershopId,
-      session_id: params.sessionId,
-      appointment_id: params.appointmentId,
-      customer_id: params.customerId,
-      professional_id: params.professionalId,
-      kind: "sale",
-      method: params.method as any,
-      amount: params.amount,
-      description: "Serviço realizado (Agenda)",
-      created_by: params.userId,
-    }).select().single();
+    const { data: tx, error: txErr } = await supabase
+      .from("cash_transactions")
+      .insert({
+        barbershop_id: params.barbershopId,
+        session_id: params.sessionId,
+        appointment_id: params.appointmentId,
+        customer_id: params.customerId,
+        professional_id: params.professionalId,
+        kind: "sale",
+        method: params.method as any,
+        amount: params.amount,
+        description: "Serviço realizado (Agenda)",
+        created_by: params.userId,
+      })
+      .select()
+      .single();
     if (txErr) throw txErr;
 
     // 3. Handle commissions (if any)
@@ -324,12 +340,11 @@ export const appointmentService = {
           amount: commissionAmount,
           base_amount: params.amount,
           rate: rate,
-          status: "pending"
+          status: "pending",
         });
       }
     }
 
     return tx;
-  }
+  },
 };
-

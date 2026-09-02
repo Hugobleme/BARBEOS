@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -47,12 +53,23 @@ export function CloseSessionButton({ session, onDone }: CloseSessionButtonProps)
           </DialogHeader>
           <div className="grid gap-2 py-4">
             <Label>Valor Final em Dinheiro</Label>
-            <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" />
-            <p className="text-xs text-muted-foreground">Informe o valor total em espécie (notas e moedas) presente no caixa agora.</p>
+            <Input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              placeholder="0,00"
+            />
+            <p className="text-xs text-muted-foreground">
+              Informe o valor total em espécie (notas e moedas) presente no caixa agora.
+            </p>
           </div>
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={close} disabled={busy}>{busy ? "Fechando..." : "Confirmar Fechamento"}</Button>
+            <Button variant="ghost" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={close} disabled={busy}>
+              {busy ? "Fechando..." : "Confirmar Fechamento"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
