@@ -30,13 +30,13 @@ export const lucideImportsRule = {
       JSXOpeningElement(node) {
         if (node.name.type === "JSXIdentifier") {
           const name = node.name.name;
-          
+
           if (allIcons.has(name)) {
             if (!importedIcons.has(name)) {
               // Check if variable is defined in scope
               const sourceCode = context.sourceCode || context.getSourceCode();
               let scope = sourceCode.getScope ? sourceCode.getScope(node) : context.getScope();
-              
+
               let isDefined = false;
               while (scope) {
                 if (scope.set.has(name)) {
@@ -45,7 +45,7 @@ export const lucideImportsRule = {
                 }
                 scope = scope.upper;
               }
-              
+
               if (!isDefined) {
                 context.report({
                   node: node.name,
@@ -56,7 +56,7 @@ export const lucideImportsRule = {
             }
           }
         }
-      }
+      },
     };
-  }
+  },
 };

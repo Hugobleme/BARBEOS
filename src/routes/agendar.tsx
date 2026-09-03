@@ -1,4 +1,4 @@
-﻿import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { appointmentService } from "@/services/appointment.service";
 import { availabilityService } from "@/services/availability.service";
+import { barbershopService } from "@/services/barbershop.service";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -238,138 +239,15 @@ function BookingPage() {
     enabled: !!shop?.id && !!date && pickedServices.length > 0 && pros.length > 0,
     queryFn: async () => {
       try {
-        const selectedPros = proId === "any" ? pros : pros.filter((p) => p.id === proId);
-        if (selectedPros.length === 0) return { times: [], timeToPros: {} };
-
-        const proIds = selectedPros.map((p) => p.id);
-        const jsDay = date!.getDay();
-
-        const { data: whData, error: whErr } = await supabase
-          .from("working_hours")
-          .select("*")
-          .in("professional_id", proIds)
-          .eq("weekday", jsDay);
-        if (whErr) throw whErr;
-
-        const dayStart = startOfDay(date!);
-        const dayEnd = addDays(dayStart, 1);
-
-        const { data: toData, error: toErr } = await supabase
-          .from("time_off")
-          .select("*")
-          .in("professional_id", proIds)
-          .gte("end_at", dayStart.toISOString())
-          .lt("start_at", dayEnd.toISOString());
-        if (toErr) throw toErr;
-
-        const { data: appData, error: appErr } = await supabase
-          .from("appointments")
-          .select("professional_id, scheduled_start, scheduled_end, status")
-          .in("professional_id", proIds)
-          .neq("status", "cancelled")
-          .gte("scheduled_end", dayStart.toISOString())
-          .lt("scheduled_start", dayEnd.toISOString());
-        if (appErr) throw appErr;
-
-        const times = new Set<string>();
-        const timeToPros: Record<string, string[]> = {};
-        const now = new Date();
-
-        const parseTime = (tStr: string, base: Date) => {
-          const [h, m] = tStr.split(":");
-          const d = new Date(base);
-          d.setHours(parseInt(h, 10), parseInt(m, 10), 0, 0);
-          return d;
-        };
-
-        for (const pro of selectedPros) {
-          const whList = whData.filter((w) => w.professional_id === pro.id);
-          if (whList.length === 0) continue;
-
-          const toList = toData
-            .filter((t) => t.professional_id === pro.id)
-            .map((t) => ({
-              start: new Date(t.start_at).getTime(),
-              end: new Date(t.end_at).getTime(),
-            }));
-
-          const appList = appData
-            .filter((a) => a.professional_id === pro.id)
-            .map((a) => ({
-              start: new Date(a.scheduled_start).getTime(),
-              end: new Date(a.scheduled_end).getTime(),
-            }));
-
-          for (const wh of whList) {
-            const startDateTime = parseTime(wh.start_time, dayStart);
-            const endDateTime = parseTime(wh.end_time, dayStart);
-            let breakStartTime = null;
-            let breakEndTime = null;
-
-            if (wh.break_start && wh.break_end) {
-              breakStartTime = parseTime(wh.break_start, dayStart);
-              breakEndTime = parseTime(wh.break_end, dayStart);
-            }
-
-            let current = startDateTime;
-            while (addMinutes(current, totalDuration) <= endDateTime) {
-              const currentEnd = addMinutes(current, totalDuration);
-
-              if (current < now) {
-                current = addMinutes(current, 30);
-                continue;
-              }
-
-              if (breakStartTime && breakEndTime) {
-                if (current < breakEndTime && currentEnd > breakStartTime) {
-                  current = addMinutes(current, 30);
-                  continue;
-                }
-              }
-
-              const cTime = current.getTime();
-              const eTime = currentEnd.getTime();
-
-              let conflict = false;
-              for (const t of toList) {
-                if (cTime < t.end && eTime > t.start) {
-                  conflict = true;
-                  break;
-                }
-              }
-              if (conflict) {
-                current = addMinutes(current, 30);
-                continue;
-              }
-
-              for (const a of appList) {
-                if (cTime < a.end && eTime > a.start) {
-                  conflict = true;
-                  break;
-                }
-              }
-              if (conflict) {
-                current = addMinutes(current, 30);
-                continue;
-              }
-
-              const timeStr = format(current, "HH:mm");
-              times.add(timeStr);
-              if (!timeToPros[timeStr]) timeToPros[timeStr] = [];
-              timeToPros[timeStr].push(pro.id);
-
-              current = addMinutes(current, 30);
-            }
-          }
-        }
-
-        return {
-          times: Array.from(times).sort(),
-          timeToPros,
-        };
-      } catch (err) {
-        if (import.meta.env.DEV) console.error("Booking page load failed: slots", err);
-        throw err;
+        return await availabilityService.getAvailableSlots({
+          barbershopId: shop!.id,
+          professionalId: proId === "any" ? null : proId,
+          date: date!,
+          durationMinutes: totalDuration,
+        });
+      } catch (e: any) {
+        if (import.meta.env.DEV) console.error("Booking page load failed: slots", e);
+        throw e;
       }
     },
   });
@@ -403,7 +281,7 @@ function BookingPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-destructive/50 mb-4" />
           <h2 className="text-xl font-bold font-serif mb-2">
-            Tivemos um problema ao conectar com a barbearia.
+            Não foi possível carregar os dados da barbearia.
           </h2>
           <p className="text-muted-foreground mb-8">Tente novamente em alguns instantes.</p>
           <Button
@@ -423,7 +301,7 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <div className="h-8 w-8 animate-spin rounded-full border-2 border-accent border-t-transparent mb-4" />
-          <p className="text-muted-foreground text-sm">Carregando agendamento...</p>
+          <p className="text-muted-foreground text-sm">Carregando dados da barbearia...</p>
         </div>
       </PublicLayout>
     );
@@ -434,12 +312,10 @@ function BookingPage() {
       <PublicLayout>
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
-          <h2 className="text-xl font-bold font-serif mb-2">Ops, não encontramos este local.</h2>
-          <p className="text-muted-foreground mb-8">
-            A barbearia que você procura parece estar indisponível. Veja outras excelentes opções.
-          </p>
-          <Button asChild variant="outline" className="font-bold uppercase tracking-wider text-xs">
-            <Link to="/barbearias">Voltar para barbearias</Link>
+          <h2 className="text-xl font-bold font-serif mb-2">Não encontramos essa barbearia.</h2>
+          <p className="text-muted-foreground mb-8">Verifique o link e tente novamente.</p>
+          <Button asChild className="mt-4">
+            <Link to="/barbearias">Explorar locais</Link>
           </Button>
         </div>
       </PublicLayout>
@@ -452,7 +328,7 @@ function BookingPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <h2 className="text-xl font-bold font-serif mb-2">
-            A barbearia ainda não configurou seus serviços online.
+            Esta barbearia ainda não possui serviços disponíveis para agendamento.
           </h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs">
             <Link to="/barbearias">Voltar para barbearias</Link>
@@ -468,7 +344,7 @@ function BookingPage() {
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center max-w-md mx-auto">
           <AlertCircle className="h-16 w-16 text-muted-foreground/30 mb-4" />
           <h2 className="text-xl font-bold font-serif mb-2">
-            No momento, nenhum profissional está com a agenda aberta nesta unidade.
+            Não há profissionais disponíveis para este agendamento.
           </h2>
           <Button asChild className="mt-4 font-bold uppercase tracking-wider text-xs">
             <Link to="/barbearias">Voltar para barbearias</Link>
@@ -662,7 +538,7 @@ function BookingPage() {
               <h2 className="text-lg font-bold mb-4">1. O que vamos fazer hoje?</h2>
               {!svcsLoading && services.length === 0 ? (
                 <p className="text-muted-foreground text-sm">
-                  Nenhum serviço disponível para esta barbearia.
+                  Esta barbearia ainda não possui serviços disponíveis para agendamento.
                 </p>
               ) : svcsLoading ? (
                 <div className="space-y-3">
@@ -671,7 +547,7 @@ function BookingPage() {
                   ))}
                 </div>
               ) : services.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum serviço disponível.</p>
+                <p className="text-muted-foreground text-sm">Esta barbearia ainda não possui serviços disponíveis para agendamento.</p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {services.map((s) => {
@@ -797,7 +673,7 @@ function BookingPage() {
                   </div>
                 ) : slots.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Agenda lotada para este dia. Que tal verificar os dias seguintes?
+                    Não encontramos horários disponíveis para esta data.
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">

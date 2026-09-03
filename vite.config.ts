@@ -4,27 +4,34 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig({
   server: {
     headers: {
-      'Content-Type': 'text/html; charset=utf-8'
-    }
+      "Content-Type": "text/html; charset=utf-8",
+    },
   },
   nitro: {
     preset: "vercel",
   },
   build: {
-    charset: 'utf-8',
-    target: 'esnext',
-    minify: 'esbuild',
+    charset: "utf-8",
+    target: "esnext",
+    minify: "esbuild",
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-router': ['@tanstack/react-router'],
-          'vendor-query': ['@tanstack/react-query'],
-          'vendor-supabase': ['@supabase/supabase-js'],
-          'vendor-ui': ['framer-motion', 'lucide-react', 'date-fns', 'clsx', 'tailwind-merge', 'zod'],
-        }
-      }
-    }
+          "vendor-react": ["react", "react-dom"],
+          "vendor-router": ["@tanstack/react-router"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-supabase": ["@supabase/supabase-js"],
+          "vendor-ui": [
+            "framer-motion",
+            "lucide-react",
+            "date-fns",
+            "clsx",
+            "tailwind-merge",
+            "zod",
+          ],
+        },
+      },
+    },
   },
   plugins: [
     VitePWA({
@@ -46,20 +53,20 @@ export default defineConfig({
           {
             src: "/icon-192.png",
             sizes: "192x192",
-            type: "image/png"
+            type: "image/png",
           },
           {
             src: "/icon-512.png",
             sizes: "512x512",
-            type: "image/png"
+            type: "image/png",
           },
           {
             src: "/icon-512-maskable.png",
             sizes: "512x512",
             type: "image/png",
-            purpose: "maskable"
-          }
-        ]
+            purpose: "maskable",
+          },
+        ],
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
@@ -67,10 +74,10 @@ export default defineConfig({
           {
             urlPattern: ({ url }) => url.origin.includes("supabase.co"),
             handler: "NetworkOnly",
-          }
+          },
         ],
         navigateFallback: null,
-      }
-    })
-  ]
+      },
+    }),
+  ],
 });
