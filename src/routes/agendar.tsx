@@ -547,7 +547,9 @@ function BookingPage() {
                   ))}
                 </div>
               ) : services.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Esta barbearia ainda não possui serviços disponíveis para agendamento.</p>
+                <p className="text-muted-foreground text-sm">
+                  Esta barbearia ainda não possui serviços disponíveis para agendamento.
+                </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {services.map((s) => {
@@ -668,8 +670,11 @@ function BookingPage() {
                     Por favor, escolha o dia do seu atendimento.
                   </p>
                 ) : slotsLoading ? (
-                  <div className="flex justify-center p-6">
+                  <div className="flex flex-col items-center justify-center p-6 gap-2">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+                    <p className="text-xs text-muted-foreground">
+                      Carregando horários disponíveis...
+                    </p>
                   </div>
                 ) : slotsError ? (
                   <p className="text-sm text-destructive">
@@ -683,7 +688,9 @@ function BookingPage() {
                         ? "A barbearia está fechada neste dia da semana."
                         : slotsData?.emptyReason === "no_professionals"
                           ? "Não há profissionais disponíveis para este agendamento."
-                          : "Não encontramos horários disponíveis para esta data."}
+                          : slotsData?.emptyReason === "no_pro_hours"
+                            ? "Este profissional ainda não possui horários cadastrados."
+                            : "Não encontramos horários disponíveis para esta data."}
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">

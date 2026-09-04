@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
@@ -29,7 +29,11 @@ import {
   XCircle,
   Eye,
   Info,
+  Clock,
+  Coffee,
+  AlertCircle,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -327,6 +331,27 @@ function ProfessionalsPage() {
   );
 }
 
+interface ProDaySchedule {
+  weekday: number;
+  name: string;
+  isWorking: boolean;
+  start_time: string;
+  end_time: string;
+  hasBreak: boolean;
+  break_start: string;
+  break_end: string;
+}
+
+const DEFAULT_PRO_DAYS = [
+  { weekday: 0, name: "Domingo", defaultWorking: false, start: "09:00", end: "18:00" },
+  { weekday: 1, name: "Segunda-feira", defaultWorking: true, start: "09:00", end: "19:00" },
+  { weekday: 2, name: "Terça-feira", defaultWorking: true, start: "09:00", end: "19:00" },
+  { weekday: 3, name: "Quarta-feira", defaultWorking: true, start: "09:00", end: "19:00" },
+  { weekday: 4, name: "Quinta-feira", defaultWorking: true, start: "09:00", end: "19:00" },
+  { weekday: 5, name: "Sexta-feira", defaultWorking: true, start: "09:00", end: "19:00" },
+  { weekday: 6, name: "Sábado", defaultWorking: true, start: "09:00", end: "17:00" },
+];
+
 function ProfessionalFormDialog({
   open,
   onClose,
@@ -340,6 +365,7 @@ function ProfessionalFormDialog({
   shopId: string;
   onSuccess: () => void;
 }) {
+  const qc = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     display_name: "",
@@ -347,6 +373,49 @@ function ProfessionalFormDialog({
     specialties: "",
     avatar_url: "",
     active: true,
+  });
+
+  const [schedule, setSchedule] = useState<ProDaySchedule[]>(() =>
+    DEFAULT_PRO_DAYS.map((d) => ({
+      weekday: d.weekday,
+      name: d.name,
+      isWorking: d.defaultWorking,
+      start_time: d.start,
+      end_time: d.end,
+      hasBreak: false,
+      break_start: "12:00",
+      break_end: "13:00",
+    })),
+  );
+
+  // Load existing working hours when editing a professional
+  const { data: existingHours, isLoading: loadingHours } = useQuery({
+    queryKey: ["professional-working-hours", pro?.id],
+    enabled: Boolean(pro?.id) && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("working_hours")
+        .select("id, professional_id, weekday, start_time, end_time, break_start, break_end")
+        .eq("professional_id", pro!.id)
+        .order("weekday");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  // Load barbershop hours to optionally mirror as defaults
+  const { data: shopHours } = useQuery({
+    queryKey: ["shop-hours", shopId],
+    enabled: Boolean(shopId) && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("barbershop_business_hours")
+        .select("id, weekday, opens_at, closes_at")
+        .eq("barbershop_id", shopId)
+        .order("weekday");
+      if (error) throw error;
+      return data || [];
+    },
   });
 
   useEffect(() => {
@@ -371,12 +440,131 @@ function ProfessionalFormDialog({
     }
   }, [open, pro]);
 
+  // Sync schedule from existingHours or shopHours
+  useEffect(() => {
+    if (open) {
+      if (pro && existingHours) {
+        if (existingHours.length > 0) {
+          setSchedule(
+            DEFAULT_PRO_DAYS.map((d) => {
+              const found = existingHours.find((h: any) => h.weekday === d.weekday);
+              if (found) {
+                return {
+                  weekday: d.weekday,
+                  name: d.name,
+                  isWorking: true,
+                  start_time: found.start_time ? found.start_time.slice(0, 5) : d.start,
+                  end_time: found.end_time ? found.end_time.slice(0, 5) : d.end,
+                  hasBreak: Boolean(found.break_start && found.break_end),
+                  break_start: found.break_start ? found.break_start.slice(0, 5) : "12:00",
+                  break_end: found.break_end ? found.break_end.slice(0, 5) : "13:00",
+                };
+              }
+              return {
+                weekday: d.weekday,
+                name: d.name,
+                isWorking: false,
+                start_time: d.start,
+                end_time: d.end,
+                hasBreak: false,
+                break_start: "12:00",
+                break_end: "13:00",
+              };
+            }),
+          );
+        } else {
+          // Professional with no saved hours: mirror shop hours if available, else standard defaults
+          applyShopHoursOrDefaults();
+        }
+      } else if (!pro) {
+        // New professional: mirror shop hours or default
+        applyShopHoursOrDefaults();
+      }
+    }
+  }, [open, pro, existingHours, shopHours]);
+
+  const applyShopHoursOrDefaults = () => {
+    setSchedule(
+      DEFAULT_PRO_DAYS.map((d) => {
+        const sh = shopHours?.find((h: any) => h.weekday === d.weekday);
+        if (sh) {
+          return {
+            weekday: d.weekday,
+            name: d.name,
+            isWorking: true,
+            start_time: sh.opens_at ? sh.opens_at.slice(0, 5) : d.start,
+            end_time: sh.closes_at ? sh.closes_at.slice(0, 5) : d.end,
+            hasBreak: false,
+            break_start: "12:00",
+            break_end: "13:00",
+          };
+        }
+        return {
+          weekday: d.weekday,
+          name: d.name,
+          isWorking: d.defaultWorking,
+          start_time: d.start,
+          end_time: d.end,
+          hasBreak: false,
+          break_start: "12:00",
+          break_end: "13:00",
+        };
+      }),
+    );
+  };
+
+  const hasNoSavedSchedule = pro && existingHours && existingHours.length === 0;
+
+  const handleToggleDay = (weekday: number, isWorking: boolean) => {
+    setSchedule((prev) => prev.map((d) => (d.weekday === weekday ? { ...d, isWorking } : d)));
+  };
+
+  const handleTimeChange = (
+    weekday: number,
+    field: "start_time" | "end_time" | "break_start" | "break_end",
+    value: string,
+  ) => {
+    setSchedule((prev) => prev.map((d) => (d.weekday === weekday ? { ...d, [field]: value } : d)));
+  };
+
+  const handleToggleBreak = (weekday: number, hasBreak: boolean) => {
+    setSchedule((prev) => prev.map((d) => (d.weekday === weekday ? { ...d, hasBreak } : d)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!shopId) return;
 
     const name = formData.display_name.trim();
     if (!name) return toast.error("Informe o nome do profissional.");
+
+    // Validate schedules for working days
+    for (const d of schedule) {
+      if (d.isWorking) {
+        if (!d.start_time || !d.end_time) {
+          return toast.error(`Informe o horário de trabalho completo para ${d.name}.`);
+        }
+        if (d.start_time >= d.end_time) {
+          return toast.error(
+            `Na ${d.name}, o início (${d.start_time}) deve ser anterior ao término (${d.end_time}).`,
+          );
+        }
+        if (d.hasBreak) {
+          if (!d.break_start || !d.break_end) {
+            return toast.error(`Informe o início e fim do intervalo para ${d.name}.`);
+          }
+          if (
+            d.start_time >= d.break_start ||
+            d.break_start >= d.break_end ||
+            d.break_end >= d.end_time
+          ) {
+            return toast.error(
+              `Na ${d.name}, o intervalo (${d.break_start} às ${d.break_end}) deve estar contido dentro do horário de trabalho (${d.start_time} às ${d.end_time}).`,
+            );
+          }
+        }
+      }
+    }
 
     const specsArray = formData.specialties
       .split(",")
@@ -394,18 +582,67 @@ function ProfessionalFormDialog({
         active: formData.active,
       };
 
+      let savedProId = pro?.id;
+
       if (pro) {
         await barbershopService.updateBarber(pro.id, payload);
-        toast.success("Profissional atualizado com sucesso.");
       } else {
-        await barbershopService.createBarber(payload);
-        toast.success("Profissional cadastrado com sucesso.");
+        const created = await barbershopService.createBarber(payload);
+        savedProId = created.id;
       }
+
+      if (!savedProId) {
+        throw new Error("Não foi possível obter o identificador do profissional.");
+      }
+
+      // Persist working hours
+      // 1. Delete previous records
+      const { error: delErr } = await supabase
+        .from("working_hours")
+        .delete()
+        .eq("professional_id", savedProId);
+      if (delErr) {
+        throw new Error(
+          `Profissional salvo, mas ocorreu erro ao limpar horários anteriores: ${delErr.message}`,
+        );
+      }
+
+      // 2. Insert enabled workdays only
+      const toInsert = schedule
+        .filter((d) => d.isWorking)
+        .map((d) => ({
+          professional_id: savedProId,
+          weekday: d.weekday,
+          start_time: d.start_time,
+          end_time: d.end_time,
+          break_start: d.hasBreak ? d.break_start : null,
+          break_end: d.hasBreak ? d.break_end : null,
+        }));
+
+      if (toInsert.length > 0) {
+        const { error: insErr } = await supabase.from("working_hours").insert(toInsert);
+        if (insErr) {
+          throw new Error(
+            `Profissional salvo, mas ocorreu erro ao salvar horários de trabalho: ${insErr.message}`,
+          );
+        }
+      }
+
+      toast.success(
+        pro
+          ? "Profissional e horários atualizados com sucesso."
+          : "Profissional e horários cadastrados com sucesso.",
+      );
+
+      qc.invalidateQueries({ queryKey: ["admin-pros", shopId] });
+      qc.invalidateQueries({ queryKey: ["professional-working-hours", savedProId] });
+      qc.invalidateQueries({ queryKey: ["public-availability", shopId] });
+      qc.invalidateQueries({ queryKey: ["onboarding-status", shopId] });
 
       onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error("Não foi possível salvar o profissional. Tente novamente.");
+      toast.error(err?.message || "Não foi possível salvar o profissional. Tente novamente.");
       if (import.meta.env.DEV) {
         console.error("Professional save error:", err);
       }
@@ -416,99 +653,259 @@ function ProfessionalFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
-      <DialogContent className="sm:max-w-full max-w-[425px] p-0 overflow-hidden bg-card border-border/60">
-        <DialogHeader className="p-6 pb-4 border-b border-border/40 text-left">
+      <DialogContent className="sm:max-w-2xl max-w-[95vw] p-0 overflow-hidden bg-card border-border/60 max-h-[90vh] flex flex-col">
+        <DialogHeader className="p-6 pb-4 border-b border-border/40 text-left shrink-0">
           <DialogTitle className="font-serif text-xl">
             {pro ? "Editar profissional" : "Adicionar profissional"}
           </DialogTitle>
           <DialogDescription className="text-xs">
             {pro
-              ? "Altere as informações deste integrante da equipe."
-              : "Cadastre um novo membro para sua barbearia."}
+              ? "Altere as informações cadastrais e a disponibilidade semanal deste integrante da equipe."
+              : "Cadastre um novo membro para sua barbearia e configure sua jornada semanal."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="p-name">
-                Nome de exibição <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="p-name"
-                value={formData.display_name}
-                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                required
-                className="h-11"
-                placeholder="Ex: João Silva"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="p-specs">
-                Especialidades{" "}
-                <span className="text-muted-foreground font-normal">(Separadas por vírgula)</span>
-              </Label>
-              <Input
-                id="p-specs"
-                value={formData.specialties}
-                onChange={(e) => setFormData({ ...formData, specialties: e.target.value })}
-                className="h-11"
-                placeholder="Ex: Degradê, Barba lenhador"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="p-avatar">
-                URL da foto <span className="text-muted-foreground font-normal">(Opcional)</span>
-              </Label>
-              <div className="flex gap-3 items-center">
-                <Avatar className="h-11 w-11 shrink-0 rounded-xl border border-border/60 bg-muted/30">
-                  <AvatarImage src={formData.avatar_url} className="object-cover" />
-                  <AvatarFallback className="rounded-xl text-xs font-serif text-muted-foreground bg-transparent">
-                    {getInitials(formData.display_name)}
-                  </AvatarFallback>
-                </Avatar>
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <ScrollArea className="flex-1 p-6 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="p-name">
+                  Nome de exibição <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  id="p-avatar"
-                  type="url"
-                  value={formData.avatar_url}
-                  onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                  className="h-11 flex-1"
-                  placeholder="https://..."
+                  id="p-name"
+                  value={formData.display_name}
+                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                  required
+                  className="h-11"
+                  placeholder="Ex: João Silva"
                 />
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="p-bio">
-                Biografia <span className="text-muted-foreground font-normal">(Opcional)</span>
-              </Label>
-              <Textarea
-                id="p-bio"
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                className="resize-none h-20"
-                placeholder="Conte um pouco sobre a experiência do profissional..."
-              />
-            </div>
-
-            <div className="flex items-center justify-between p-4 border border-border/40 rounded-xl bg-muted/10">
-              <div className="space-y-0.5">
-                <Label className="text-sm">Profissional ativo</Label>
-                <p className="text-[10px] text-muted-foreground">
-                  Profissionais inativos deixam de aparecer nas áreas públicas que usam essa
-                  configuração.
-                </p>
+              <div className="space-y-2">
+                <Label htmlFor="p-specs">
+                  Especialidades{" "}
+                  <span className="text-muted-foreground font-normal">(Separadas por vírgula)</span>
+                </Label>
+                <Input
+                  id="p-specs"
+                  value={formData.specialties}
+                  onChange={(e) => setFormData({ ...formData, specialties: e.target.value })}
+                  className="h-11"
+                  placeholder="Ex: Degradê, Barba lenhador"
+                />
               </div>
-              <Switch
-                checked={formData.active}
-                onCheckedChange={(c) => setFormData({ ...formData, active: c })}
-              />
-            </div>
-          </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-border/40">
+              <div className="space-y-2">
+                <Label htmlFor="p-avatar">
+                  URL da foto <span className="text-muted-foreground font-normal">(Opcional)</span>
+                </Label>
+                <div className="flex gap-3 items-center">
+                  <Avatar className="h-11 w-11 shrink-0 rounded-xl border border-border/60 bg-muted/30">
+                    <AvatarImage src={formData.avatar_url} className="object-cover" />
+                    <AvatarFallback className="rounded-xl text-xs font-serif text-muted-foreground bg-transparent">
+                      {getInitials(formData.display_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <Input
+                    id="p-avatar"
+                    type="url"
+                    value={formData.avatar_url}
+                    onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                    className="h-11 flex-1"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="p-bio">
+                  Biografia <span className="text-muted-foreground font-normal">(Opcional)</span>
+                </Label>
+                <Textarea
+                  id="p-bio"
+                  value={formData.bio}
+                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                  className="resize-none h-20"
+                  placeholder="Conte um pouco sobre a experiência do profissional..."
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-4 border border-border/40 rounded-xl bg-muted/10">
+                <div className="space-y-0.5">
+                  <Label className="text-sm">Profissional ativo</Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Profissionais inativos deixam de aparecer nas áreas públicas que usam essa
+                    configuração.
+                  </p>
+                </div>
+                <Switch
+                  checked={formData.active}
+                  onCheckedChange={(c) => setFormData({ ...formData, active: c })}
+                />
+              </div>
+
+              {/* DISPONIBILIDADE SEMANAL */}
+              <div className="pt-6 border-t border-border/40 space-y-3">
+                <div className="space-y-1">
+                  <h3 className="font-serif font-bold text-base flex items-center gap-2 text-foreground">
+                    <Clock className="h-4 w-4 text-accent" />
+                    Disponibilidade semanal
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Defina os dias e horários em que este profissional pode receber agendamentos.
+                  </p>
+                </div>
+
+                {hasNoSavedSchedule && (
+                  <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                    <span>Este profissional ainda não possui disponibilidade cadastrada.</span>
+                  </div>
+                )}
+
+                {loadingHours ? (
+                  <div className="p-4 text-center text-xs text-muted-foreground">
+                    Carregando disponibilidade...
+                  </div>
+                ) : (
+                  <div className="space-y-3 mt-3">
+                    {schedule.map((day) => {
+                      const hasTimeError =
+                        day.isWorking &&
+                        day.start_time &&
+                        day.end_time &&
+                        day.start_time >= day.end_time;
+                      const hasBreakError =
+                        day.isWorking &&
+                        day.hasBreak &&
+                        (day.start_time >= day.break_start ||
+                          day.break_start >= day.break_end ||
+                          day.break_end >= day.end_time);
+
+                      return (
+                        <Card
+                          key={day.weekday}
+                          className={`p-3.5 border transition-all ${
+                            day.isWorking
+                              ? "border-border/60 bg-card"
+                              : "border-border/30 bg-muted/10 opacity-70"
+                          }`}
+                        >
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2.5">
+                                <Switch
+                                  id={`pro-day-${day.weekday}`}
+                                  checked={day.isWorking}
+                                  onCheckedChange={(c) => handleToggleDay(day.weekday, c)}
+                                />
+                                <Label
+                                  htmlFor={`pro-day-${day.weekday}`}
+                                  className="font-bold text-sm cursor-pointer"
+                                >
+                                  {day.name}
+                                </Label>
+                              </div>
+                              <span
+                                className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
+                                  day.isWorking
+                                    ? "bg-accent/10 text-accent"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                {day.isWorking ? "Trabalha neste dia" : "Folga"}
+                              </span>
+                            </div>
+
+                            {day.isWorking && (
+                              <div className="space-y-2 pt-1 border-t border-border/30">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-muted-foreground w-16">
+                                    Horário:
+                                  </span>
+                                  <Input
+                                    type="time"
+                                    value={day.start_time}
+                                    onChange={(e) =>
+                                      handleTimeChange(day.weekday, "start_time", e.target.value)
+                                    }
+                                    className="w-24 h-8 text-xs font-mono"
+                                  />
+                                  <span className="text-xs text-muted-foreground">às</span>
+                                  <Input
+                                    type="time"
+                                    value={day.end_time}
+                                    onChange={(e) =>
+                                      handleTimeChange(day.weekday, "end_time", e.target.value)
+                                    }
+                                    className="w-24 h-8 text-xs font-mono"
+                                  />
+
+                                  <Button
+                                    type="button"
+                                    variant={day.hasBreak ? "secondary" : "outline"}
+                                    size="sm"
+                                    onClick={() => handleToggleBreak(day.weekday, !day.hasBreak)}
+                                    className="h-8 text-xs ml-auto"
+                                  >
+                                    <Coffee className="h-3.5 w-3.5 mr-1" />
+                                    {day.hasBreak ? "Remover intervalo" : "Adicionar intervalo"}
+                                  </Button>
+                                </div>
+
+                                {day.hasBreak && (
+                                  <div className="flex items-center gap-2 pl-2 border-l-2 border-accent/40 bg-accent/5 p-2 rounded-r-md">
+                                    <span className="text-xs text-muted-foreground w-16">
+                                      Intervalo:
+                                    </span>
+                                    <Input
+                                      type="time"
+                                      value={day.break_start}
+                                      onChange={(e) =>
+                                        handleTimeChange(day.weekday, "break_start", e.target.value)
+                                      }
+                                      className="w-24 h-8 text-xs font-mono"
+                                      placeholder="Início"
+                                    />
+                                    <span className="text-xs text-muted-foreground">às</span>
+                                    <Input
+                                      type="time"
+                                      value={day.break_end}
+                                      onChange={(e) =>
+                                        handleTimeChange(day.weekday, "break_end", e.target.value)
+                                      }
+                                      className="w-24 h-8 text-xs font-mono"
+                                      placeholder="Fim"
+                                    />
+                                  </div>
+                                )}
+
+                                {hasTimeError && (
+                                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Início deve ser anterior ao término.
+                                  </p>
+                                )}
+                                {hasBreakError && (
+                                  <p className="text-[11px] text-destructive flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    Intervalo deve estar dentro do horário de trabalho.
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </ScrollArea>
+
+          <div className="flex justify-end gap-3 p-4 border-t border-border/40 shrink-0 bg-muted/10">
             <Button
               type="button"
               variant="outline"
@@ -520,10 +917,10 @@ function ProfessionalFormDialog({
             </Button>
             <Button
               type="submit"
-              className="h-10 text-xs font-bold uppercase tracking-wider px-6"
+              className="h-10 text-xs font-bold uppercase tracking-wider px-6 bg-accent text-accent-foreground"
               disabled={loading}
             >
-              {loading ? "Salvando..." : "Salvar"}
+              {loading ? "Salvando..." : "Salvar profissional"}
             </Button>
           </div>
         </form>

@@ -77,6 +77,7 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
         "/admin/relatorios",
       ],
       CONFIGURAÇÕES: [
+        "/admin/horarios",
         "/admin/franquia",
         "/admin/folgas",
         "/admin/carteira",

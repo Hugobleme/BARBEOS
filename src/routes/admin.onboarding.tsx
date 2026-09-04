@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCurrentShop } from "@/hooks/use-current-shop";
 import { useOnboardingStatus } from "@/hooks/use-onboarding";
@@ -73,6 +73,7 @@ function OnboardingPage() {
     hasProfile,
     hasServices,
     hasProfessionals,
+    hasHours,
     hasReview,
     completedCount,
     totalSteps,
@@ -199,27 +200,32 @@ function OnboardingPage() {
           </div>
 
           {/* 4. Horários */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border bg-muted/10 border-border/40 gap-4 opacity-75">
+          <div
+            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border ${hasHours ? "bg-accent/5 border-accent/20" : "bg-muted/10 border-border/40"} gap-4`}
+          >
             <div className="flex items-start gap-4">
-              <div className="mt-0.5 rounded-full p-1 text-muted-foreground bg-muted">
-                <Clock className="h-5 w-5" />
+              <div
+                className={`mt-0.5 rounded-full p-1 ${hasHours ? "text-accent bg-accent/10" : "text-muted-foreground bg-muted"}`}
+              >
+                <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    Horários de funcionamento em preparação
-                  </h4>
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                    Em breve
-                  </span>
-                </div>
+                <h4 className="font-bold flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  Horários de atendimento
+                </h4>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Esta configuração estará disponível em breve. Enquanto isso, mantenha os serviços
-                  e a equipe atualizados.
+                  Defina os dias e horários de funcionamento da barbearia e equipe.
                 </p>
               </div>
             </div>
+            <Button
+              asChild
+              variant={hasHours ? "outline" : "default"}
+              className="shrink-0 w-full sm:w-auto"
+            >
+              <Link to="/admin/horarios">Configurar horários</Link>
+            </Button>
           </div>
 
           {/* 5. Review */}

@@ -43,6 +43,20 @@ export class AvailabilityService {
     return (data?.length ?? 0) > 0;
   }
 
+  /**
+   * Check if given professional(s) have any working hours configured at all (any weekday).
+   */
+  async hasAnyWorkingHours(proIds: string[]): Promise<boolean> {
+    if (!proIds || proIds.length === 0) return false;
+    const { data, error } = await supabase
+      .from("working_hours")
+      .select("id")
+      .in("professional_id", proIds)
+      .limit(1);
+    if (error) return false;
+    return (data?.length ?? 0) > 0;
+  }
+
   async getAvailableSlots(params: AvailabilityParams): Promise<AvailabilityResult> {
     const { barbershopId, professionalId, date, durationMinutes, intervalMinutes = 30 } = params;
 
@@ -99,6 +113,18 @@ export class AvailabilityService {
       proIdsToFetch = pros.map((p) => p.id);
     }
 
+    // Check if relevant professional(s) have ANY working hours configured at all
+    const hasAnyProHours = await this.hasAnyWorkingHours(proIdsToFetch);
+    if (!hasAnyProHours) {
+      if (import.meta.env.DEV) {
+        console.debug(
+          "[booking/availability] No working hours configured for professional(s):",
+          proIdsToFetch,
+        );
+      }
+      return { times: [], timeToPros: {}, emptyReason: "no_pro_hours" };
+    }
+
     const { data: proHours, error: proHoursErr } = await supabase
       .from("working_hours")
       .select("*")
@@ -135,33 +161,44 @@ export class AvailabilityService {
 
     const allSlots: AvailableSlot[] = [];
 
+    const toMinutes = (timeStr: string) => {
+      const [h, m] = timeStr.split(":");
+      return parseInt(h, 10) * 60 + parseInt(m, 10);
+    };
+
     for (const pId of proIdsToFetch) {
-      const intervals = [];
+      const intervals: { start: string; end: string }[] = [];
 
       const specificProHours = (proHours || []).filter((ph) => ph.professional_id === pId);
-      if (specificProHours.length > 0) {
-        for (const ph of specificProHours) {
-          if (ph.break_start && ph.break_end) {
-            intervals.push({ start: ph.start_time, end: ph.break_start });
-            intervals.push({ start: ph.break_end, end: ph.end_time });
-          } else {
-            intervals.push({ start: ph.start_time, end: ph.end_time });
-          }
+      if (specificProHours.length === 0) {
+        // Professional does not work on this weekday (day off)
+        continue;
+      }
+
+      for (const ph of specificProHours) {
+        // Split around break if applicable
+        const proIntervals: { start: string; end: string }[] = [];
+        if (ph.break_start && ph.break_end) {
+          proIntervals.push({ start: ph.start_time, end: ph.break_start });
+          proIntervals.push({ start: ph.break_end, end: ph.end_time });
+        } else {
+          proIntervals.push({ start: ph.start_time, end: ph.end_time });
         }
-      } else {
-        // Fallback to shop hours when professional has no specific working hours
-        for (const sh of shopHours) {
-          intervals.push({ start: sh.opens_at, end: sh.closes_at });
+
+        // Intersect professional intervals with barbershop business hours
+        for (const pi of proIntervals) {
+          for (const sh of shopHours) {
+            const effStart = pi.start > sh.opens_at ? pi.start : sh.opens_at;
+            const effEnd = pi.end < sh.closes_at ? pi.end : sh.closes_at;
+            if (toMinutes(effStart) < toMinutes(effEnd)) {
+              intervals.push({ start: effStart, end: effEnd });
+            }
+          }
         }
       }
 
       const proTimeOffs = (timeOffs || []).filter((to) => to.professional_id === pId);
       const proConflicts = (conflicts || []).filter((c: any) => c.professional_id === pId);
-
-      const toMinutes = (timeStr: string) => {
-        const [h, m] = timeStr.split(":");
-        return parseInt(h, 10) * 60 + parseInt(m, 10);
-      };
 
       for (const inv of intervals) {
         let currentMins = toMinutes(inv.start);

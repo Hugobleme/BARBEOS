@@ -37,6 +37,29 @@ export function useOnboardingStatus(shopId: string | null) {
 
       if (proErr) throw proErr;
 
+      // 4. Business Hours
+      const { data: businessHours, error: hoursErr } = await supabase
+        .from("barbershop_business_hours")
+        .select("id")
+        .eq("barbershop_id", shopId)
+        .limit(1);
+
+      if (hoursErr) throw hoursErr;
+
+      // 5. Professional Working Hours
+      let hasProHours = false;
+      if (professionals && professionals.length > 0) {
+        const proIds = professionals.map((p) => p.id);
+        const { data: proWorkingHours, error: proHoursErr } = await supabase
+          .from("working_hours")
+          .select("id")
+          .in("professional_id", proIds)
+          .limit(1);
+
+        if (proHoursErr) throw proHoursErr;
+        hasProHours = !!proWorkingHours && proWorkingHours.length > 0;
+      }
+
       const hasProfile =
         !!shop &&
         !!shop.name &&
@@ -44,28 +67,32 @@ export function useOnboardingStatus(shopId: string | null) {
         (!!shop.address || !!shop.contacts || !!shop.logo_url);
       const hasServices = !!services && services.length > 0;
       const hasProfessionals = !!professionals && professionals.length > 0;
+      const hasShopHours = !!businessHours && businessHours.length > 0;
+      const hasHours = hasShopHours && hasProHours;
 
-      // denominator is 4 total (Profile, Services, Professionals, Review).
-      // Hours is "Em breve" and excluded from denominator.
-      // Review is considered complete if the first 3 are complete.
-      const hasReview = hasProfile && hasServices && hasProfessionals;
+      // Total 5 steps: Profile, Services, Professionals, Horários, Review.
+      const hasReview = hasProfile && hasServices && hasProfessionals && hasHours;
 
       const completedCount =
         (hasProfile ? 1 : 0) +
         (hasServices ? 1 : 0) +
         (hasProfessionals ? 1 : 0) +
+        (hasHours ? 1 : 0) +
         (hasReview ? 1 : 0);
 
-      const isFullyComplete = completedCount === 4;
+      const isFullyComplete = completedCount === 5;
 
       return {
         shop,
         hasProfile,
         hasServices,
         hasProfessionals,
+        hasShopHours,
+        hasProHours,
+        hasHours,
         hasReview,
         completedCount,
-        totalSteps: 4,
+        totalSteps: 5,
         isFullyComplete,
       };
     },
