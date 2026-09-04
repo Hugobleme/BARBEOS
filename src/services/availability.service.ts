@@ -162,6 +162,7 @@ export class AvailabilityService {
     const allSlots: AvailableSlot[] = [];
 
     const toMinutes = (timeStr: string) => {
+      if (!timeStr) return 0;
       const [h, m] = timeStr.split(":");
       return parseInt(h, 10) * 60 + parseInt(m, 10);
     };
@@ -188,10 +189,20 @@ export class AvailabilityService {
         // Intersect professional intervals with barbershop business hours
         for (const pi of proIntervals) {
           for (const sh of shopHours) {
-            const effStart = pi.start > sh.opens_at ? pi.start : sh.opens_at;
-            const effEnd = pi.end < sh.closes_at ? pi.end : sh.closes_at;
-            if (toMinutes(effStart) < toMinutes(effEnd)) {
-              intervals.push({ start: effStart, end: effEnd });
+            const piStartMin = toMinutes(pi.start);
+            const piEndMin = toMinutes(pi.end);
+            const shOpenMin = toMinutes(sh.opens_at);
+            const shCloseMin = toMinutes(sh.closes_at);
+            const effStartMin = Math.max(piStartMin, shOpenMin);
+            const effEndMin = Math.min(piEndMin, shCloseMin);
+            if (effStartMin < effEndMin) {
+              const startStr = `${Math.floor(effStartMin / 60)
+                .toString()
+                .padStart(2, "0")}:${(effStartMin % 60).toString().padStart(2, "0")}`;
+              const endStr = `${Math.floor(effEndMin / 60)
+                .toString()
+                .padStart(2, "0")}:${(effEndMin % 60).toString().padStart(2, "0")}`;
+              intervals.push({ start: startStr, end: endStr });
             }
           }
         }

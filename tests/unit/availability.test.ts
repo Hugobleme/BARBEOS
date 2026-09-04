@@ -386,4 +386,34 @@ describe("AvailabilityService", () => {
       }),
     ).rejects.toThrow("Query failure: connection timeout");
   });
+
+  // ── 14. Format mismatch (HH:mm vs HH:mm:ss) normalizes properly ─────
+  it("14. Format mismatch (HH:mm vs HH:mm:ss) normalizes properly", async () => {
+    mockSupabase({
+      shopHours: [{ opens_at: "09:00:00", closes_at: "18:00:00" }],
+      proHours: [
+        {
+          professional_id: "pro1",
+          start_time: "09:00",
+          end_time: "18:00",
+          break_start: "12:00:00",
+          break_end: "13:00",
+        },
+      ],
+    });
+    const date = addDays(new Date(), 1);
+    const result = await service.getAvailableSlots({
+      barbershopId: "shop1",
+      professionalId: "pro1",
+      date,
+      durationMinutes: 60,
+      intervalMinutes: 60,
+    });
+    expect(result.times).toContain("09:00");
+    expect(result.times).toContain("10:00");
+    expect(result.times).toContain("11:00");
+    expect(result.times).not.toContain("12:00");
+    expect(result.times).toContain("13:00");
+    expect(result.times).toContain("17:00");
+  });
 });
