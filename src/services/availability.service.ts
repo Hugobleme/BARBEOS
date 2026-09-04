@@ -1,4 +1,4 @@
-﻿import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { format, addMinutes, isBefore, isAfter } from "date-fns";
 
 export type AvailableSlot = {
@@ -14,22 +14,48 @@ export type AvailabilityParams = {
   intervalMinutes?: number;
 };
 
+export type EmptyReason =
+  | "past_date"
+  | "no_shop_hours"
+  | "closed_day"
+  | "no_professionals"
+  | "no_pro_hours"
+  | "all_booked"
+  | null;
+
+export type AvailabilityResult = {
+  times: string[];
+  timeToPros: Record<string, string[]>;
+  emptyReason: EmptyReason;
+};
+
 export class AvailabilityService {
-  async getAvailableSlots(
-    params: AvailabilityParams,
-  ): Promise<{ times: string[]; timeToPros: Record<string, string[]> }> {
+  /**
+   * Check if a barbershop has any business hours configured at all (any weekday).
+   */
+  async hasAnyBusinessHours(barbershopId: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("barbershop_business_hours")
+      .select("id")
+      .eq("barbershop_id", barbershopId)
+      .limit(1);
+    if (error) return false;
+    return (data?.length ?? 0) > 0;
+  }
+
+  async getAvailableSlots(params: AvailabilityParams): Promise<AvailabilityResult> {
     const { barbershopId, professionalId, date, durationMinutes, intervalMinutes = 30 } = params;
 
     const now = new Date();
     // 1. Validate date
     if (isBefore(date, new Date(now.getFullYear(), now.getMonth(), now.getDate()))) {
-      return { times: [], timeToPros: {} };
+      return { times: [], timeToPros: {}, emptyReason: "past_date" };
     }
 
     const weekday = date.getDay();
     const dateStr = format(date, "yyyy-MM-dd");
 
-    // 2. Load barbershop operating intervals
+    // 2. Load barbershop operating intervals for this weekday
     const { data: shopHours, error: shopErr } = await supabase
       .from("barbershop_business_hours")
       .select("*")
@@ -37,9 +63,23 @@ export class AvailabilityService {
       .eq("weekday", weekday);
 
     if (shopErr) throw new Error("Query failure: " + shopErr.message);
+
     if (!shopHours || shopHours.length === 0) {
-      // throw new Error("No business hours configured");
-      return { times: [], timeToPros: {} }; // gracefully return empty
+      // Distinguish: no hours configured AT ALL vs. closed on this specific day
+      const hasAny = await this.hasAnyBusinessHours(barbershopId);
+      const reason: EmptyReason = hasAny ? "closed_day" : "no_shop_hours";
+
+      if (import.meta.env.DEV) {
+        console.debug("[booking/availability]", {
+          barbershopId,
+          weekday,
+          dateStr,
+          reason,
+          shopHoursCount: 0,
+        });
+      }
+
+      return { times: [], timeToPros: {}, emptyReason: reason };
     }
 
     // 3. Resolve professional intervals
@@ -53,7 +93,9 @@ export class AvailabilityService {
         .eq("barbershop_id", barbershopId)
         .eq("active", true);
       if (prosErr) throw new Error("Query failure: " + prosErr.message);
-      if (!pros || pros.length === 0) return { times: [], timeToPros: {} };
+      if (!pros || pros.length === 0) {
+        return { times: [], timeToPros: {}, emptyReason: "no_professionals" };
+      }
       proIdsToFetch = pros.map((p) => p.id);
     }
 
@@ -76,6 +118,21 @@ export class AvailabilityService {
     });
     if (conflictsErr) throw new Error("Query failure: " + conflictsErr.message);
 
+    if (import.meta.env.DEV) {
+      console.debug("[booking/availability]", {
+        barbershopId,
+        professionalId,
+        date: date?.toISOString?.() ?? date,
+        weekday,
+        durationMinutes,
+        intervalMinutes,
+        shopHoursCount: shopHours?.length ?? 0,
+        professionalHoursCount: proHours?.length ?? 0,
+        timeOffCount: timeOffs?.length ?? 0,
+        conflictCount: conflicts?.length ?? 0,
+      });
+    }
+
     const allSlots: AvailableSlot[] = [];
 
     for (const pId of proIdsToFetch) {
@@ -92,6 +149,7 @@ export class AvailabilityService {
           }
         }
       } else {
+        // Fallback to shop hours when professional has no specific working hours
         for (const sh of shopHours) {
           intervals.push({ start: sh.opens_at, end: sh.closes_at });
         }
@@ -169,9 +227,14 @@ export class AvailabilityService {
       }
     }
 
+    if (import.meta.env.DEV) {
+      console.debug("[booking/availability] generatedSlotsCount:", times.size);
+    }
+
     return {
       times: Array.from(times).sort(),
       timeToPros,
+      emptyReason: times.size === 0 ? "all_booked" : null,
     };
   }
 }

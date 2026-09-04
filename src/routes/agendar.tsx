@@ -671,9 +671,19 @@ function BookingPage() {
                   <div className="flex justify-center p-6">
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
                   </div>
+                ) : slotsError ? (
+                  <p className="text-sm text-destructive">
+                    Não foi possível carregar os horários. Tente novamente em alguns instantes.
+                  </p>
                 ) : slots.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    Não encontramos horários disponíveis para esta data.
+                    {slotsData?.emptyReason === "no_shop_hours"
+                      ? "Esta barbearia ainda não configurou seus horários de funcionamento."
+                      : slotsData?.emptyReason === "closed_day"
+                        ? "A barbearia está fechada neste dia da semana."
+                        : slotsData?.emptyReason === "no_professionals"
+                          ? "Não há profissionais disponíveis para este agendamento."
+                          : "Não encontramos horários disponíveis para esta data."}
                   </p>
                 ) : (
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
