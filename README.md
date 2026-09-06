@@ -1,4 +1,5 @@
-﻿[![CI](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml)
+[![CI](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml/badge.svg)](https://github.com/Hugobleme/BARBEOS/actions/workflows/ci.yml)
+
 # ðŸ’ˆ BarberOS â€” Sistema de GestÃ£o & Agendamento para Barbearias Modernas
 
 O **BarberOS** Ã© uma plataforma completa e moderna para barbearias, desenvolvida com **React 19**, **TypeScript**, **Vite**, **TanStack Router**, **TanStack Start (SSR)**, **Tailwind CSS v4** e **Supabase** como backend seguro e em tempo real.
@@ -14,7 +15,7 @@ O **BarberOS** Ã© uma plataforma completa e moderna para barbearias, desenvolv
    - Suporte a **PWA (Progressive Web App)** instalÃ¡vel no smartphone e desktop.
 
 2. **âœ‚ï¸ Painel Administrativo:**
-   - **Agenda (`/admin/agenda`):** VisÃ£o diÃ¡ria e semanal com atualizaÃ§Ã£o em tempo real (Supabase Realtime) e alteraÃ§Ã£o de status (*Agendado, Em atendimento, ConcluÃ­do, Cancelado, No-Show*).
+   - **Agenda (`/admin/agenda`):** VisÃ£o diÃ¡ria e semanal com atualizaÃ§Ã£o em tempo real (Supabase Realtime) e alteraÃ§Ã£o de status (_Agendado, Em atendimento, ConcluÃ­do, Cancelado, No-Show_).
    - **PDV / BalcÃ£o (`/admin/pdv`):** Registro de vendas de serviÃ§os e produtos com leitor de cupons, seleÃ§Ã£o de profissionais e comissÃµes automÃ¡ticas.
    - **Controle de Caixa (`/admin/caixa`):** Abertura, fechamento diÃ¡rio, sangrias e conciliaÃ§Ã£o por mÃ©todo de pagamento.
    - **Estoque & Produtos (`/admin/estoque`):** GestÃ£o de estoque com alertas de saldo mÃ­nimo e movimentaÃ§Ãµes rastreadas.
@@ -31,10 +32,12 @@ O **BarberOS** Ã© uma plataforma completa e moderna para barbearias, desenvolv
 ## ðŸ› ï¸ InstalaÃ§Ã£o Local
 
 ### PrÃ©-requisitos
+
 - Node.js 18+ ou 20+
 - Gerenciador de pacotes npm
 
 ### Passos
+
 ```bash
 # 1. Clone o repositÃ³rio
 git clone https://github.com/Hugobleme/BARBEOS.git
@@ -56,11 +59,12 @@ npm run dev
 ## ðŸŒ Deploy em ProduÃ§Ã£o
 
 ### 1. VariÃ¡veis de Ambiente NecessÃ¡rias
+
 Configure as seguintes variÃ¡veis no painel da sua hospedagem (Vercel / Netlify):
 
-| VariÃ¡vel | DescriÃ§Ã£o | Exemplo |
-| :--- | :--- | :--- |
-| `VITE_SUPABASE_URL` | URL do seu projeto no Supabase | `https://xyzproject.supabase.co` |
+| VariÃ¡vel                | DescriÃ§Ã£o                                    | Exemplo                           |
+| :----------------------- | :--------------------------------------------- | :-------------------------------- |
+| `VITE_SUPABASE_URL`      | URL do seu projeto no Supabase                 | `https://xyzproject.supabase.co`  |
 | `VITE_SUPABASE_ANON_KEY` | Chave anÃ´nima pÃºblica (anon key) do Supabase | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
 
 ---
@@ -91,7 +95,8 @@ O repositÃ³rio jÃ¡ inclui o arquivo [`netlify.toml`](./netlify.toml) configu
 ---
 
 ### 4. Supabase & Banco de Dados em ProduÃ§Ã£o
-1. **Migrations & RLS:** Aplique as migraÃ§Ãµes SQL localizadas na pasta `supabase/migrations/` no painel do Supabase (*SQL Editor*) para garantir que todas as polÃ­ticas de seguranÃ§a (Row Level Security) e tabelas estejam ativas.
+
+1. **Migrations & RLS:** Aplique as migraÃ§Ãµes SQL localizadas na pasta `supabase/migrations/` no painel do Supabase (_SQL Editor_) para garantir que todas as polÃ­ticas de seguranÃ§a (Row Level Security) e tabelas estejam ativas.
 2. **Backups:** No painel do Supabase, ative os backups automÃ¡ticos diÃ¡rios em **Settings > Database > Backups**.
 3. **SSL / HTTPS:** Tanto a Vercel quanto o Netlify fornecem certificados SSL (HTTPS) gratuitos e automÃ¡ticos. O PWA e os Service Workers exigem HTTPS para funcionamento em produÃ§Ã£o.
 
@@ -100,6 +105,7 @@ O repositÃ³rio jÃ¡ inclui o arquivo [`netlify.toml`](./netlify.toml) configu
 ## ðŸ“² PWA (Progressive Web App)
 
 O BarberOS funciona como um aplicativo nativo em dispositivos mÃ³veis (Android e iOS) e Desktop:
+
 - **Manifest:** Configurado em [`public/manifest.json`](./public/manifest.json).
 - **Service Worker:** [`public/sw.js`](./public/sw.js) com cache de recursos estÃ¡ticos e suporte offline.
 - **Como Testar o PWA:**
@@ -115,15 +121,19 @@ O BarberOS funciona como um aplicativo nativo em dispositivos mÃ³veis (Android
 Propriedade de BarberOS. Todos os direitos reservados.
 
 ## Mapas
-A home page do cliente utiliza a biblioteca leve **Leaflet** (eact-leaflet) para exibir o mapa dinâmico de barbearias, consumindo os tiles gratuitos do OpenStreetMap/CartoDB.
+
+A home page do cliente utiliza a biblioteca leve **Leaflet** (
+eact-leaflet) para exibir o mapa dinâmico de barbearias, consumindo os tiles gratuitos do OpenStreetMap/CartoDB.
 Para utilizar Google Maps ou Mapbox no futuro, basta alterar a variável VITE_MAP_PROVIDER para google ou mapbox (requer extensão do MapProvider.tsx com o respectivo SDK da provedora).
 
 ## 🧹 Code Quality & Linting
 
 ### Missing Lucide Icon Imports Check
+
 To prevent runtime crashes caused by using `<IconName />` components without importing them from `lucide-react`, we have a custom ESLint plugin (`eslint-plugin-barbeos`).
 
 **How to run locally:**
+
 ```bash
 npm run lint
 # or specifically check a file:
@@ -131,9 +141,56 @@ npx eslint src/routes/admin.servicos.tsx
 ```
 
 **Example Error Output:**
+
 ```text
 126:14  error  Icon 'Info' is used but not imported from 'lucide-react'  barbeos/lucide-imports
 ```
 
 This check runs automatically in CI during the build/test verification workflow.
 
+---
+
+## 🧪 End-to-End (E2E) Testing
+
+### Framework: Playwright
+
+The project uses **Playwright** for browser-level end-to-end automation across desktop and mobile viewports. Playwright was selected for its native multi-context concurrency support (critical for verifying atomic reservation conflicts) and resilient web-first assertions.
+
+### Installation
+
+Browsers are installed automatically or via:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+### Environment Variables
+
+Configure in your `.env` or CI secrets (see [`.env.example`](./.env.example)):
+
+- `E2E_BASE_URL`: Target base URL (default: `http://localhost:4173`).
+- `E2E_WRITABLE_ENV`: Set to `true` **only** in an isolated writable staging or test database. Defaults to `false` to protect production data.
+- `E2E_OWNER_EMAIL` & `E2E_OWNER_PASSWORD`: Test credentials for owner admin flows.
+- `E2E_TEST_SHOP_SLUG`: Isolated test barbershop slug (default: `e2e-barbeos-test`).
+
+### Running Tests
+
+```bash
+# Run all unit and E2E tests:
+npm test
+
+# Run Playwright E2E suite in headless mode:
+npm run test:e2e
+
+# Run with interactive Playwright UI:
+npm run test:e2e:ui
+
+# View HTML test execution report:
+npm run test:e2e:report
+```
+
+### Non-Destructive Testing & CI Behavior
+
+- **Default & CI Mode:** All public-route, unauthenticated guard, PDV rendering, and mobile smoke tests run against the local preview build without mutating any database records.
+- **Writable / Destructive Mode:** Final booking write tests and concurrent reservation conflict tests (`Promise.all` two browser contexts) execute **only** when `E2E_WRITABLE_ENV=true` and dedicated credentials are provided; otherwise they are safely skipped.
+- **Failure Artifacts:** Screenshots, traces, and videos are captured only on failure in `playwright-report/` and uploaded as CI workflow artifacts.
