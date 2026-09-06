@@ -234,6 +234,7 @@ function BookingPage() {
     data: slotsData,
     isLoading: slotsLoading,
     error: slotsError,
+    refetch: refetchSlots,
   } = useQuery({
     queryKey: ["book-slots", shop?.id, proId, date?.toISOString(), totalDuration],
     enabled: !!shop?.id && !!date && pickedServices.length > 0 && pros.length > 0,
@@ -382,67 +383,60 @@ function BookingPage() {
 
       if (!currentUser) throw new Error("Falha na autenticação.");
 
-      // Verify or create customer record
-      const { data: existingCustomer } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("profile_id", currentUser.id)
-        .eq("barbershop_id", shop.id)
-        .maybeSingle();
-
-      let customerId = existingCustomer?.id;
-      if (!customerId) {
-        const { data: newCust, error: custErr } = await supabase
-          .from("customers")
-          .insert({
-            barbershop_id: shop.id,
-            profile_id: currentUser.id,
-            full_name: currentUser.user_metadata?.full_name || name || "Cliente",
-            email: currentUser.email,
-            phone: currentUser.user_metadata?.phone || phone || null,
-          })
-          .select()
-          .maybeSingle();
-        if (custErr) throw custErr;
-        customerId = newCust?.id;
-      }
-
-      // Create appointment
+      // Calculate appointment start
       const [hour, min] = time!.split(":");
       const start = new Date(date!);
       start.setHours(parseInt(hour), parseInt(min), 0, 0);
-      const end = addMinutes(start, totalDuration);
 
       const finalProId = proId === "any" ? slotsData?.timeToPros[time!]?.[0] || pros[0]?.id : proId;
 
-      await appointmentService.createAppointment({
+      await appointmentService.createPublicBooking({
         barbershopId: shop.id,
-        customerId: customerId,
         professionalId: finalProId,
-        startsAt: start,
-        customerData: {
-          name: name || currentUser?.user_metadata?.full_name || "Cliente",
-          phone: phone || currentUser?.user_metadata?.phone || "",
-          email: currentUser?.email,
-        },
-
-        services: pickedServices.map((s) => ({
-          id: s.id,
-          price: Number(s.price),
-          duration_min: s.duration_min,
-        })),
+        serviceIds: pickedServices.map((s) => s.id),
+        scheduledStart: start,
+        customerName: name || currentUser?.user_metadata?.full_name || "Cliente",
+        customerPhone: phone || currentUser?.user_metadata?.phone || "",
+        customerEmail: currentUser?.email || email || null,
+        notes: null,
       });
 
       toast.success("Agendamento solicitado!");
       navigate({ to: "/minha-conta" });
     } catch (err: any) {
       const msg = err.message || "";
-      if (msg.includes("row-level security") || err.code === "42501") {
+      if (msg.includes("BOOKING_SLOT_TAKEN") || msg.includes("23P01")) {
+        toast.error("Este horário acabou de ser reservado. Escolha outro horário para continuar.");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("BOOKING_OUTSIDE_BUSINESS_HOURS")) {
+        toast.error("O horário selecionado está fora do expediente da barbearia.");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("BOOKING_OUTSIDE_PROFESSIONAL_HOURS")) {
+        toast.error("O horário selecionado está fora do expediente do profissional.");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("BOOKING_PROFESSIONAL_ON_BREAK")) {
+        toast.error("O profissional estará em intervalo neste horário. Escolha outro horário.");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("BOOKING_PROFESSIONAL_UNAVAILABLE")) {
+        toast.error("O profissional não está disponível neste horário (folga ou afastamento).");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("BOOKING_PAST_DATE")) {
+        toast.error("Não é possível agendar em datas ou horários passados.");
+        setStep(2);
+        refetchSlots();
+      } else if (msg.includes("row-level security") || err.code === "42501") {
         toast.error(
           "Não foi possível confirmar o agendamento. Esta barbearia pode não estar aceitando reservas no momento.",
         );
       } else {
-        toast.error(msg || "Erro ao confirmar agendamento.");
+        toast.error(
+          "Não foi possível concluir o agendamento agora. Tente novamente em alguns instantes.",
+        );
       }
     } finally {
       setSubmitting(false);

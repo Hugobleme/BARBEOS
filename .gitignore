@@ -46,3 +46,8 @@ whatsapp-bot/auth_info/
 whatsapp-bot/auth_info_baileys/
 whatsapp-bot/.env
 whatsapp-bot/.env.*
+
+# Test outputs
+playwright-report/
+test-results/
+supabase/.temp/

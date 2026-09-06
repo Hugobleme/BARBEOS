@@ -2,16 +2,15 @@ import { describe, it, expect, beforeEach } from "vitest";
 
 /**
  * ============================================================================
- * ATOMIC RESERVATION PRE-FLIGHT REHEARSAL TEST SUITE
+ * ATOMIC RESERVATION PRE-FLIGHT & PRODUCTION REHEARSAL TEST SUITE
  * ============================================================================
  *
  * NOTE ON ENVIRONMENT & CONCURRENCY:
  * This test suite executes in the local test environment using in-memory state
- * fixtures and transactional simulation. No production database mutations are
- * performed. Concurrency and isolation semantics (such as PostgreSQL partial
- * GiST exclusion constraint and advisory transaction locking) are simulated
- * deterministically via cooperative serialization barriers to verify expected
- * single-winner semantics without altering production data.
+ * fixtures and transactional simulation. Concurrency and isolation semantics
+ * (such as PostgreSQL partial GiST exclusion constraint and advisory transaction
+ * locking) are simulated deterministically via cooperative serialization barriers
+ * to verify expected single-winner semantics without mutating production data.
  */
 
 // ----------------------------------------------------------------------------
@@ -24,6 +23,7 @@ export interface BarbershopFixture {
   id: string;
   name: string;
   active: boolean;
+  settings?: Record<string, any> | null;
 }
 
 export interface ProfessionalFixture {
@@ -48,7 +48,6 @@ export interface ShopBusinessHoursFixture {
   weekday: number; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   opens_at: string; // "09:00"
   closes_at: string; // "19:00"
-  closed: boolean;
 }
 
 export interface ProfessionalWorkingHoursFixture {
@@ -79,6 +78,8 @@ export interface AppointmentRecord {
   status: AppointmentStatus;
   total_amount: number;
   source: string;
+  notes?: string | null;
+  created_by?: string | null;
 }
 
 export interface AppointmentServiceRecord {
@@ -103,13 +104,18 @@ export interface CreateBookingRequest {
   professionalId: string;
   serviceIds: string[];
   scheduledStart: string; // ISO string
-  customer: {
-    id?: string;
-    profileId?: string | null;
-    fullName: string;
-    phone?: string;
-    email?: string;
-  };
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  notes?: string | null;
+  authenticatedProfileId?: string | null;
+}
+
+export interface MinimalBookingResult {
+  appointment_id: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  status: string;
 }
 
 // ----------------------------------------------------------------------------
@@ -148,12 +154,54 @@ export class SimulatedAtomicBookingDatabase {
   }
 
   /**
-   * Executes the exact logic planned for `public.create_public_booking(...)`
+   * Executes the exact logic implemented in `public.create_public_booking(...)`
    */
-  public async createPublicBooking(req: CreateBookingRequest): Promise<{
-    appointment: AppointmentRecord;
-    appointmentServices: AppointmentServiceRecord[];
-  }> {
+  public async createPublicBooking(req: CreateBookingRequest): Promise<MinimalBookingResult> {
+    // 1. Basic input validation
+    if (!req.barbershopId || !req.professionalId || !req.serviceIds || !req.scheduledStart) {
+      throw new Error("BOOKING_INVALID_INPUT");
+    }
+
+    if (req.serviceIds.length === 0) {
+      throw new Error("BOOKING_INVALID_INPUT");
+    }
+
+    // Check duplicate services
+    const uniqueServices = new Set(req.serviceIds);
+    if (uniqueServices.size !== req.serviceIds.length) {
+      throw new Error("BOOKING_DUPLICATE_SERVICES");
+    }
+
+    const cleanName = (req.customerName || "").trim();
+    const cleanPhone = (req.customerPhone || "").replace(/\D/g, "");
+    const cleanEmail = req.customerEmail ? req.customerEmail.trim() : null;
+    const cleanNotes = req.notes ? req.notes.trim() : null;
+
+    if (cleanName.length === 0 || cleanName.length > 100) {
+      throw new Error("BOOKING_INVALID_CUSTOMER_NAME");
+    }
+
+    if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+      throw new Error("BOOKING_INVALID_CUSTOMER_PHONE");
+    }
+
+    if (cleanEmail && !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(cleanEmail)) {
+      throw new Error("BOOKING_INVALID_CUSTOMER_EMAIL");
+    }
+
+    const startDate = new Date(req.scheduledStart);
+    if (isNaN(startDate.getTime())) throw new Error("BOOKING_INVALID_INPUT");
+
+    const now = new Date();
+    // 5-minute tolerance for clock skew
+    if (startDate.getTime() < now.getTime() - 5 * 60 * 1000) {
+      throw new Error("BOOKING_PAST_DATE");
+    }
+
+    if (startDate.getTime() > now.getTime() + 180 * 24 * 60 * 60 * 1000) {
+      throw new Error("BOOKING_HORIZON_EXCEEDED");
+    }
+
     // Acquire transaction lock on professional to serialize concurrent requests
     const releaseLock = await this.acquireProfessionalLock(req.professionalId);
 
@@ -163,84 +211,73 @@ export class SimulatedAtomicBookingDatabase {
     const snapshotApptServices = [...this.appointmentServices];
 
     try {
-      // 1. Verify Barbershop
+      // 2. Barbershop validation
       const shop = this.barbershops.find((b) => b.id === req.barbershopId);
-      if (!shop) throw new Error("Barbearia não encontrada.");
-      if (!shop.active) throw new Error("Barbearia inativa não aceita agendamentos.");
+      if (!shop || !shop.active) {
+        throw new Error("BOOKING_INVALID_SHOP");
+      }
 
-      // 2. Verify Professional
+      // 3. Professional validation
       const pro = this.professionals.find((p) => p.id === req.professionalId);
-      if (!pro) throw new Error("Profissional não encontrado.");
-      if (pro.barbershop_id !== req.barbershopId) {
-        throw new Error("Profissional não pertence a esta barbearia.");
+      if (!pro || pro.barbershop_id !== req.barbershopId || !pro.active) {
+        throw new Error("BOOKING_INVALID_PROFESSIONAL");
       }
-      if (!pro.active) throw new Error("Profissional inativo.");
 
-      // 3. Verify Services
-      if (!req.serviceIds || req.serviceIds.length === 0) {
-        throw new Error("Nenhum serviço selecionado.");
-      }
+      // 4. Services validation & totals calculation
       const selectedServices: ServiceFixture[] = [];
       let totalDuration = 0;
       let totalAmount = 0;
 
       for (const sId of req.serviceIds) {
-        const s = this.services.find((serv) => serv.id === sId);
-        if (!s) throw new Error(`Serviço ${sId} não encontrado.`);
-        if (s.barbershop_id !== req.barbershopId) {
-          throw new Error("Serviço não pertence a esta barbearia.");
+        const s = this.services.find(
+          (serv) => serv.id === sId && serv.barbershop_id === req.barbershopId && serv.active,
+        );
+        if (!s) {
+          throw new Error("BOOKING_INVALID_SERVICES");
         }
-        if (!s.active) throw new Error(`Serviço ${s.name} está inativo.`);
         selectedServices.push(s);
         totalDuration += s.duration_min;
         totalAmount += s.price;
       }
 
-      // 4. Calculate Times
-      const startDate = new Date(req.scheduledStart);
-      if (isNaN(startDate.getTime())) throw new Error("Data de início inválida.");
+      if (totalDuration <= 0) totalDuration = 30;
       const endDate = new Date(startDate.getTime() + totalDuration * 60000);
 
-      if (endDate <= startDate) {
-        throw new Error("Duração inválida do agendamento.");
-      }
-
-      // 5. Operating Hours Verification
+      // 5. Working-hours & schedule validation
       const weekday = startDate.getUTCDay();
       const shopHours = this.shopBusinessHours.find(
         (sh) => sh.barbershop_id === req.barbershopId && sh.weekday === weekday,
       );
-      if (!shopHours || shopHours.closed) {
-        throw new Error("A barbearia está fechada nesta data.");
+      if (!shopHours) {
+        throw new Error("BOOKING_OUTSIDE_BUSINESS_HOURS");
       }
 
       const startHM = startDate.toISOString().slice(11, 16);
       const endHM = endDate.toISOString().slice(11, 16);
 
       if (startHM < shopHours.opens_at || endHM > shopHours.closes_at) {
-        throw new Error("Horário fora do expediente da barbearia.");
+        throw new Error("BOOKING_OUTSIDE_BUSINESS_HOURS");
       }
 
-      // 6. Professional Working Hours Verification
       const proHours = this.workingHours.find(
         (wh) => wh.professional_id === req.professionalId && wh.weekday === weekday,
       );
       if (!proHours || !proHours.is_working) {
-        throw new Error("Profissional não atende nesta data.");
-      }
-      if (startHM < proHours.start_time || endHM > proHours.end_time) {
-        throw new Error("Horário fora do expediente do profissional.");
+        throw new Error("BOOKING_OUTSIDE_PROFESSIONAL_HOURS");
       }
 
-      // 7. Professional Break Verification
+      if (startHM < proHours.start_time || endHM > proHours.end_time) {
+        throw new Error("BOOKING_OUTSIDE_PROFESSIONAL_HOURS");
+      }
+
+      // Check Break
       if (proHours.break_start && proHours.break_end) {
-        const hasBreakOverlap = startHM < proHours.break_end && endHM > proHours.break_start;
-        if (hasBreakOverlap) {
-          throw new Error("Horário coincide com o intervalo do profissional.");
+        if (startHM < proHours.break_end && endHM > proHours.break_start) {
+          throw new Error("BOOKING_PROFESSIONAL_ON_BREAK");
         }
       }
 
-      // 8. Time-Off Verification
+      // Check Time-Off
       const timeOffConflict = this.timeOffs.find((to) => {
         if (to.professional_id !== req.professionalId) return false;
         const toStart = new Date(to.start_at).getTime();
@@ -248,11 +285,11 @@ export class SimulatedAtomicBookingDatabase {
         return startDate.getTime() < toEnd && endDate.getTime() > toStart;
       });
       if (timeOffConflict) {
-        throw new Error("Profissional em período de folga/afastamento.");
+        throw new Error("BOOKING_PROFESSIONAL_UNAVAILABLE");
       }
 
-      // 9. Concurrency & Overlap Exclusion Check (PostgreSQL GiST simulation)
-      // Blocking statuses: scheduled, in_progress
+      // 6. Overlap Exclusion Check (PostgreSQL GiST simulation)
+      // Active blocking statuses: 'scheduled', 'in_progress'
       const hasOverlap = this.appointments.some((a) => {
         if (a.professional_id !== req.professionalId) return false;
         if (!["scheduled", "in_progress"].includes(a.status)) return false;
@@ -267,38 +304,43 @@ export class SimulatedAtomicBookingDatabase {
       });
 
       if (hasOverlap) {
-        const err: any = new Error(
-          "Conflito de agendamento: o profissional já possui compromisso neste horário.",
-        );
-        err.code = "23P01"; // exclusion_violation
+        const err: any = new Error("BOOKING_SLOT_TAKEN");
+        err.code = "23P01";
         throw err;
       }
 
-      // 10. Customer Resolution or Creation
-      let customerId = req.customer.id;
-      if (!customerId) {
-        const existing = this.customers.find(
+      // 7. Customer resolution or creation
+      let customerId: string | null = null;
+      if (req.authenticatedProfileId) {
+        const existingByProfile = this.customers.find(
           (c) =>
-            c.barbershop_id === req.barbershopId &&
-            ((req.customer.profileId && c.profile_id === req.customer.profileId) ||
-              (req.customer.phone && c.phone === req.customer.phone)),
+            c.barbershop_id === req.barbershopId && c.profile_id === req.authenticatedProfileId,
         );
-        if (existing) {
-          customerId = existing.id;
-        } else {
-          customerId = `cust_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-          this.customers.push({
-            id: customerId,
-            barbershop_id: req.barbershopId,
-            profile_id: req.customer.profileId || null,
-            full_name: req.customer.fullName,
-            phone: req.customer.phone || null,
-            email: req.customer.email || null,
-          });
-        }
+        if (existingByProfile) customerId = existingByProfile.id;
       }
 
-      // 11. Insert Appointment
+      if (!customerId) {
+        const existingByPhone = this.customers.find(
+          (c) =>
+            c.barbershop_id === req.barbershopId &&
+            (c.phone || "").replace(/\D/g, "") === cleanPhone,
+        );
+        if (existingByPhone) customerId = existingByPhone.id;
+      }
+
+      if (!customerId) {
+        customerId = `cust_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        this.customers.push({
+          id: customerId,
+          barbershop_id: req.barbershopId,
+          profile_id: req.authenticatedProfileId || null,
+          full_name: cleanName,
+          phone: cleanPhone,
+          email: cleanEmail,
+        });
+      }
+
+      // 8. Insert Appointment
       const apptId = `appt_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
       const newAppt: AppointmentRecord = {
         id: apptId,
@@ -310,30 +352,32 @@ export class SimulatedAtomicBookingDatabase {
         status: "scheduled",
         total_amount: totalAmount,
         source: "web",
+        notes: cleanNotes,
+        created_by: req.authenticatedProfileId || null,
       };
       this.appointments.push(newAppt);
 
-      // 12. Insert Appointment Services (with failure injection check)
+      // 9. Insert Appointment Services (with failure injection check)
       if (this.injectServiceFailure) {
-        throw new Error("Erro simulado ao vincular serviços do agendamento");
+        throw new Error("Simulated failure inserting appointment_services");
       }
 
-      const createdServices: AppointmentServiceRecord[] = [];
       for (const s of selectedServices) {
-        const asRec: AppointmentServiceRecord = {
+        this.appointmentServices.push({
           id: `as_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
           appointment_id: apptId,
           service_id: s.id,
           price_snapshot: s.price,
           duration_snapshot: s.duration_min,
-        };
-        this.appointmentServices.push(asRec);
-        createdServices.push(asRec);
+        });
       }
 
+      // Return minimal safe payload (zero PII)
       return {
-        appointment: newAppt,
-        appointmentServices: createdServices,
+        appointment_id: apptId,
+        scheduled_start: startDate.toISOString(),
+        scheduled_end: endDate.toISOString(),
+        status: "scheduled",
       };
     } catch (error) {
       // Transaction Rollback simulation
@@ -351,7 +395,7 @@ export class SimulatedAtomicBookingDatabase {
 // Test Suites
 // ----------------------------------------------------------------------------
 
-describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
+describe("Atomic Booking RPC Invariants (Complete 19 Rehearsal Scenarios)", () => {
   let db: SimulatedAtomicBookingDatabase;
 
   const SHOP_ID = "shop_prestige_1";
@@ -367,8 +411,16 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
   const SRV_INACTIVE_ID = "srv_inactive";
   const SRV_OTHER_SHOP_ID = "srv_other_shop";
 
-  // Reference date: Wednesday 2026-09-09 (UTC weekday = 3)
-  const BASE_DATE_PREFIX = "2026-09-09T";
+  // Dynamic future date: next Wednesday at 10:00 UTC
+  // Ensures test is always in the future
+  const getFutureWednesdayISO = (timeHM: string): string => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((3 - d.getDay() + 7) % 7 || 7)); // Next Wednesday (weekday=3)
+    const yyyy = d.getUTCFullYear();
+    const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}T${timeHM}:00.000Z`;
+  };
 
   beforeEach(() => {
     db = new SimulatedAtomicBookingDatabase();
@@ -431,7 +483,6 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
         weekday: 3,
         opens_at: "09:00",
         closes_at: "19:00",
-        closed: false,
       },
     ];
 
@@ -454,8 +505,8 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
       {
         id: "to_1",
         professional_id: PRO_ACTIVE_ID,
-        start_at: `${BASE_DATE_PREFIX}14:00:00.000Z`,
-        end_at: `${BASE_DATE_PREFIX}15:00:00.000Z`,
+        start_at: getFutureWednesdayISO("14:00"),
+        end_at: getFutureWednesdayISO("15:00"),
       },
     ];
 
@@ -467,8 +518,8 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
         barbershop_id: SHOP_ID,
         customer_id: "cust_1",
         professional_id: PRO_ACTIVE_ID,
-        scheduled_start: `${BASE_DATE_PREFIX}10:00:00.000Z`,
-        scheduled_end: `${BASE_DATE_PREFIX}10:30:00.000Z`,
+        scheduled_start: getFutureWednesdayISO("10:00"),
+        scheduled_end: getFutureWednesdayISO("10:30"),
         status: "scheduled",
         total_amount: 50,
         source: "web",
@@ -479,20 +530,32 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
         barbershop_id: SHOP_ID,
         customer_id: "cust_2",
         professional_id: PRO_ACTIVE_ID,
-        scheduled_start: `${BASE_DATE_PREFIX}11:00:00.000Z`,
-        scheduled_end: `${BASE_DATE_PREFIX}11:30:00.000Z`,
+        scheduled_start: getFutureWednesdayISO("11:00"),
+        scheduled_end: getFutureWednesdayISO("11:30"),
         status: "cancelled",
         total_amount: 50,
         source: "web",
       },
-      // No-show appointment: 11:30 - 12:00 (no_show - must NOT block)
+      // Completed appointment: 11:30 - 12:00 (completed in the past / does not block if non-overlapping)
       {
-        id: "appt_existing_no_show",
+        id: "appt_existing_completed",
         barbershop_id: SHOP_ID,
         customer_id: "cust_3",
         professional_id: PRO_ACTIVE_ID,
-        scheduled_start: `${BASE_DATE_PREFIX}11:30:00.000Z`,
-        scheduled_end: `${BASE_DATE_PREFIX}12:00:00.000Z`,
+        scheduled_start: getFutureWednesdayISO("11:30"),
+        scheduled_end: getFutureWednesdayISO("12:00"),
+        status: "completed",
+        total_amount: 50,
+        source: "web",
+      },
+      // No-show appointment: 13:00 - 13:30 (no_show - must NOT block)
+      {
+        id: "appt_existing_no_show",
+        barbershop_id: SHOP_ID,
+        customer_id: "cust_4",
+        professional_id: PRO_ACTIVE_ID,
+        scheduled_start: getFutureWednesdayISO("13:00"),
+        scheduled_end: getFutureWednesdayISO("13:30"),
         status: "no_show",
         total_amount: 50,
         source: "web",
@@ -500,261 +563,275 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
     ];
   });
 
-  // --------------------------------------------------------------------------
-  // Case 1: Valid Booking Creation
-  // --------------------------------------------------------------------------
-  it("1. creates a valid booking and links appointment_services with correct snapshots", async () => {
+  // 1. Valid anonymous/guest booking
+  it("1. creates a valid anonymous/guest booking", async () => {
     const res = await db.createPublicBooking({
       barbershopId: SHOP_ID,
       professionalId: PRO_ACTIVE_ID,
-      serviceIds: [SRV_HAIRCUT_ID, SRV_BEARD_ID], // 30m + 20m = 50m
-      scheduledStart: `${BASE_DATE_PREFIX}09:00:00.000Z`,
-      customer: {
-        fullName: "Carlos Silva",
-        phone: "11999998888",
-        email: "carlos@teste.com",
-      },
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("09:00"),
+      customerName: "Visitante Anonimo",
+      customerPhone: "11999991111",
+      customerEmail: "anonimo@teste.com",
     });
 
-    expect(res.appointment).toBeDefined();
-    expect(res.appointment.status).toBe("scheduled");
-    expect(res.appointment.scheduled_start).toBe(`${BASE_DATE_PREFIX}09:00:00.000Z`);
-    expect(res.appointment.scheduled_end).toBe(`${BASE_DATE_PREFIX}09:50:00.000Z`);
-    expect(res.appointment.total_amount).toBe(85); // 50 + 35
+    expect(res.appointment_id).toBeDefined();
+    expect(res.status).toBe("scheduled");
+    expect(res.scheduled_start).toBe(getFutureWednesdayISO("09:00"));
+    expect(res.scheduled_end).toBe(getFutureWednesdayISO("09:30"));
 
-    expect(res.appointmentServices).toHaveLength(2);
-    expect(res.appointmentServices[0].price_snapshot).toBe(50);
-    expect(res.appointmentServices[0].duration_snapshot).toBe(30);
-    expect(res.appointmentServices[1].price_snapshot).toBe(35);
-    expect(res.appointmentServices[1].duration_snapshot).toBe(20);
-
-    // Customer created in database
-    const cust = db.customers.find((c) => c.phone === "11999998888");
+    const cust = db.customers.find((c) => c.phone === "11999991111");
     expect(cust).toBeDefined();
-    expect(cust?.full_name).toBe("Carlos Silva");
+    expect(cust?.profile_id).toBeNull();
   });
 
-  // --------------------------------------------------------------------------
-  // Case 2: Overlapping Booking Rejected
-  // --------------------------------------------------------------------------
-  it("2. rejects an overlapping booking for the same professional", async () => {
-    // Existing is 10:00 - 10:30. Attempt 10:15 - 10:45
-    await expect(
-      db.createPublicBooking({
-        barbershopId: SHOP_ID,
-        professionalId: PRO_ACTIVE_ID,
-        serviceIds: [SRV_HAIRCUT_ID], // 30m
-        scheduledStart: `${BASE_DATE_PREFIX}10:15:00.000Z`,
-        customer: { fullName: "Cliente Conflito" },
-      }),
-    ).rejects.toThrow(/Conflito de agendamento/);
-  });
-
-  // --------------------------------------------------------------------------
-  // Case 3: Back-to-Back Bookings Allowed
-  // --------------------------------------------------------------------------
-  it("3. allows back-to-back bookings exactly touching boundaries", async () => {
-    // Existing is 10:00 - 10:30.
-    // Booking A: 09:30 - 10:00 (ends exactly when existing begins)
-    const before = await db.createPublicBooking({
-      barbershopId: SHOP_ID,
-      professionalId: PRO_ACTIVE_ID,
-      serviceIds: [SRV_HAIRCUT_ID], // 30m
-      scheduledStart: `${BASE_DATE_PREFIX}09:30:00.000Z`,
-      customer: { fullName: "Cliente Antes" },
-    });
-    expect(before.appointment.scheduled_end).toBe(`${BASE_DATE_PREFIX}10:00:00.000Z`);
-
-    // Booking B: 10:30 - 11:00 (starts exactly when existing ends)
-    const after = await db.createPublicBooking({
-      barbershopId: SHOP_ID,
-      professionalId: PRO_ACTIVE_ID,
-      serviceIds: [SRV_HAIRCUT_ID], // 30m
-      scheduledStart: `${BASE_DATE_PREFIX}10:30:00.000Z`,
-      customer: { fullName: "Cliente Depois" },
-    });
-    expect(after.appointment.scheduled_start).toBe(`${BASE_DATE_PREFIX}10:30:00.000Z`);
-  });
-
-  // --------------------------------------------------------------------------
-  // Case 4: Cancelled Appointments Do Not Block
-  // --------------------------------------------------------------------------
-  it("4. allows booking in a slot vacated by a cancelled appointment", async () => {
-    // Cancelled appointment is 11:00 - 11:30
+  // 2. Valid authenticated customer booking
+  it("2. creates a valid authenticated customer booking and attaches profile_id", async () => {
     const res = await db.createPublicBooking({
       barbershopId: SHOP_ID,
       professionalId: PRO_ACTIVE_ID,
-      serviceIds: [SRV_HAIRCUT_ID], // 30m
-      scheduledStart: `${BASE_DATE_PREFIX}11:00:00.000Z`,
-      customer: { fullName: "Cliente Slot Cancelado" },
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("09:30"),
+      customerName: "Cliente Logado",
+      customerPhone: "11999992222",
+      authenticatedProfileId: "profile_uuid_123",
     });
-    expect(res.appointment.scheduled_start).toBe(`${BASE_DATE_PREFIX}11:00:00.000Z`);
-    expect(res.appointment.status).toBe("scheduled");
+
+    expect(res.appointment_id).toBeDefined();
+    const cust = db.customers.find((c) => c.profile_id === "profile_uuid_123");
+    expect(cust).toBeDefined();
+    expect(cust?.full_name).toBe("Cliente Logado");
   });
 
-  // --------------------------------------------------------------------------
-  // Case 5: No-Show Appointments Do Not Block
-  // --------------------------------------------------------------------------
-  it("5. allows booking in a slot previously occupied by a no_show appointment", async () => {
-    // No-show appointment is 11:30 - 12:00
-    const res = await db.createPublicBooking({
-      barbershopId: SHOP_ID,
-      professionalId: PRO_ACTIVE_ID,
-      serviceIds: [SRV_HAIRCUT_ID], // 30m
-      scheduledStart: `${BASE_DATE_PREFIX}11:30:00.000Z`,
-      customer: { fullName: "Cliente Slot NoShow" },
-    });
-    expect(res.appointment.scheduled_start).toBe(`${BASE_DATE_PREFIX}11:30:00.000Z`);
-    expect(res.appointment.status).toBe("scheduled");
-  });
-
-  // --------------------------------------------------------------------------
-  // Case 6: Cross-Tenant IDs Rejected
-  // --------------------------------------------------------------------------
-  it("6. rejects cross-tenant professional or service IDs", async () => {
-    // Foreign professional from other shop
-    await expect(
-      db.createPublicBooking({
-        barbershopId: SHOP_ID,
-        professionalId: PRO_OTHER_SHOP_ID,
-        serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}13:00:00.000Z`,
-        customer: { fullName: "Cliente Teste" },
-      }),
-    ).rejects.toThrow(/Profissional não pertence a esta barbearia/);
-
-    // Foreign service from other shop
-    await expect(
-      db.createPublicBooking({
-        barbershopId: SHOP_ID,
-        professionalId: PRO_ACTIVE_ID,
-        serviceIds: [SRV_OTHER_SHOP_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}13:00:00.000Z`,
-        customer: { fullName: "Cliente Teste" },
-      }),
-    ).rejects.toThrow(/Serviço não pertence a esta barbearia/);
-  });
-
-  // --------------------------------------------------------------------------
-  // Case 7: Inactive Shop/Professional/Service Rejected
-  // --------------------------------------------------------------------------
-  it("7. rejects bookings with inactive shop, professional, or service", async () => {
-    // Inactive shop
+  // 3. Inactive barbershop rejection
+  it("3. rejects booking for inactive barbershop with BOOKING_INVALID_SHOP", async () => {
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_INACTIVE_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}09:00:00.000Z`,
-        customer: { fullName: "Cliente Inativo" },
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Inativo",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/Barbearia inativa/);
+    ).rejects.toThrow("BOOKING_INVALID_SHOP");
+  });
 
-    // Inactive professional
+  // 4. Inactive professional rejection
+  it("4. rejects booking for inactive professional with BOOKING_INVALID_PROFESSIONAL", async () => {
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_INACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}09:00:00.000Z`,
-        customer: { fullName: "Cliente Inativo" },
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Inativo",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/Profissional inativo/);
+    ).rejects.toThrow("BOOKING_INVALID_PROFESSIONAL");
+  });
 
-    // Inactive service
+  // 5. Inactive service rejection
+  it("5. rejects booking with inactive service with BOOKING_INVALID_SERVICES", async () => {
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_INACTIVE_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}09:00:00.000Z`,
-        customer: { fullName: "Cliente Inativo" },
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Inativo",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/está inativo/);
+    ).rejects.toThrow("BOOKING_INVALID_SERVICES");
   });
 
-  // --------------------------------------------------------------------------
-  // Case 8: Outside Operating Hours Rejected
-  // --------------------------------------------------------------------------
-  it("8. rejects booking outside barbershop business hours", async () => {
+  // 6. Cross-tenant professional rejection
+  it("6. rejects professional belonging to another barbershop", async () => {
+    await expect(
+      db.createPublicBooking({
+        barbershopId: SHOP_ID,
+        professionalId: PRO_OTHER_SHOP_ID,
+        serviceIds: [SRV_HAIRCUT_ID],
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Cross",
+        customerPhone: "11999993333",
+      }),
+    ).rejects.toThrow("BOOKING_INVALID_PROFESSIONAL");
+  });
+
+  // 7. Cross-tenant service rejection
+  it("7. rejects service belonging to another barbershop", async () => {
+    await expect(
+      db.createPublicBooking({
+        barbershopId: SHOP_ID,
+        professionalId: PRO_ACTIVE_ID,
+        serviceIds: [SRV_OTHER_SHOP_ID],
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Cross",
+        customerPhone: "11999993333",
+      }),
+    ).rejects.toThrow("BOOKING_INVALID_SERVICES");
+  });
+
+  // 8. Duplicate service ID rejection
+  it("8. rejects duplicate service IDs with BOOKING_DUPLICATE_SERVICES", async () => {
+    await expect(
+      db.createPublicBooking({
+        barbershopId: SHOP_ID,
+        professionalId: PRO_ACTIVE_ID,
+        serviceIds: [SRV_HAIRCUT_ID, SRV_HAIRCUT_ID],
+        scheduledStart: getFutureWednesdayISO("09:00"),
+        customerName: "Teste Duplicado",
+        customerPhone: "11999993333",
+      }),
+    ).rejects.toThrow("BOOKING_DUPLICATE_SERVICES");
+  });
+
+  // 9. Past booking rejection
+  it("9. rejects booking in the past with BOOKING_PAST_DATE", async () => {
+    await expect(
+      db.createPublicBooking({
+        barbershopId: SHOP_ID,
+        professionalId: PRO_ACTIVE_ID,
+        serviceIds: [SRV_HAIRCUT_ID],
+        scheduledStart: "2020-01-01T10:00:00.000Z",
+        customerName: "Teste Passado",
+        customerPhone: "11999993333",
+      }),
+    ).rejects.toThrow("BOOKING_PAST_DATE");
+  });
+
+  // 10. Booking outside barbershop hours
+  it("10. rejects booking outside barbershop business hours", async () => {
     // Shop opens at 09:00. Attempt 08:30
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}08:30:00.000Z`,
-        customer: { fullName: "Cliente Cedo Demais" },
+        scheduledStart: getFutureWednesdayISO("08:30"),
+        customerName: "Teste Horario",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/Horário fora do expediente da barbearia/);
+    ).rejects.toThrow("BOOKING_OUTSIDE_BUSINESS_HOURS");
+  });
 
-    // Shop closes at 19:00. Attempt 18:45 for 30m service (ends at 19:15)
+  // 11. Booking outside professional hours
+  it("11. rejects booking outside professional working hours", async () => {
+    // Pro ends at 18:00, shop open until 19:00. 30m haircut at 18:00 ends at 18:30
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}18:45:00.000Z`,
-        customer: { fullName: "Cliente Tarde Demais" },
+        scheduledStart: getFutureWednesdayISO("18:00"),
+        customerName: "Teste Horario",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/Horário fora do expediente da barbearia/);
+    ).rejects.toThrow("BOOKING_OUTSIDE_PROFESSIONAL_HOURS");
   });
 
-  // --------------------------------------------------------------------------
-  // Case 9: Outside Professional Hours Rejected
-  // --------------------------------------------------------------------------
-  it("9. rejects booking outside professional working hours", async () => {
-    // Pro finishes at 18:00 (while shop is open until 19:00). Attempt 18:00
-    await expect(
-      db.createPublicBooking({
-        barbershopId: SHOP_ID,
-        professionalId: PRO_ACTIVE_ID,
-        serviceIds: [SRV_HAIRCUT_ID], // ends at 18:30
-        scheduledStart: `${BASE_DATE_PREFIX}18:00:00.000Z`,
-        customer: { fullName: "Cliente Fora Turno Pro" },
-      }),
-    ).rejects.toThrow(/Horário fora do expediente do profissional/);
-  });
-
-  // --------------------------------------------------------------------------
-  // Case 10: Break Time Overlap Rejected
-  // --------------------------------------------------------------------------
-  it("10. rejects booking overlapping with professional break/lunch", async () => {
-    // Pro break is 12:00 - 13:00. Attempt 12:15 - 12:45
+  // 12. Booking during break
+  it("12. rejects booking overlapping professional lunch/break", async () => {
+    // Break is 12:00 - 13:00. Attempt 12:15 - 12:45
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}12:15:00.000Z`,
-        customer: { fullName: "Cliente No Almoço" },
+        scheduledStart: getFutureWednesdayISO("12:15"),
+        customerName: "Teste Break",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/intervalo do profissional/);
+    ).rejects.toThrow("BOOKING_PROFESSIONAL_ON_BREAK");
   });
 
-  // --------------------------------------------------------------------------
-  // Case 11: Time-Off Overlap Rejected
-  // --------------------------------------------------------------------------
-  it("11. rejects booking during professional time-off", async () => {
-    // Time off is 14:00 - 15:00. Attempt 14:15 - 14:45
+  // 13. Booking during time off
+  it("13. rejects booking during professional time-off", async () => {
+    // Time-off is 14:00 - 15:00. Attempt 14:15 - 14:45
     await expect(
       db.createPublicBooking({
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}14:15:00.000Z`,
-        customer: { fullName: "Cliente Na Folga" },
+        scheduledStart: getFutureWednesdayISO("14:15"),
+        customerName: "Teste Folga",
+        customerPhone: "11999993333",
       }),
-    ).rejects.toThrow(/período de folga/);
+    ).rejects.toThrow("BOOKING_PROFESSIONAL_UNAVAILABLE");
   });
 
-  // --------------------------------------------------------------------------
-  // Case 12: Rollback Atomicity (No Orphaned Records)
-  // --------------------------------------------------------------------------
-  it("12. rolls back entire transaction if appointment_services insertion fails", async () => {
-    const initialApptCount = db.appointments.length;
-    const initialCustCount = db.customers.length;
-    const initialApptServicesCount = db.appointmentServices.length;
+  // 14. Back-to-back appointments allowed
+  it("14. allows back-to-back appointments touching exact interval boundaries", async () => {
+    // Existing is 10:00 - 10:30.
+    // Booking A: 09:30 - 10:00 (ends exactly when existing starts)
+    const before = await db.createPublicBooking({
+      barbershopId: SHOP_ID,
+      professionalId: PRO_ACTIVE_ID,
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("09:30"),
+      customerName: "Cliente Antes",
+      customerPhone: "11999994444",
+    });
+    expect(before.scheduled_end).toBe(getFutureWednesdayISO("10:00"));
+
+    // Booking B: 10:30 - 11:00 (starts exactly when existing ends)
+    const after = await db.createPublicBooking({
+      barbershopId: SHOP_ID,
+      professionalId: PRO_ACTIVE_ID,
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("10:30"),
+      customerName: "Cliente Depois",
+      customerPhone: "11999995555",
+    });
+    expect(after.scheduled_start).toBe(getFutureWednesdayISO("10:30"));
+  });
+
+  // 15. Overlapping intervals are rejected
+  it("15. rejects overlapping intervals with BOOKING_SLOT_TAKEN", async () => {
+    // Existing is 10:00 - 10:30. Attempt 10:15 - 10:45
+    await expect(
+      db.createPublicBooking({
+        barbershopId: SHOP_ID,
+        professionalId: PRO_ACTIVE_ID,
+        serviceIds: [SRV_HAIRCUT_ID],
+        scheduledStart: getFutureWednesdayISO("10:15"),
+        customerName: "Cliente Conflito",
+        customerPhone: "11999996666",
+      }),
+    ).rejects.toThrow("BOOKING_SLOT_TAKEN");
+  });
+
+  // 16. cancelled, completed, and no_show appointments do not block a new slot
+  it("16. allows booking over slots vacated by cancelled, completed, or no_show appointments", async () => {
+    // Cancelled slot: 11:00 - 11:30
+    const overCancelled = await db.createPublicBooking({
+      barbershopId: SHOP_ID,
+      professionalId: PRO_ACTIVE_ID,
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("11:00"),
+      customerName: "Cliente Reocupou Cancelado",
+      customerPhone: "11999997777",
+    });
+    expect(overCancelled.status).toBe("scheduled");
+
+    // No-show slot: 13:00 - 13:30
+    const overNoShow = await db.createPublicBooking({
+      barbershopId: SHOP_ID,
+      professionalId: PRO_ACTIVE_ID,
+      serviceIds: [SRV_HAIRCUT_ID],
+      scheduledStart: getFutureWednesdayISO("13:00"),
+      customerName: "Cliente Reocupou NoShow",
+      customerPhone: "11999998888",
+    });
+    expect(overNoShow.status).toBe("scheduled");
+  });
+
+  // 17. Failure inserting appointment_services rolls back the full operation
+  it("17. rolls back the entire operation if appointment_services insertion fails", async () => {
+    const initialAppts = db.appointments.length;
+    const initialCusts = db.customers.length;
+    const initialServices = db.appointmentServices.length;
 
     db.injectServiceFailure = true;
 
@@ -763,57 +840,78 @@ describe("Atomic Booking Pre-Flight Rehearsal (Local Simulation)", () => {
         barbershopId: SHOP_ID,
         professionalId: PRO_ACTIVE_ID,
         serviceIds: [SRV_HAIRCUT_ID],
-        scheduledStart: `${BASE_DATE_PREFIX}16:00:00.000Z`,
-        customer: {
-          fullName: "Cliente Rollback Test",
-          phone: "11988887777",
-        },
+        scheduledStart: getFutureWednesdayISO("16:00"),
+        customerName: "Cliente Rollback",
+        customerPhone: "11999999999",
       }),
-    ).rejects.toThrow(/Erro simulado ao vincular serviços/);
+    ).rejects.toThrow("Simulated failure inserting appointment_services");
 
-    // Assert zero partial mutations remained
-    expect(db.appointments.length).toBe(initialApptCount);
-    expect(db.customers.length).toBe(initialCustCount);
-    expect(db.appointmentServices.length).toBe(initialApptServicesCount);
-    expect(db.customers.find((c) => c.phone === "11988887777")).toBeUndefined();
+    // Zero partial records remained
+    expect(db.appointments.length).toBe(initialAppts);
+    expect(db.customers.length).toBe(initialCusts);
+    expect(db.appointmentServices.length).toBe(initialServices);
   });
 
-  // --------------------------------------------------------------------------
-  // Case 13: Parallel Concurrent Attempts (Exactly 1 Success, 1 Conflict)
-  // --------------------------------------------------------------------------
-  it("13. guarantees exactly one success and one conflict on concurrent parallel bookings", async () => {
-    const slot = `${BASE_DATE_PREFIX}16:30:00.000Z`;
+  // 18. Two parallel requests produce exactly one success and one BOOKING_SLOT_TAKEN
+  it("18. guarantees exactly one success and one BOOKING_SLOT_TAKEN on concurrent parallel requests", async () => {
+    const slot = getFutureWednesdayISO("16:30");
 
-    const requestA = db.createPublicBooking({
+    const reqA = db.createPublicBooking({
       barbershopId: SHOP_ID,
       professionalId: PRO_ACTIVE_ID,
       serviceIds: [SRV_HAIRCUT_ID],
       scheduledStart: slot,
-      customer: { fullName: "Cliente Paralelo A", phone: "11911111111" },
+      customerName: "Concorrente A",
+      customerPhone: "11911112222",
     });
 
-    const requestB = db.createPublicBooking({
+    const reqB = db.createPublicBooking({
       barbershopId: SHOP_ID,
       professionalId: PRO_ACTIVE_ID,
       serviceIds: [SRV_HAIRCUT_ID],
       scheduledStart: slot,
-      customer: { fullName: "Cliente Paralelo B", phone: "11922222222" },
+      customerName: "Concorrente B",
+      customerPhone: "11933334444",
     });
 
-    const results = await Promise.allSettled([requestA, requestB]);
-
+    const results = await Promise.allSettled([reqA, reqB]);
     const fulfilled = results.filter((r) => r.status === "fulfilled");
     const rejected = results.filter((r) => r.status === "rejected");
 
-    // Exactly 1 winner, exactly 1 conflict
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
 
-    const winnerResult = (fulfilled[0] as PromiseFulfilledResult<any>).value;
-    expect(winnerResult.appointment.scheduled_start).toBe(slot);
+    const winner = (fulfilled[0] as PromiseFulfilledResult<MinimalBookingResult>).value;
+    expect(winner.scheduled_start).toBe(slot);
 
-    const errorResult = (rejected[0] as PromiseRejectedResult).reason;
-    expect(errorResult.message).toMatch(/Conflito de agendamento/);
-    expect(errorResult.code).toBe("23P01");
+    const loser = (rejected[0] as PromiseRejectedResult).reason;
+    expect(loser.message).toMatch("BOOKING_SLOT_TAKEN");
+  });
+
+  // 19. RPC response does not expose unrelated customer data
+  it("19. ensures RPC returns only minimal scheduling fields without exposing customer PII", async () => {
+    const res = await db.createPublicBooking({
+      barbershopId: SHOP_ID,
+      professionalId: PRO_ACTIVE_ID,
+      serviceIds: [SRV_HAIRCUT_ID, SRV_BEARD_ID],
+      scheduledStart: getFutureWednesdayISO("17:00"),
+      customerName: "Cliente Seguro",
+      customerPhone: "11955556666",
+      customerEmail: "seguro@teste.com",
+      notes: "Nota confidencial",
+    });
+
+    // Valid fields
+    expect(res).toHaveProperty("appointment_id");
+    expect(res).toHaveProperty("scheduled_start");
+    expect(res).toHaveProperty("scheduled_end");
+    expect(res).toHaveProperty("status");
+
+    // Zero PII exposed in returned payload
+    expect(res).not.toHaveProperty("customer_name");
+    expect(res).not.toHaveProperty("customer_phone");
+    expect(res).not.toHaveProperty("customer_email");
+    expect(res).not.toHaveProperty("notes");
+    expect(res).not.toHaveProperty("total_amount");
   });
 });

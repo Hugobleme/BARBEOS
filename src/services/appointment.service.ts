@@ -1,4 +1,4 @@
-﻿// @ts-nocheck
+// @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
 
@@ -35,7 +35,52 @@ export interface CreateAppointmentInput {
   status?: AppointmentStatus;
 }
 
+export interface CreatePublicBookingInput {
+  barbershopId: string;
+  professionalId: string;
+  serviceIds: string[];
+  scheduledStart: Date | string;
+  customerName: string;
+  customerPhone: string;
+  customerEmail?: string | null;
+  notes?: string | null;
+}
+
+export interface CreatedBookingResult {
+  appointment_id: string;
+  scheduled_start: string;
+  scheduled_end: string;
+  status: string;
+}
+
 export const appointmentService = {
+  /**
+   * Cria agendamento público atômico via RPC com validação e concorrência no banco
+   */
+  async createPublicBooking(input: CreatePublicBookingInput): Promise<CreatedBookingResult> {
+    const startIso =
+      typeof input.scheduledStart === "string"
+        ? input.scheduledStart
+        : input.scheduledStart.toISOString();
+
+    const { data, error } = await supabase.rpc("create_public_booking", {
+      p_barbershop_id: input.barbershopId,
+      p_professional_id: input.professionalId,
+      p_service_ids: input.serviceIds,
+      p_scheduled_start: startIso,
+      p_customer_name: input.customerName,
+      p_customer_phone: input.customerPhone,
+      p_customer_email: input.customerEmail || null,
+      p_notes: input.notes || null,
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    return data as CreatedBookingResult;
+  },
+
   /**
    * Verifica se o horário possui conflito com outro agendamento existente
    */
