@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { supabase } from "@/integrations/supabase/client";
 import { Database } from "@/integrations/supabase/types";
+import { reportBookingConflict, reportNetworkDiagnostic } from "@/lib/observability";
 
 export type Appointment = Database["public"]["Tables"]["appointments"]["Row"] & {
   professional?: { id: string; display_name: string; commission_rule?: any };
@@ -75,6 +76,24 @@ export const appointmentService = {
     });
 
     if (error) {
+      const msg = error.message || "";
+      const isConflict =
+        msg.includes("BOOKING_SLOT_TAKEN") ||
+        msg.includes("23P01") ||
+        (error as any).code === "23P01";
+
+      if (isConflict) {
+        reportBookingConflict({
+          route: "/agendar",
+          hasShopContext: Boolean(input.barbershopId),
+        });
+      } else {
+        reportNetworkDiagnostic("submit_public_booking", error, {
+          route: "/agendar",
+          hasShopContext: Boolean(input.barbershopId),
+        });
+      }
+
       throw error;
     }
 

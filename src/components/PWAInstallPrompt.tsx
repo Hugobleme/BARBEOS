@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { reportPwaDiagnostic } from "@/lib/observability";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,12 +14,41 @@ const STORAGE_KEY = "barberos-pwa-install-dismissed";
 export function PWAInstallPrompt({ className }: { className?: string }) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isVisible, setIsVisible] = useState(false);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    // Verifica se está rodando em ambiente navegador
     if (typeof window === "undefined") return;
 
-    // Se já estiver instalado em modo standalone, não exibe
+    // Monitor service worker lifecycle safely
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .getRegistration()
+        .then((reg) => {
+          if (!reg) return;
+
+          if (reg.waiting) {
+            setUpdateAvailable(true);
+            reportPwaDiagnostic("update_detected");
+          }
+
+          reg.addEventListener("updatefound", () => {
+            const installingWorker = reg.installing;
+            if (!installingWorker) return;
+
+            installingWorker.addEventListener("statechange", () => {
+              if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                setUpdateAvailable(true);
+                reportPwaDiagnostic("update_detected");
+              }
+            });
+          });
+        })
+        .catch((err) => {
+          reportPwaDiagnostic("registration_failure", err?.message);
+        });
+    }
+
+    // Se já estiver instalado em modo standalone, não exibe prompt de instalação
     if (window.matchMedia("(display-mode: standalone)").matches) {
       return;
     }
@@ -69,6 +99,11 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
     setIsVisible(false);
   }
 
+  function handleReloadForUpdate() {
+    reportPwaDiagnostic("reload_triggered");
+    window.location.reload();
+  }
+
   if (updateAvailable) {
     return (
       <div
@@ -85,7 +120,7 @@ export function PWAInstallPrompt({ className }: { className?: string }) {
         </div>
         <Button
           size="sm"
-          onClick={() => window.location.reload()}
+          onClick={handleReloadForUpdate}
           className="rounded-none bg-accent text-accent-foreground text-xs font-bold uppercase tracking-wider hover:bg-foreground hover:text-background shrink-0"
         >
           Recarregar agora

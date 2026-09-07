@@ -194,3 +194,45 @@ npm run test:e2e:report
 - **Default & CI Mode:** All public-route, unauthenticated guard, PDV rendering, and mobile smoke tests run against the local preview build without mutating any database records.
 - **Writable / Destructive Mode:** Final booking write tests and concurrent reservation conflict tests (`Promise.all` two browser contexts) execute **only** when `E2E_WRITABLE_ENV=true` and dedicated credentials are provided; otherwise they are safely skipped.
 - **Failure Artifacts:** Screenshots, traces, and videos are captured only on failure in `playwright-report/` and uploaded as CI workflow artifacts.
+
+---
+
+## 📊 Observability & Privacy-Safe Operational Diagnostics
+
+BARBEOS includes a zero-overhead, privacy-first observability layer (`src/lib/observability.ts`, `src/lib/sanitize-error.ts`) designed to diagnose client, router, network, and atomic booking collisions without collecting sensitive user or authorization data.
+
+### 🛡️ Privacy & Zero-PII Policy
+
+All captured errors are aggressively sanitized before logging or transmission. The following items are strictly redacted:
+- **Authentication & Secrets:** JWT tokens (`eyJ...`), Bearer tokens, Supabase anonymous/service keys, passwords, cookie/authorization headers (`[REDACTED_HEADER]`, `[REDACTED_JWT]`, `[REDACTED_SECRET]`).
+- **Customer Personal Data (PII):** Full names, email addresses (`[REDACTED_EMAIL]`), Brazilian phone numbers in multiple formats (`[REDACTED_PHONE]`), and internal customer/user UUIDs (`[REDACTED_ID]`).
+- **Query Parameters:** Query string keys including `token`, `auth`, `key`, `secret`, `password`, `email`, `phone`, and `customer_id` are redacted.
+- **Message Bounds:** Error messages are capped at 200 characters with ellipsis. Stack traces are never logged in production.
+
+### 🚀 Key Features
+
+1. **Client & Server Containment:**
+   - Client global listeners capture uncaught errors (`window.error`, `unhandledrejection`) safely.
+   - React Error Boundary (`src/components/ErrorBoundary.tsx`) catches runtime render errors and presents a localized, friendly recovery screen without showing raw exceptions or stacks.
+   - Server-side runtime (`src/server.ts`) outputs single-line structured JSON logs (`timestamp`, `source`, `operation`, `route`, `message`, `status`, `code`) omitting request bodies, query parameters, cookies, and authorization headers.
+
+2. **Atomic Booking Conflict Tracking:**
+   - Slot reservation collisions (`BOOKING_SLOT_TAKEN` / PostgreSQL `23P01`) are recorded as handled, retryable diagnostic events without persisting customer credentials.
+
+3. **PWA Lifecycle Diagnostics:**
+   - Service worker registration, update checks, and reload triggers are safely tracked via `reportPwaDiagnostic`.
+
+4. **Deduplication & Rate Limiting:**
+   - Sliding window (5 seconds) eliminates identical error spam.
+   - Per-session budget (max 50 events) prevents client resource exhaustion.
+
+### 📋 Incident Response Runbook
+
+When diagnosing errors in production:
+1. **Filter by Source:** Inspect logs by `source`: `"booking"` (slot conflicts), `"network"` (Supabase RPC/query failures), `"pwa"` (Service Worker lifecycle), `"ui"` (React components), `"router"` (TanStack Router).
+2. **Examine `errorCode` & `status`:**
+   - `BOOKING_SLOT_TAKEN` / `23P01` (Status 409): Expected atomic concurrency collision when two clients book the same slot simultaneously. The client is guided to pick another slot.
+   - `42501`: PostgreSQL Row Level Security (RLS) violation. Verify RLS policies on the queried table or RPC.
+   - `PGRST...`: PostgREST schema mismatch or parameter validation failure.
+3. **Check `operation`:** Pinpoints the exact application function (e.g. `submit_public_booking`, `react_render`, `update_detected`).
+

@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { appointmentService } from "@/services/appointment.service";
 import { availabilityService } from "@/services/availability.service";
 import { barbershopService } from "@/services/barbershop.service";
+import { reportError } from "@/lib/observability";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/agendar")({
 });
 
 function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => void }) {
-  console.error("Booking route error", error);
+  reportError(error, { source: "router", route: "/agendar" });
   const isChunkError =
     error.name === "ChunkLoadError" ||
     error.message.includes("Failed to fetch dynamically imported module") ||

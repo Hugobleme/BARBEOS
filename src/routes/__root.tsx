@@ -1,4 +1,4 @@
-﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -58,9 +58,20 @@ function getReadableError(error: unknown): string {
   return String(error);
 }
 
+import { useEffect } from "react";
+import { initGlobalErrorListeners, reportError } from "@/lib/observability";
+
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error("Unhandled application error", error);
   const router = useRouter();
+  const loc = useRouterState({ select: (s) => s.location });
+
+  useEffect(() => {
+    reportError(error, {
+      source: "router",
+      route: loc?.pathname || (typeof window !== "undefined" ? window.location.pathname : "/"),
+      operation: "route_render",
+    });
+  }, [error, loc?.pathname]);
 
   if (
     error.message?.includes("Failed to fetch dynamically imported module") ||
@@ -193,6 +204,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const isLoading = useRouterState({ select: (s) => s.status === "pending" });
+
+  useEffect(() => {
+    initGlobalErrorListeners();
+  }, []);
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="barberos-theme">
