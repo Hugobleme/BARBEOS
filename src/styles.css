@@ -1,13 +1,13 @@
-﻿@import "tailwindcss" source(none);
+@import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-display: 'Playfair Display', ui-serif, Georgia, serif;
-  --font-serif: 'Playfair Display', ui-serif, Georgia, serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Playfair Display", ui-serif, Georgia, serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -63,26 +63,31 @@
 }
 
 @layer base {
-  * { 
-    border-color: var(--color-border); 
+  * {
+    border-color: var(--color-border);
     outline-color: var(--color-ring);
   }
-  html { 
-    font-family: var(--font-sans); 
+  html {
+    font-family: var(--font-sans);
     scroll-behavior: smooth;
     -webkit-tap-highlight-color: transparent;
   }
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-feature-settings: "ss01","cv11","salt";
+    font-feature-settings: "ss01", "cv11", "salt";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     line-height: 1.6;
   }
-  h1,h2,h3,h4,h5,h6 { 
-    font-family: var(--font-display); 
-    letter-spacing: -0.01em; 
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
     font-weight: 600;
     line-height: 1.2;
   }
@@ -102,7 +107,7 @@
     @apply relative overflow-hidden bg-accent text-accent-foreground font-bold tracking-wider uppercase text-xs rounded-xl shadow-lg shadow-accent/20 transition-all duration-300 hover:bg-white hover:text-black hover:shadow-white/20 active:scale-[0.98];
   }
   .btn-premium::after {
-    content: '';
+    content: "";
     @apply absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 transition-opacity duration-300;
   }
   .btn-premium:hover::after {
@@ -126,4 +131,22 @@
 
 .page-transition {
   @apply animate-in fade-in zoom-in-[0.98] duration-500 ease-out;
+}
+
+/* Accessibility: prefers-reduced-motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessibility: focus ring */
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }

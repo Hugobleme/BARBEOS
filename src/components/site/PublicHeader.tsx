@@ -1,4 +1,4 @@
-﻿import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { Menu, Scissors, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -26,7 +26,12 @@ export function PublicHeader() {
         <div className="flex items-center gap-4">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden"
+                aria-label="Abrir menu de navegação"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -47,6 +52,7 @@ export function PublicHeader() {
                   <Link
                     key={link.to}
                     to={link.to}
+                    aria-current={loc.pathname === link.to ? "page" : undefined}
                     onClick={() => setOpen(false)}
                     className={`rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-[0.2em] transition-all active:scale-95 ${loc.pathname === link.to ? "bg-accent/10 text-accent" : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"}`}
                   >
@@ -66,8 +72,11 @@ export function PublicHeader() {
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 place-items-center border border-accent/40 bg-accent/10 text-accent">
+          <Link to="/" className="flex items-center gap-2.5" aria-label="Página inicial BarberOS">
+            <span
+              className="grid h-9 w-9 place-items-center border border-accent/40 bg-accent/10 text-accent"
+              aria-hidden="true"
+            >
               <Scissors className="h-4 w-4" />
             </span>
             <span className="font-serif text-xl tracking-tight hidden xs:inline">BarberOS</span>
@@ -76,7 +85,12 @@ export function PublicHeader() {
 
         <nav className="hidden items-center gap-8 text-[11px] font-medium uppercase tracking-[0.25em] text-muted-foreground md:flex">
           {NAV_LINKS.map((link) => (
-            <Link key={link.to} to={link.to} className="transition-colors hover:text-accent">
+            <Link
+              key={link.to}
+              to={link.to}
+              aria-current={loc.pathname === link.to ? "page" : undefined}
+              className={`transition-colors hover:text-accent ${loc.pathname === link.to ? "text-accent font-semibold" : ""}`}
+            >
               {link.label}
             </Link>
           ))}

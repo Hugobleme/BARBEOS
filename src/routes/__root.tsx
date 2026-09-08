@@ -73,15 +73,50 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     });
   }, [error, loc?.pathname]);
 
-  if (
+  const isChunkError =
     error.message?.includes("Failed to fetch dynamically imported module") ||
     error.message?.includes("Importing a module script failed") ||
-    error.name === "ChunkLoadError"
-  ) {
-    if (typeof window !== "undefined") {
-      window.location.reload();
-      return <div className="p-8 text-center text-muted-foreground">Atualizando aplicativo...</div>;
-    }
+    error.name === "ChunkLoadError";
+
+  if (isChunkError) {
+    const handleRetry = () => {
+      if (typeof window !== "undefined") {
+        const lastReload = sessionStorage.getItem("barbeos_chunk_retry");
+        const now = Date.now();
+        if (!lastReload || now - Number(lastReload) > 10000) {
+          sessionStorage.setItem("barbeos_chunk_retry", String(now));
+          window.location.reload();
+        } else {
+          router.invalidate();
+          reset();
+        }
+      }
+    };
+
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <div className="max-w-md text-center border border-border bg-card/60 p-8 backdrop-blur-md">
+          <h1 className="font-serif text-2xl font-bold text-foreground">
+            Não foi possível carregar esta página.
+          </h1>
+          <p className="mt-2 text-xs text-muted-foreground">Tente novamente.</p>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button
+              onClick={handleRetry}
+              className="inline-flex items-center justify-center rounded-none bg-accent px-5 py-2 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-colors hover:bg-foreground hover:text-background"
+            >
+              Tentar novamente
+            </button>
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-none border border-border bg-card px-5 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              Página inicial
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const isDevelopment = import.meta.env.DEV;
@@ -184,13 +219,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <meta charSet="UTF-8" />
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <HeadContent />
       </head>
       <body className="overflow-x-hidden antialiased bg-background text-foreground">

@@ -1,4 +1,4 @@
-﻿import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
@@ -8,7 +8,7 @@ export default defineConfig({
     },
   },
   nitro: {
-    preset: "vercel",
+    preset: process.env.VERCEL ? "vercel" : undefined,
   },
   build: {
     charset: "utf-8",
@@ -16,19 +16,24 @@ export default defineConfig({
     minify: "esbuild",
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom"],
-          "vendor-router": ["@tanstack/react-router"],
-          "vendor-query": ["@tanstack/react-query"],
-          "vendor-supabase": ["@supabase/supabase-js"],
-          "vendor-ui": [
-            "framer-motion",
-            "lucide-react",
-            "date-fns",
-            "clsx",
-            "tailwind-merge",
-            "zod",
-          ],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            if (id.includes("recharts") || id.includes("d3-")) {
+              return "vendor-charts";
+            }
+            if (id.includes("@supabase")) {
+              return "vendor-supabase";
+            }
+            if (id.includes("@tanstack/react-router") || id.includes("@tanstack/react-query")) {
+              return "vendor-tanstack";
+            }
+            if (id.includes("framer-motion")) {
+              return "vendor-motion";
+            }
+            if (id.includes("react-dom") || id.includes("react/")) {
+              return "vendor-react";
+            }
+          }
         },
       },
     },

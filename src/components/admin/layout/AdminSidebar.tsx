@@ -216,6 +216,7 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
                     {!collapsed ? (
                       <button
                         onClick={() => toggleSection(group.title)}
+                        aria-expanded={isOpen}
                         className="flex w-full items-center justify-between px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
                       >
                         {group.title}
@@ -244,6 +245,7 @@ export function AdminSidebar({ navItems, open, setOpen }: SidebarProps) {
                               <Link
                                 key={n.to}
                                 to={n.to}
+                                aria-current={active ? "page" : undefined}
                                 onClick={() => {
                                   if (window.innerWidth < 768) setOpen(false);
                                 }}

@@ -142,7 +142,10 @@ function BarbeariasPage() {
               </div>
               <div>
                 <Select value={minRating} onValueChange={setMinRating}>
-                  <SelectTrigger className="h-11 text-base md:text-sm bg-background border-border/40">
+                  <SelectTrigger
+                    aria-label="Filtrar por avaliação mínima"
+                    className="h-11 text-base md:text-sm bg-background border-border/40"
+                  >
                     <SelectValue placeholder="Avaliação mínima" />
                   </SelectTrigger>
                   <SelectContent>
@@ -155,7 +158,10 @@ function BarbeariasPage() {
               </div>
               <div>
                 <Select value={sort} onValueChange={setSort}>
-                  <SelectTrigger className="h-11 text-base md:text-sm bg-background border-border/40">
+                  <SelectTrigger
+                    aria-label="Ordenar resultados"
+                    className="h-11 text-base md:text-sm bg-background border-border/40"
+                  >
                     <SelectValue placeholder="Ordenar por" />
                   </SelectTrigger>
                   <SelectContent>

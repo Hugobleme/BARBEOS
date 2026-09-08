@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,6 @@ import {
   Star,
 } from "lucide-react";
 import { brl, minutes, DEMO_BARBERSHOP_ID } from "@/lib/format";
-import { AuroraFab } from "@/components/aurora/AuroraFab";
 import { OptimizedImage } from "@/components/OptimizedImage";
 import { Image } from "@/components/Image";
 import heroImage from "@/assets/hero-barbershop.jpg";
@@ -237,14 +236,15 @@ function Landing() {
             <div className="pointer-events-none absolute -right-10 -top-10 h-72 w-72 rounded-full bg-accent/20 blur-[120px]" />
             <div className="pointer-events-none absolute -left-10 -bottom-10 h-64 w-64 rounded-full bg-accent/15 blur-[100px]" />
 
-            <div
-              className="group relative min-h-[400px] sm:aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]"
-              style={{
-                backgroundImage: "url('/hero-barbershop.jpg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
+            <div className="group relative min-h-[400px] sm:aspect-[3/4] overflow-hidden rounded-none border border-accent/40 shadow-[0_0_50px_rgba(212,175,55,0.18)]">
+              <img
+                src={heroImage}
+                alt="Ambiente sofisticado de barbearia premium BarberOS"
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+              />
               {/* Gradient overlay sutil para manter a imagem brilhante e visível */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-80 pointer-events-none transition-opacity duration-1000 group-hover:opacity-90" />
 
@@ -305,7 +305,10 @@ function Landing() {
                 Ordenar:
               </span>
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[180px] rounded-none border-border bg-background/60 text-xs">
+                <SelectTrigger
+                  aria-label="Ordenar barbearias"
+                  className="w-[180px] rounded-none border-border bg-background/60 text-xs"
+                >
                   <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent className="rounded-none border-border">

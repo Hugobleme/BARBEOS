@@ -7,8 +7,11 @@ export function PublicFooter() {
       <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
         <div className="grid gap-10 md:grid-cols-5">
           <div className="md:col-span-2">
-            <Link to="/" className="flex items-center gap-2.5">
-              <span className="grid h-9 w-9 place-items-center border border-accent/40 bg-accent/10 text-accent">
+            <Link to="/" className="flex items-center gap-2.5" aria-label="Página inicial BarberOS">
+              <span
+                className="grid h-9 w-9 place-items-center border border-accent/40 bg-accent/10 text-accent"
+                aria-hidden="true"
+              >
                 <Scissors className="h-4 w-4" />
               </span>
               <span className="font-serif text-xl tracking-tight text-foreground">BarberOS</span>

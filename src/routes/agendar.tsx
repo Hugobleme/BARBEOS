@@ -96,7 +96,7 @@ function BookingErrorBoundary({ error, reset }: { error: Error; reset: () => voi
   );
 }
 
-const STEPS = ["Serviço", "Profissional", "3. Escolha o dia e horário", "Confirmar"] as const;
+const STEPS = ["Serviços", "Profissional", "Data e Horário", "Confirmação"] as const;
 
 type Service = {
   id: string;
@@ -502,7 +502,7 @@ function BookingPage() {
           {shop.logo_url && (
             <img
               src={shop.logo_url}
-              alt="Logo"
+              alt={`Logo da barbearia ${shop.name}`}
               className="h-12 w-12 rounded-lg object-cover border border-border/40 shadow-sm hidden md:block"
             />
           )}
@@ -511,12 +511,21 @@ function BookingPage() {
 
       <div className="mx-auto max-w-3xl px-4 py-8 md:py-12 pb-32">
         {/* Stepper indicator */}
-        <div className="mb-8">
+        <div
+          className="mb-8"
+          role="progressbar"
+          aria-valuenow={step + 1}
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuetext={`Passo ${step + 1} de ${STEPS.length}: ${STEPS[step]}`}
+        >
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               Passo {step + 1} de {STEPS.length}
             </span>
-            <span className="text-sm font-bold text-accent">{STEPS[step]}</span>
+            <span className="text-sm font-bold text-accent" aria-current="step">
+              {STEPS[step]}
+            </span>
           </div>
           <div className="h-2 w-full bg-border/40 rounded-full overflow-hidden">
             <div
@@ -552,6 +561,8 @@ function BookingPage() {
                     return (
                       <button
                         key={s.id}
+                        type="button"
+                        aria-pressed={sel}
                         onClick={() => {
                           if (sel) setPickedServices((prev) => prev.filter((x) => x.id !== s.id));
                           else setPickedServices((prev) => [...prev, s]);
@@ -600,6 +611,8 @@ function BookingPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <button
+                    type="button"
+                    aria-pressed={proId === "any"}
                     onClick={() => setProId("any")}
                     className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all text-center ${
                       proId === "any"
@@ -618,6 +631,8 @@ function BookingPage() {
                   {pros.map((p) => (
                     <button
                       key={p.id}
+                      type="button"
+                      aria-pressed={proId === p.id}
                       onClick={() => setProId(p.id)}
                       className={`flex flex-col items-center justify-center p-4 rounded-xl border transition-all text-center ${
                         proId === p.id
@@ -645,7 +660,7 @@ function BookingPage() {
           {step === 2 && (
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">Data</h2>
+                <h2 className="text-lg font-bold mb-4">3. Escolha a data</h2>
                 <Calendar
                   mode="single"
                   selected={date}
@@ -659,24 +674,28 @@ function BookingPage() {
               </Card>
 
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">4. Selecione o horário</h2>
+                <h2 className="text-lg font-bold mb-4">Horários disponíveis</h2>
                 {!date ? (
                   <p className="text-sm text-muted-foreground">
                     Por favor, escolha o dia do seu atendimento.
                   </p>
                 ) : slotsLoading ? (
-                  <div className="flex flex-col items-center justify-center p-6 gap-2">
+                  <div
+                    className="flex flex-col items-center justify-center p-6 gap-2"
+                    role="status"
+                    aria-live="polite"
+                  >
                     <div className="h-6 w-6 animate-spin rounded-full border-2 border-accent border-t-transparent" />
                     <p className="text-xs text-muted-foreground">
                       Carregando horários disponíveis...
                     </p>
                   </div>
                 ) : slotsError ? (
-                  <p className="text-sm text-destructive">
+                  <p className="text-sm text-destructive" role="alert">
                     Não foi possível carregar os horários. Tente novamente em alguns instantes.
                   </p>
                 ) : slots.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground" role="status">
                     {slotsData?.emptyReason === "no_shop_hours"
                       ? "Esta barbearia ainda não configurou seus horários de funcionamento."
                       : slotsData?.emptyReason === "closed_day"
@@ -688,10 +707,18 @@ function BookingPage() {
                             : "Não encontramos horários disponíveis para esta data."}
                   </p>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  <div
+                    className="grid grid-cols-3 sm:grid-cols-4 gap-2"
+                    role="region"
+                    aria-live="polite"
+                    aria-label="Horários disponíveis"
+                  >
                     {slots.map((t) => (
                       <button
                         key={t}
+                        type="button"
+                        aria-pressed={time === t}
+                        aria-label={`Horário ${t}`}
                         onClick={() => setTime(t)}
                         className={`py-2 px-1 text-center rounded-lg text-sm font-bold border transition-colors ${
                           time === t
@@ -711,7 +738,7 @@ function BookingPage() {
           {step === 3 && (
             <div className="grid md:grid-cols-2 gap-6">
               <Card className="p-4 md:p-6 border-border/40 shadow-sm">
-                <h2 className="text-lg font-bold mb-4">5. Confirme seu agendamento</h2>
+                <h2 className="text-lg font-bold mb-4">4. Confirme seu agendamento</h2>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">Serviços</span>
@@ -734,7 +761,7 @@ function BookingPage() {
                   <div className="flex justify-between gap-4">
                     <span className="text-muted-foreground">Data/Hora</span>
                     <span className="text-right font-medium text-accent">
-                      {date && format(date, "dd/MM/yyyy", { locale: ptBR })} Ã s {time}
+                      {date && format(date, "dd/MM/yyyy", { locale: ptBR })} às {time}
                     </span>
                   </div>
                   <div className="border-t border-border/40 pt-3 mt-3 flex justify-between items-center text-base">
@@ -748,14 +775,24 @@ function BookingPage() {
                 <Card className="p-4 md:p-6 border-border/40 shadow-sm bg-accent/5">
                   <h2 className="text-lg font-bold mb-4">Identificação</h2>
 
-                  <div className="flex rounded-lg overflow-hidden border border-border/60 mb-4 text-xs font-bold">
+                  <div
+                    role="tablist"
+                    aria-label="Modo de autenticação"
+                    className="flex rounded-lg overflow-hidden border border-border/60 mb-4 text-xs font-bold"
+                  >
                     <button
+                      type="button"
+                      role="tab"
+                      aria-selected={authMode === "login"}
                       onClick={() => setAuthMode("login")}
                       className={`flex-1 py-2 text-center transition-colors ${authMode === "login" ? "bg-accent text-accent-foreground" : "bg-card hover:bg-muted"}`}
                     >
                       Já tenho conta
                     </button>
                     <button
+                      type="button"
+                      role="tab"
+                      aria-selected={authMode === "register"}
                       onClick={() => setAuthMode("register")}
                       className={`flex-1 py-2 text-center transition-colors ${authMode === "register" ? "bg-accent text-accent-foreground" : "bg-card hover:bg-muted"}`}
                     >
@@ -767,16 +804,27 @@ function BookingPage() {
                     {authMode === "register" && (
                       <>
                         <div className="space-y-1">
-                          <Label>Nome completo</Label>
+                          <Label htmlFor="booking-customer-name">Nome completo</Label>
                           <Input
+                            id="booking-customer-name"
+                            name="name"
+                            autoComplete="name"
+                            required
+                            aria-required="true"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="h-10 bg-background"
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label>Telefone (WhatsApp)</Label>
+                          <Label htmlFor="booking-customer-phone">Telefone (WhatsApp)</Label>
                           <Input
+                            id="booking-customer-phone"
+                            name="tel"
+                            type="tel"
+                            autoComplete="tel"
+                            required
+                            aria-required="true"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                             className="h-10 bg-background"
@@ -786,18 +834,28 @@ function BookingPage() {
                       </>
                     )}
                     <div className="space-y-1">
-                      <Label>E-mail</Label>
+                      <Label htmlFor="booking-customer-email">E-mail</Label>
                       <Input
+                        id="booking-customer-email"
+                        name="email"
                         type="email"
+                        autoComplete="email"
+                        required
+                        aria-required="true"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="h-10 bg-background"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label>Senha</Label>
+                      <Label htmlFor="booking-customer-password">Senha</Label>
                       <Input
+                        id="booking-customer-password"
+                        name="password"
                         type="password"
+                        autoComplete={authMode === "login" ? "current-password" : "new-password"}
+                        required
+                        aria-required="true"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         className="h-10 bg-background"
@@ -847,6 +905,7 @@ function BookingPage() {
         <Button
           variant="outline"
           size="icon"
+          aria-label="Voltar para o passo anterior"
           disabled={step === 0 || submitting}
           onClick={() => setStep((s) => s - 1)}
           className="h-12 w-12 shrink-0 border-border/60"

@@ -7,6 +7,7 @@ interface ImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   imageClassName?: string;
   aspectRatio?: "square" | "video" | "photo" | "auto" | "portrait";
   fallback?: string;
+  fetchPriority?: "high" | "low" | "auto";
 }
 
 export function Image({
@@ -16,6 +17,7 @@ export function Image({
   imageClassName = "",
   aspectRatio = "auto",
   fallback = "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1200&q=80",
+  loading = "lazy",
   ...props
 }: ImageProps) {
   const [loaded, setLoaded] = useState(false);
@@ -36,7 +38,7 @@ export function Image({
       <img
         src={imageSrc}
         alt={alt}
-        loading="lazy"
+        loading={loading}
         onLoad={() => setLoaded(true)}
         onError={() => {
           setError(true);

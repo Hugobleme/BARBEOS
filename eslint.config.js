@@ -9,11 +9,16 @@ import barbeosPlugin from "./eslint-plugin-barbeos/index.js";
 export default tseslint.config(
   {
     ignores: [
-      "dist",
-      ".output",
-      ".vinxi",
-      ".vercel",
-      "node_modules",
+      "**/dist/**",
+      "**/.output/**",
+      "**/.vinxi/**",
+      "**/.vercel/**",
+      "**/.tanstack/**",
+      "**/playwright-report/**",
+      "**/test-results/**",
+      "**/node_modules/**",
+      "**/whatsapp-bot/**",
+      "**/supabase/**",
       "*.cjs",
       "src/integrations/supabase/types.ts",
     ],

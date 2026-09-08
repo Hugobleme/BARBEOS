@@ -69,6 +69,8 @@ export function AdminHeader({
     <header className="sticky top-0 z-30 flex h-20 md:h-16 flex-col md:flex-row items-stretch md:items-center justify-between gap-2 md:gap-4 border-b border-border/40 bg-background/80 px-4 backdrop-blur-xl md:px-8 py-2 md:py-0">
       <div className="flex items-center justify-between md:justify-start gap-4">
         <button
+          type="button"
+          aria-label="Abrir menu lateral"
           className="rounded-lg p-2 transition-colors hover:bg-accent/10 active:scale-90 md:hidden"
           onClick={() => setOpenSidebar(true)}
         >
@@ -112,6 +114,7 @@ export function AdminHeader({
                 <Button
                   size="icon"
                   variant="ghost"
+                  aria-label="Criar nova unidade"
                   className="h-7 w-7 rounded-lg hover:bg-accent/20 hover:text-accent shrink-0"
                 >
                   <Plus className="h-4 w-4" />
@@ -173,7 +176,11 @@ export function AdminHeader({
         {/* User Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex h-9 items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-3 md:px-4 transition-colors hover:bg-muted/40">
+            <button
+              type="button"
+              aria-label="Menu do usuário"
+              className="flex h-9 items-center gap-3 rounded-xl border border-border/40 bg-muted/20 px-3 md:px-4 transition-colors hover:bg-muted/40"
+            >
               <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20">
                 <User className="h-3.5 w-3.5 text-accent" />
               </div>
