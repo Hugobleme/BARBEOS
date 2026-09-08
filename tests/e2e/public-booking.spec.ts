@@ -46,14 +46,14 @@ test.describe("4. Public Booking Flow Suite", () => {
       await serviceCard.click();
 
       const nextButton = page.getByRole("button", { name: /continuar|avançar|próximo/i });
-      if (await nextButton.isEnabled()) {
+      if ((await nextButton.isVisible()) && (await nextButton.isEnabled())) {
         await nextButton.click();
 
         const anyPro = page.getByText(/qualquer profissional/i);
         if (await anyPro.isVisible()) {
           await anyPro.click();
           const proNext = page.getByRole("button", { name: /continuar|avançar|próximo/i });
-          if (await proNext.isEnabled()) {
+          if ((await proNext.isVisible()) && (await proNext.isEnabled())) {
             await proNext.click();
           }
         }

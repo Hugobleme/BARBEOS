@@ -236,3 +236,22 @@ When diagnosing errors in production:
    - `PGRST...`: PostgREST schema mismatch or parameter validation failure.
 3. **Check `operation`:** Pinpoints the exact application function (e.g. `submit_public_booking`, `react_render`, `update_detected`).
 
+---
+
+## 🚀 Release Readiness & Health Checklist
+
+Before and after every deployment to production, follow the standardized release sequence and runbooks:
+
+### 📚 Official Runbooks
+- [**Release Runbook**](./docs/RELEASE_RUNBOOK.md): Complete pre-merge, pre-deploy, Vercel verification, and rollback criteria.
+- [**Production Smoke Test**](./docs/PRODUCTION_SMOKE_TEST.md): Manual, non-destructive step-by-step verification guide for owners and engineers.
+- [**Incident Response Runbook**](./docs/INCIDENT_RESPONSE.md): Severity matrix (P0/P1/P2), safe logging policies, and response workflows.
+
+### 🔄 Release Sequence
+1. **Validate CI:** Ensure GitHub Actions CI passes completely (`lint`, `lint:icons`, `build`, `unit`, `e2e`).
+2. **Confirm GitHub `main` commit:** Verify target commit hash is on `origin/main`.
+3. **Confirm Vercel Ready deployment:** Verify deployment status is `Ready` on the production domain.
+4. **Run production smoke test:** Execute non-destructive checks following [PRODUCTION_SMOKE_TEST.md](./docs/PRODUCTION_SMOKE_TEST.md) or run `npm run test:smoke:production`.
+5. **Monitor sanitized errors:** Check observability logs for unexpected `booking`, `network`, or `ui` errors.
+6. **Record incident or release result:** Fill in the smoke test template or file an incident report if issues are detected.
+

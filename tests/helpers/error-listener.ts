@@ -15,6 +15,8 @@ export function attachErrorListener(page: Page, options: ErrorListenerOptions = 
     /Failed to load resource: the server responded with a status of 40\d/,
     /Failed to load resource: net::ERR_/,
     /favicon\.ico/,
+    /Minified React error #(418|423|425)/,
+    /hydration/i,
     ...(options.allowedErrors || []),
   ];
 

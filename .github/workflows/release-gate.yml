@@ -1,0 +1,77 @@
+name: Release Gate Verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment to verify"
+        required: true
+        type: choice
+        default: "preview"
+        options:
+          - preview
+          - staging
+          - production
+      base_url:
+        description: "Base URL for non-destructive production smoke tests (e.g. https://barbeos.vercel.app)"
+        required: false
+        default: "http://localhost:4173"
+      run_smoke:
+        description: "Execute non-destructive smoke test against base_url"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  verify-release:
+    name: Release Verification (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Lint icons
+        run: npm run lint:icons
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit & Integration Tests
+        run: npm run test:unit
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright E2E Tests (Isolated Preview)
+        run: npm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:4173
+          E2E_WRITABLE_ENV: "false"
+
+      - name: Run Non-Destructive Smoke Tests
+        if: ${{ inputs.run_smoke }}
+        run: npm run test:smoke:production
+        env:
+          E2E_BASE_URL: ${{ inputs.base_url }}
+          E2E_WRITABLE_ENV: "false"
+
+      - name: Upload Playwright Report on Failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: release-verification-playwright-report
+          path: playwright-report/
+          retention-days: 7
