@@ -1,7 +1,6 @@
 {
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts", "eslint.config.js"],
   "compilerOptions": {
-    "charset": "utf-8",
     "target": "ES2022",
     "jsx": "react-jsx",
     "module": "ESNext",
