@@ -1,6 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AvailabilityService } from "../../src/services/availability.service";
 
+vi.mock("../../src/integrations/supabase/client", () => ({
+  supabase: {
+    from: vi.fn(),
+    rpc: vi.fn(),
+  },
+}));
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: vi.fn(),
@@ -8,7 +15,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../../src/integrations/supabase/client";
 import { addDays, format } from "date-fns";
 
 describe("AvailabilityService", () => {
@@ -19,18 +26,28 @@ describe("AvailabilityService", () => {
     vi.resetAllMocks();
   });
 
+  interface MockSupabaseOptions {
+    shopHours?: any[];
+    proHours?: any[];
+    timeOffs?: any[];
+    conflicts?: any[];
+    hasAnyShopHours?: boolean;
+    hasAnyProHours?: boolean;
+    pros?: Array<{ id: string }>;
+  }
+
   /**
    * Helper to configure the Supabase query mock
    */
   const mockSupabase = ({
-    shopHours = [] as any[],
-    proHours = [] as any[],
-    timeOffs = [] as any[],
-    conflicts = [] as any[],
+    shopHours = [],
+    proHours = [],
+    timeOffs = [],
+    conflicts = [],
     hasAnyShopHours = shopHours.length > 0,
     hasAnyProHours = proHours.length > 0,
     pros = [{ id: "pro1" }],
-  } = {}) => {
+  }: MockSupabaseOptions = {}) => {
     (supabase.from as any).mockImplementation((table: string) => {
       if (table === "barbershop_business_hours") {
         return {
