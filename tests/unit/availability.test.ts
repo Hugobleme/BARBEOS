@@ -337,8 +337,9 @@ describe("AvailabilityService", () => {
     (supabase.rpc as any).mockResolvedValue({ data: [], error: null });
 
     // Test a specific calendar date in local time
-    const testDate = new Date(2026, 8, 8, 23, 30, 0); // Tuesday 23:30
-    const localWeekday = testDate.getDay(); // 2
+    const testDate = addDays(new Date(), 7);
+    testDate.setHours(23, 30, 0, 0);
+    const localWeekday = testDate.getDay();
 
     await service.getAvailableSlots({
       barbershopId: "shop1",

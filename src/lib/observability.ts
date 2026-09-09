@@ -283,6 +283,25 @@ export function reportPwaDiagnostic(
 }
 
 /**
+ * Reports safe non-error operational events (e.g. notification outbox lifecycle).
+ */
+export function reportObservabilityEvent(
+  operation:
+    | "notification_event_enqueued"
+    | "notification_event_duplicate_prevented"
+    | "notification_event_enqueue_failed"
+    | "notification_provider_disabled",
+  context: Partial<SafeErrorEvent> = {},
+): SafeErrorEvent | null {
+  return reportError(new Error(`Operational event: ${operation}`), {
+    source: "network",
+    operation,
+    retryable: false,
+    ...context,
+  });
+}
+
+/**
  * Initializes global client-side error listeners idempotently.
  */
 export function initGlobalErrorListeners(): void {
