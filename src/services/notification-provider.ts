@@ -66,6 +66,71 @@ export class DisabledNotificationProvider implements INotificationProvider {
   }
 }
 
+export type SimulationMode = "success" | "retryable_failure" | "permanent_failure";
+
+export interface SimulatedProviderOptions {
+  defaultMode?: SimulationMode;
+  failureCode?: string;
+}
+
+/**
+ * Isolated simulation provider for rehearsal and automated outbox testing.
+ * Makes zero network calls, requires zero credentials, and never exposes PII.
+ */
+export class SimulatedNotificationProvider implements INotificationProvider {
+  readonly name = "simulated";
+  private mode: SimulationMode;
+  private customFailureCode?: string;
+
+  constructor(options: SimulatedProviderOptions = {}) {
+    this.mode = options.defaultMode || "success";
+    this.customFailureCode = options.failureCode;
+  }
+
+  isConfigured(): boolean {
+    return true;
+  }
+
+  setMode(mode: SimulationMode, failureCode?: string): void {
+    this.mode = mode;
+    this.customFailureCode = failureCode;
+  }
+
+  async send(payload: NotificationDeliveryPayload): Promise<NotificationDeliveryResult> {
+    // Determine behavior either from explicit metadata override (in isolated tests) or instance mode
+    const requestedMode = (payload.metadata?.simulation_mode as SimulationMode) || this.mode;
+
+    reportObservabilityEvent("notification_event_simulated", {
+      route: "outbox_worker",
+      hasShopContext: Boolean(payload.barbershopId),
+      statusCode: 200,
+    });
+
+    if (requestedMode === "retryable_failure") {
+      return {
+        ok: false,
+        retryable: true,
+        failureCode: this.customFailureCode || "SIMULATED_TRANSIENT_RATE_LIMIT",
+      };
+    }
+
+    if (requestedMode === "permanent_failure") {
+      return {
+        ok: false,
+        retryable: false,
+        failureCode: this.customFailureCode || "SIMULATED_INVALID_RECIPIENT",
+      };
+    }
+
+    // Default: simulated success
+    const syntheticId = `sim_msg_${payload.eventId.replace(/-/g, "").slice(0, 12)}_${Date.now().toString(36)}`;
+    return {
+      ok: true,
+      providerMessageId: syntheticId,
+    };
+  }
+}
+
 // Default provider instance (strictly disabled in client/foundation environment)
 let activeProvider: INotificationProvider = new DisabledNotificationProvider();
 

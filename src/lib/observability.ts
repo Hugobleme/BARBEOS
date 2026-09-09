@@ -290,7 +290,13 @@ export function reportObservabilityEvent(
     | "notification_event_enqueued"
     | "notification_event_duplicate_prevented"
     | "notification_event_enqueue_failed"
-    | "notification_provider_disabled",
+    | "notification_provider_disabled"
+    | "notification_worker_started"
+    | "notification_event_claimed"
+    | "notification_event_simulated"
+    | "notification_event_retry_scheduled"
+    | "notification_event_dead_lettered"
+    | "notification_worker_completed",
   context: Partial<SafeErrorEvent> = {},
 ): SafeErrorEvent | null {
   return reportError(new Error(`Operational event: ${operation}`), {
